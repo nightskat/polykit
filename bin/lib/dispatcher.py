@@ -180,6 +180,22 @@ def run_vendor(
         elif vendor == "gemini":
             return _dispatch_gemini(prompt, model, validated_timeout, runner, env)
 
+        elif vendor == "openrouter":
+            from lib.openrouter import or_dispatch
+            r = or_dispatch(prompt, model=model, timeout=validated_timeout)
+            if r.ok:
+                return DispatchResult(status="ok", vendor=vendor, model=model,
+                                      summary="openrouter completed successfully",
+                                      stdout=r.text, exit_code=0)
+            if r.quota_capped:
+                return DispatchResult(status="skipped", vendor=vendor, model=model,
+                                      summary="openrouter quota-capped (402/429)",
+                                      warnings=[r.error or ""], exit_code=r.http_code or 1,
+                                      reason="quota_capped")
+            return DispatchResult(status="error", vendor=vendor, model=model,
+                                  summary=f"openrouter failed: {r.error}",
+                                  warnings=[r.error or ""], exit_code=r.http_code or 1)
+
         else:
             return DispatchResult(
                 status="blocked",

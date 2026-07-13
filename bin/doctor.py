@@ -22,7 +22,8 @@ def run_doctor(probes=None, now=None) -> dict:
     return state
 
 def render_table(state: dict) -> str:
-    vendors = ["codex", "gemini", "claude", "grok"]
+    # Dynamic theo state (thứ tự REGISTRY) — vendor mới như openrouter tự hiện.
+    vendors = list(state.get("vendors", {}).keys())
     lines = []
     # Header
     lines.append(f"{'VENDOR':<10} | {'STATE':<20} | {'PATH':<50} | {'VERSION':<15}")

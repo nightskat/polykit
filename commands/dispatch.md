@@ -1,5 +1,5 @@
 ---
-description: Dispatch task tới vendor (codex|gemini|claude|grok), degrade nếu thiếu
+description: Dispatch task tới vendor (codex|gemini|claude|grok|openrouter), degrade nếu thiếu
 argument-hint: "<vendor> [model] -- <prompt>"
 allowed-tools: Bash
 ---

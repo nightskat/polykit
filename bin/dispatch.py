@@ -12,7 +12,7 @@ from lib.dispatcher import run_vendor
 
 def main():
     parser = argparse.ArgumentParser(description="Multi-vendor CLI dispatch wrapper")
-    parser.add_argument("vendor", choices=["gemini", "codex", "claude", "grok"], help="Vendor to dispatch to")
+    parser.add_argument("vendor", choices=["gemini", "codex", "claude", "grok", "openrouter"], help="Vendor to dispatch to")
     parser.add_argument("model", nargs="?", default="auto", help="Model slug to use (default: auto)")
     parser.add_argument("--timeout", type=int, default=120, help="Timeout in seconds (default: 120)")
     parser.add_argument("--format", choices=["text", "json"], default="text", help="Output format (default: text)")
