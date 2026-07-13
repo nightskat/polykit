@@ -1,10 +1,11 @@
+from __future__ import annotations
 import json
-import platformdirs
+from lib.paths import user_state_dir
 from pathlib import Path
 from datetime import datetime, timezone
 
 def evidence_path() -> Path:
-    return Path(platformdirs.user_state_dir("polykit")) / "dispatch-log.jsonl"
+    return Path(user_state_dir("polykit")) / "dispatch-log.jsonl"
 
 def append_evidence(record: dict, path=None) -> bool:
     if path is None:

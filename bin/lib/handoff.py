@@ -1,4 +1,5 @@
-import platformdirs
+from __future__ import annotations
+from lib.paths import user_state_dir
 from pathlib import Path
 
 def build_handoff_note(task: str, done: list[str], remaining: list[str], files: list[str], now: str) -> str:
@@ -22,7 +23,7 @@ def build_handoff_note(task: str, done: list[str], remaining: list[str], files: 
 
 def write_handoff(note: str, path=None) -> Path:
     if path is None:
-        path = Path(platformdirs.user_state_dir("polykit")) / "handoff-latest.md"
+        path = Path(user_state_dir("polykit")) / "handoff-latest.md"
     else:
         path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)

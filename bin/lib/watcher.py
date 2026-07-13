@@ -1,21 +1,22 @@
+from __future__ import annotations
 import json
 import hashlib
 import os
 import time
 from pathlib import Path
-import platformdirs
+from lib.paths import user_state_dir
 
 class LockBusy(Exception):
     pass
 
 def lock_path() -> Path:
-    return Path(platformdirs.user_state_dir("polykit")) / "watch.lock.d"
+    return Path(user_state_dir("polykit")) / "watch.lock.d"
 
 def baseline_path() -> Path:
-    return Path(platformdirs.user_state_dir("polykit")) / "watch-baseline.json"
+    return Path(user_state_dir("polykit")) / "watch-baseline.json"
 
 def alert_state_path() -> Path:
-    return Path(platformdirs.user_state_dir("polykit")) / "watch-last-alert.json"
+    return Path(user_state_dir("polykit")) / "watch-last-alert.json"
 
 class WatchLock:
     def __init__(self, path=None, stale_sec=300):

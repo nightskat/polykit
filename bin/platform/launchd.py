@@ -1,3 +1,4 @@
+from __future__ import annotations
 # cron/schtasks = PARKED (chỉ launchd cho v0.1)
 import plistlib
 from pathlib import Path

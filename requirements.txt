@@ -1,2 +1,3 @@
-# PolyKit runtime deps (P5: chỉ stdlib + platformdirs)
-platformdirs>=4.0
+# PolyKit runtime — CHỈ stdlib. Chạy được với system python3 (3.9+) không cần cài gì.
+# platformdirs = OPTIONAL: có thì dùng, không có thì bin/lib/paths.py fallback stdlib.
+# Cài để path chuẩn hơn (tùy chọn): pip install platformdirs>=4.0

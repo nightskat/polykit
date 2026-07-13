@@ -1,14 +1,15 @@
+from __future__ import annotations
 import json
 import pathlib
 from pathlib import Path
-import platformdirs
+from lib.paths import user_state_dir
 from lib.states import VendorProbe, classify
 from lib.vendors import REGISTRY
 
 SCHEMA_VERSION = 1
 
 def state_path() -> Path:
-    return Path(platformdirs.user_state_dir("polykit")) / "state.json"
+    return Path(user_state_dir("polykit")) / "state.json"
 
 def build_state(probes: list[VendorProbe], now: str) -> dict:
     return {
