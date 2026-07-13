@@ -73,9 +73,11 @@ def main():
     parser.add_argument("--pressure", type=int, help="Pressure percentage")
     parser.add_argument("--threshold", type=int, default=80, help="Pressure threshold")
     parser.add_argument("--vendor", type=str, help="Vendor hint")
-    
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Không gửi tg-ping thật — chỉ in message sẽ gửi")
+
     args = parser.parse_args()
-    
+
     stderr = ""
     if args.stderr_file:
         try:
@@ -83,13 +85,19 @@ def main():
                 stderr = f.read()
         except Exception:
             pass
-            
-    res = handle_signal(
-        stderr=stderr,
-        pressure_pct=args.pressure,
-        threshold=args.threshold,
-        vendor_hint=args.vendor
-    )
+
+    # --dry-run: notifier chỉ in ra stderr, KHÔNG gọi tg-ping (Tuan yêu cầu sau MVP test).
+    dry_notifier = None
+    if args.dry_run:
+        def dry_notifier(msg, silent=False):
+            print(f"[DRY RUN] {msg}", file=sys.stderr)
+            return True
+
+    kwargs = {"stderr": stderr, "pressure_pct": args.pressure,
+              "threshold": args.threshold, "vendor_hint": args.vendor}
+    if dry_notifier is not None:
+        kwargs["notifier"] = dry_notifier
+    res = handle_signal(**kwargs)
     print(json.dumps(res))
 
 if __name__ == "__main__":
