@@ -90,7 +90,9 @@ README liệt kê: git, Python 3.11+, Claude Code. Vendor CLIs = optional, mỗi
 → Điểm quan sát = **cron quota-check độc lập** (mở rộng quota-check.sh 4h hiện có, chạy ngoài mọi session).
 - **Proactive (ý Tuan 13/07)**: quota pressure vượt ngưỡng (vd ~80%) → hỏi TRƯỚC khi cap:
   tg-ping "Claude còn ~X%. Handoff sang đâu? codex / gemini / để cap" + chuẩn bị handoff note.
-  Cơ chế handoff: tận dụng `continues` CLI (bridge session sẵn có) — KHÔNG tự viết bridge mới.
+- **Handoff note = cốt lõi, zero dependency**: file .md (task dở, đã làm, còn lại, files) —
+  paste được vào bất kỳ vendor nào. `continues` CLI = tiện nghi OPTIONAL: có thì auto-inject,
+  không có thì thôi — detect theo P1 như mọi vendor, KHÔNG thành prereq, KHÔNG tự viết bridge.
 - **Reactive (lưới cuối)**: cap thật → fixture match stderr (`tests/fixtures/claude_cap.txt`)
   → tg-ping "Cap đến HH:MM. Lane: codex main / gemini worker." Unknown error ≠ cap → log, KHÔNG ping.
 - Playbook `SWITCH-MAIN.md` 5 bước (Codex main không có context session dở — handoff note bù phần này).
