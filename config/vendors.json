@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "vendors": {
+    "codex": {
+      "binary": "codex",
+      "auth_hint": "chạy `codex login`"
+    },
+    "gemini": {
+      "binary": "gemini",
+      "auth_hint": "chạy `gemini` rồi /auth"
+    },
+    "claude": {
+      "binary": "claude",
+      "auth_hint": "đã auth qua Claude Code"
+    },
+    "grok": {
+      "binary": "grok",
+      "auth_hint": "chạy `grok` để auth"
+    }
+  }
+}
