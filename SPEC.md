@@ -1,7 +1,8 @@
-# POLYKIT v0.1.1 — Spec
+# POLYKIT v0.1.2 — Spec
 
 > Thu từ POLYHARNESS v0.1 (2026-07-13). Triết lý giữ: contract chuẩn, recommendation-không-ép.
-> v0.1.1: vá 12 findings Codex review + đổi hình dạng sang **Claude Code plugin, Python-first, cross-platform**.
+> v0.1.1: vá 12 findings Codex + đổi hình dạng **Claude Code plugin, Python-first, cross-platform**.
+> v0.1.2: vá 4 findings Gemini + lỗ detect-point M3 + M3 proactive handoff + cut CI matrix.
 
 ## Mục tiêu
 Một **Claude Code plugin** gom toàn bộ multi-vendor tooling (dispatch, quota, failover, watcher).
@@ -27,7 +28,8 @@ polykit/  (git repo = marketplace luôn)
 ├── config/          # template, commit được (P2)
 └── tests/           # fixtures + matrix test (P1)
 ```
-State máy-riêng sinh ở `~/.polykit/state/` — KHÔNG nằm trong repo.
+State máy-riêng KHÔNG nằm trong repo — path do `platformdirs` quyết
+(mac `~/Library/Application Support/polykit/`, win `%LOCALAPPDATA%`, linux `~/.local/state/`).
 
 ## Nguyên tắc
 
@@ -44,8 +46,8 @@ Vendor state machine: `not_installed` → `installed_not_authed` → `ready` →
 | quota | "no data" | ✓ | ✓ | ✓ | ✓ |
 | watcher | no-op + log | ✓ | ✓ | ✓ | ✓ |
 
-### P2. Config ≠ State — có schema (Codex #6)
-- `config/` trong plugin (template) · state ở `~/.polykit/state/` · mỗi file JSON có `schema_version`.
+### P2. Config ≠ State — có schema (Codex #6, Gemini #7)
+- `config/` trong plugin (template) · state ở path `platformdirs` (KHÔNG hardcode) · mỗi file JSON có `schema_version`.
 - Đổi schema → bump version + migrate hoặc regenerate (state là cache, regenerate được).
 - Transfer = cài plugin + copy config, state tự sinh.
 
@@ -59,11 +61,14 @@ Vendor state machine: `not_installed` → `installed_not_authed` → `ready` →
 - Result JSON required: `status, summary, warnings[]`. Vendor bị skip → degraded result
   `{status:"skipped", reason:"not_authed|not_installed|quota_capped"}` — cùng schema, không null.
 
-### P5. Cross-platform (mới — quyết định 13/07)
+### P5. Cross-platform — bằng THIẾT KẾ, chứng minh trên mac (v0.1.2 descope)
 - Python 3.11+ cho mọi logic; `pathlib` + `platformdirs`, cấm hardcode `/Users/...`.
-- Scheduler qua adapter: launchd (mac) / cron (linux) / schtasks (win). Chỉ adapter được biết OS.
-- Vendor CLI: tự detect (`shutil.which`), chưa auth → nhắc lệnh auth. Plugin KHÔNG cài CLI hộ.
-- CI matrix 3 OS (GitHub Actions) chạy tests/ — thay cho "test trên máy ông anh".
+- Subprocess đơn giản: `subprocess.run(timeout=)`, KHÔNG PID tree / signal Unix (Gemini #2 — Windows không có).
+- Scheduler: interface adapter chừa sẵn, v0.1 chỉ implement **launchd**; cron/schtasks viết khi có máy thật (Gemini #6).
+- Vendor CLI: detect `shutil.which` lúc doctor → lưu **absolute path** vào state; cron dùng path đã lưu,
+  path chết → re-detect 1 lần rồi mới báo `not_installed` (Gemini #4 — PATH tối giản trong cron).
+- Chưa auth → nhắc đúng lệnh auth. Plugin KHÔNG cài CLI hộ.
+- Test: pytest mock/fixture chạy local mac. CI matrix 3 OS = PARKED (portability bằng thiết kế, không bằng CI).
 
 ## Prereqs công khai (Codex #12)
 README liệt kê: git, Python 3.11+, Claude Code. Vendor CLIs = optional, mỗi cái 1 dòng
@@ -77,26 +82,35 @@ README liệt kê: git, Python 3.11+, Claude Code. Vendor CLIs = optional, mỗi
   + ma trận P1 chạy trên fixture. Acceptance: cài plugin máy hiện tại, doctor đúng 100% ma trận.
 - **M1c Port dispatch.py**: port safe-dispatch.sh sang Python (giữ depth-guard, timeout-guard,
   sandbox flags). Acceptance: dispatch codex + gemini chạy thật; combo thiếu vendor ra degraded result.
+- **Guard chống rewrite-hố**: M1c quá 3 session chưa xong → DỪNG, wrap bash hiện có trong plugin
+  trước, port Python từng phần sau. Rewrite không được chặn ship.
 
-### M3 — Quota failover (pain 4) — fixture hoá (Codex #9)
-- Capture stderr/exit-code THẬT của Claude 5h cap → lưu `tests/fixtures/claude_cap.txt`.
-- Detect match fixture → tg-ping "Cap đến HH:MM. Lane thay thế: codex main / gemini worker."
-- Unknown error ≠ cap → log, KHÔNG ping (chống báo động giả).
-- Playbook `SWITCH-MAIN.md` 5 bước. Acceptance: replay fixture → ping <1 phút; error lạ → im.
+### M3 — Quota failover (pain 4) — proactive, có điểm quan sát ngoài (v0.1.2)
+**Lỗ đã vá: ai phát hiện cap?** Polykit chạy trong session Claude thì chết cùng Claude.
+→ Điểm quan sát = **cron quota-check độc lập** (mở rộng quota-check.sh 4h hiện có, chạy ngoài mọi session).
+- **Proactive (ý Tuan 13/07)**: quota pressure vượt ngưỡng (vd ~80%) → hỏi TRƯỚC khi cap:
+  tg-ping "Claude còn ~X%. Handoff sang đâu? codex / gemini / để cap" + chuẩn bị handoff note.
+  Cơ chế handoff: tận dụng `continues` CLI (bridge session sẵn có) — KHÔNG tự viết bridge mới.
+- **Reactive (lưới cuối)**: cap thật → fixture match stderr (`tests/fixtures/claude_cap.txt`)
+  → tg-ping "Cap đến HH:MM. Lane: codex main / gemini worker." Unknown error ≠ cap → log, KHÔNG ping.
+- Playbook `SWITCH-MAIN.md` 5 bước (Codex main không có context session dở — handoff note bù phần này).
+- Acceptance: giả lập pressure 80% → nhận ping hỏi trước; replay fixture cap → ping <1 phút; error lạ → im.
 
 ### M2 — Grok lane (pain 3) — acceptance đủ (Codex #11)
 - Grok adapter trong dispatch.py: state.json entry, timeout, result JSON chuẩn P4, evidence log.
 - Acceptance: dispatch grok chạy; máy không grok → degraded result + doctor ghi rõ; 402 → `quota_capped` không phải crash.
 
 ### M4 — Watcher nhẹ (pain 2) — có guards (Codex #10)
-- Weekly qua scheduler adapter: diff model list + CLI version → đánh dấu stale + tg-ping 1 dòng.
+- **Reuse-first**: mở rộng freshness engine hiện có (state.json + housekeep CN), KHÔNG viết engine mới.
+- Weekly qua scheduler adapter (launchd): diff model list + CLI version → đánh dấu stale + tg-ping 1 dòng.
 - Guards: timeout mọi lệnh detect · máy offline/ngủ → skip im lặng, chạy bù lần sau ·
   auth hết hạn → state `not_authed` (không alert lặp) · file lock chống race với dispatch.
 - Acceptance: bump version giả → 1 alert duy nhất; rút mạng → không crash không spam.
 
 ## PARKED (mở lại khi pain lặp ≥3 lần)
 Quota ledger/reservation · benchmark onboarding tiers · docs snapshot diff · update canary ·
-recommendation scoring · MCP server riêng · SQLite · auto-cài vendor CLI.
+recommendation scoring · MCP server riêng · SQLite · auto-cài vendor CLI ·
+CI matrix 3 OS · cron/schtasks adapter · auto-resume full-context sau handoff.
 
 ## Không làm
 Auto-merge · auto-deploy · DAG tự trị · multi-machine · web dashboard · billing.
