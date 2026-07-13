@@ -4,7 +4,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Trạng thái hiện tại
 
-**Spec-only, chưa có code.** Đang ở trước milestone M1a (inventory). Đọc `SPEC.md` (v0.1.2) trước mọi việc — đó là nguồn sự thật duy nhất về scope, nguyên tắc, và acceptance criteria.
+**v0.1 code hoàn chỉnh — 6/6 milestone xong (M1a→M1b→M1c→M3→M2→M4).** 65 test pass.
+Đọc `SPEC.md` (v0.1.2) cho scope/nguyên tắc, `docs/M1A-INVENTORY.md` cho quyết định gom tooling.
+
+### Chạy
+```
+python bin/doctor.py            # trạng thái vendor (state machine)
+echo "prompt" | python bin/dispatch.py <codex|gemini|claude|grok> [model] --result-json
+python bin/failover.py --pressure 85     # quota failover proactive/reactive
+python bin/watcher.py --dry-run          # diff model/version weekly
+~/.pyenv/versions/3.11.8/bin/python -m pytest tests/ -q   # 65 test
+```
+
+### Map module → milestone
+| Milestone | File chính | Acceptance đã đạt |
+|---|---|---|
+| M1b doctor | `bin/doctor.py`, `bin/lib/{states,vendors,state_store}.py` | detect 4 vendor, state.json schema_version=1 |
+| M1c dispatch | `bin/dispatch.py`, `bin/lib/{dispatch_core,dispatcher}.py` | codex+gemini chạy thật, thiếu vendor→skipped, ToS negative test |
+| M3 failover | `bin/failover.py`, `bin/lib/{quota,handoff,notifier}.py` | pressure→ping trước, cap→ping reactive, lỗi lạ→im |
+| M2 grok | `bin/lib/{quota_error,evidence}.py` (+dispatcher) | 402→quota_capped không crash, evidence log |
+| M4 watcher | `bin/watcher.py`, `bin/lib/watcher.py`, `bin/platform/launchd.py` | bump→1 alert, offline→skip, notify fail→retry |
 
 ## Dự án là gì
 
