@@ -91,13 +91,16 @@ def main():
     if args.dry_run:
         def dry_notifier(msg, silent=False):
             print(f"[DRY RUN] {msg}", file=sys.stderr)
-            return True
+            # Codex MVP #4: trả False — thành thật CHƯA gửi, không đánh lừa automation.
+            return False
 
     kwargs = {"stderr": stderr, "pressure_pct": args.pressure,
               "threshold": args.threshold, "vendor_hint": args.vendor}
     if dry_notifier is not None:
         kwargs["notifier"] = dry_notifier
     res = handle_signal(**kwargs)
+    if args.dry_run:
+        res["dry_run"] = True  # đánh dấu rõ: notified=false vì dry-run, không phải gửi lỗi
     print(json.dumps(res))
 
 if __name__ == "__main__":
