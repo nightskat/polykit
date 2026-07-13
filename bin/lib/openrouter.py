@@ -10,7 +10,10 @@ from pathlib import Path
 OR_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 OR_KEY_ENVS = ["OPENROUTER_API_KEY", "OR_API_KEY"]
 OR_KEY_FILES = [Path.home() / ".config/openrouter/key", Path.home() / ".openrouter/key"]
-DEFAULT_FREE_MODEL = "google/gemini-2.0-flash-exp:free"
+# Free model OpenRouter XOAY VÒNG thường xuyên (model cũ bị gỡ → 404, provider busy → 429).
+# Giá trị này verify sống 2026-07-13; hết hạn thì đổi, hoặc truyền model tường minh khi dispatch.
+# TODO(backlog): "auto" nên tự chọn 1 model :free còn sống qua /models thay vì hardcode.
+DEFAULT_FREE_MODEL = "nvidia/nemotron-3-nano-30b-a3b:free"
 
 @dataclass
 class ORResult:
