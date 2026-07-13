@@ -1,0 +1,2 @@
+# PolyKit runtime deps (P5: chỉ stdlib + platformdirs)
+platformdirs>=4.0
