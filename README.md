@@ -9,7 +9,7 @@ Claude Code plugin gom multi-vendor CLI tooling: **doctor** (trạng thái vendo
 
 ## Cài (Mac & Windows như nhau)
 ```
-claude plugin marketplace add github.com/nightskat/polykit
+claude plugin marketplace add https://github.com/nightskat/polykit.git
 claude plugin install polykit@polykit
 ```
 Xong. Mở session mới, gõ `/polykit:doctor` xem trạng thái.
