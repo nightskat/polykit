@@ -35,6 +35,17 @@ def main():
         sandbox=args.sandbox
     )
 
+    # M2 evidence log — best-effort, chỉ ở CLI boundary (không ghi khi test gọi lib).
+    try:
+        from lib.evidence import append_evidence, make_record
+        from datetime import datetime, timezone
+        append_evidence(make_record(
+            result.vendor, result.model, result.status,
+            datetime.now(timezone.utc).isoformat(), reason=result.reason,
+        ))
+    except Exception:
+        pass
+
     if args.result_json:
         print(json.dumps(result.to_dict(), indent=2))
     else:

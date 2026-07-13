@@ -9,6 +9,7 @@ import urllib.error
 from pathlib import Path
 from lib.states import classify, VendorState
 from lib.vendors import detect, REGISTRY
+from lib.quota_error import is_quota_error
 from lib.dispatch_core import (
     DispatchError,
     DispatchResult,
@@ -19,6 +20,27 @@ from lib.dispatch_core import (
     build_grok_cmd,
     gemini_agy_tier,
 )
+
+
+def _classify_completed(vendor: str, model: str, res) -> DispatchResult:
+    """M2: map kết quả subprocess → DispatchResult. returncode!=0 kèm dấu hiệu
+    quota (402/insufficient credit/exhausted) → skipped/quota_capped, KHÔNG crash,
+    KHÔNG coi là lỗi generic. Dùng chung cho codex/claude/grok."""
+    stdout = res.stdout or ""
+    if res.returncode == 0:
+        return DispatchResult(status="ok", vendor=vendor, model=model,
+                              summary=f"{vendor} completed successfully",
+                              stdout=stdout, exit_code=0)
+    stderr = res.stderr or ""
+    warnings = stderr.splitlines()[:20]
+    if is_quota_error(stderr, res.returncode):
+        return DispatchResult(status="skipped", vendor=vendor, model=model,
+                              summary=f"{vendor} quota-capped (402/exhausted)",
+                              warnings=warnings, stdout=stdout,
+                              exit_code=res.returncode, reason="quota_capped")
+    return DispatchResult(status="error", vendor=vendor, model=model,
+                          summary=f"{vendor} failed with exit code {res.returncode}",
+                          warnings=warnings, stdout=stdout, exit_code=res.returncode)
 
 def run_vendor(
     vendor: str,
@@ -101,27 +123,7 @@ def run_vendor(
                 timeout=validated_timeout,
                 env=env,
             )
-            if res.returncode != 0:
-                stderr_lines = res.stderr.splitlines() if res.stderr else []
-                warnings = stderr_lines[:20]
-                return DispatchResult(
-                    status="error",
-                    vendor=vendor,
-                    model=model,
-                    summary=f"codex failed with exit code {res.returncode}",
-                    warnings=warnings,
-                    stdout=res.stdout or "",
-                    exit_code=res.returncode,
-                )
-            return DispatchResult(
-                status="ok",
-                vendor=vendor,
-                model=model,
-                summary="codex completed successfully",
-                warnings=[],
-                stdout=res.stdout or "",
-                exit_code=0,
-            )
+            return _classify_completed(vendor, model, res)
 
         elif vendor == "claude":
             cmd = build_claude_cmd(model, prompt)
@@ -168,27 +170,8 @@ def run_vendor(
                     timeout=validated_timeout,
                     env=env,
                 )
-                if res.returncode != 0:
-                    stderr_lines = res.stderr.splitlines() if res.stderr else []
-                    warnings = stderr_lines[:20]
-                    return DispatchResult(
-                        status="error",
-                        vendor=vendor,
-                        model=model,
-                        summary=f"grok failed with exit code {res.returncode}",
-                        warnings=warnings,
-                        stdout=res.stdout or "",
-                        exit_code=res.returncode,
-                    )
-                return DispatchResult(
-                    status="ok",
-                    vendor=vendor,
-                    model=model,
-                    summary="grok completed successfully",
-                    warnings=[],
-                    stdout=res.stdout or "",
-                    exit_code=0,
-                )
+                # M2: 402/insufficient-credit → quota_capped (không crash).
+                return _classify_completed(vendor, model, res)
             finally:
                 if os.path.exists(temp_prompt_path):
                     os.unlink(temp_prompt_path)
