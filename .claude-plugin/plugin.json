@@ -1,6 +1,6 @@
 {
   "name": "polykit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Multi-vendor CLI toolkit: dispatch, quota failover, watcher. Python-first, cross-platform.",
   "author": {
     "name": "Tuan Khuc",
