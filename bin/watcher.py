@@ -26,7 +26,8 @@ def run_watch(state=None, now=None, notifier=None, detector=None) -> dict:
                     state = run_doctor(now=now)
             
             new_snap = watcher.snapshot_from_state(state)
-            
+            watcher.enrich_openrouter_models(new_snap)
+
             if watcher.is_offline(new_snap):
                 return {"action": "noop", "reason": "offline"}
             

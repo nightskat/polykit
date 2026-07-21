@@ -166,6 +166,35 @@ def format_alert(changes: list[dict]) -> str:
             parts.append(f"{v} {cnt_str} {suffix}")
     return f"🔔 polykit: {'; '.join(parts)}"
 
+OR_MODELS_API = "https://openrouter.ai/api/v1/models"
+
+def fetch_or_free_models(timeout: int = 15) -> list[str] | None:
+    """Lấy danh sách model free trên OpenRouter (pricing.prompt == "0").
+    Trả None khi lỗi mạng/format — caller quyết định fallback, KHÔNG trả []
+    để phân biệt 'không fetch được' với 'OR thật sự hết model free'."""
+    import urllib.request
+    try:
+        req = urllib.request.Request(OR_MODELS_API, headers={"User-Agent": "polykit-watcher"})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            data = json.load(r)
+        return sorted(m["id"] for m in data.get("data", [])
+                      if isinstance(m, dict) and m.get("pricing", {}).get("prompt") == "0")
+    except Exception:
+        return None
+
+def enrich_openrouter_models(snap: dict, fetcher=fetch_or_free_models) -> None:
+    """Ghép OR free models vào snapshot để diff_snapshots bắt thêm/bớt model.
+    Probe API-key (vendors.py) luôn trả models=[] vì OR không có CLI — watcher
+    tự fetch ở đây, NGOÀI critical path dispatch. Fetch fail → giữ models từ
+    baseline cũ để không alert giả 'removed toàn bộ'."""
+    if "openrouter" not in snap:
+        return
+    ids = fetcher()
+    if ids is None:
+        old = load_json(baseline_path())
+        ids = (old.get("openrouter") or {}).get("models") or []
+    snap["openrouter"]["models"] = ids
+
 def is_offline(snapshot: dict) -> bool:
     # Codex M4 #2: offline = detect fail hạ tầng (mọi vendor có error field),
     # KHÔNG phải not_installed. Gỡ vendor thật (not_installed, error=None) vẫn
