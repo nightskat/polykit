@@ -33,7 +33,12 @@ def test_gemini_agy_tier():
     assert gemini_agy_tier("gemini-3.1-pro-high") == "pro-high"
     assert gemini_agy_tier("gemini-3.1-pro-low") == "pro-low"
     assert gemini_agy_tier("gemini-3.1-pro") == "pro-low"
-    assert gemini_agy_tier("gemini-3.5-flash-high") == "high"
-    assert gemini_agy_tier("gemini-3.5-flash-low") == "low"
-    assert gemini_agy_tier("gemini-2.5-flash") == "med"
+    # 3.6 Flash (newest) — bare effort suffixes + auto default
+    assert gemini_agy_tier("gemini-3.6-flash-high") == "high"
+    assert gemini_agy_tier("gemini-3.6-flash-low") == "low"
+    assert gemini_agy_tier("gemini-3.6-flash-medium") == "med"
     assert gemini_agy_tier("auto") == "med"
+    # 3.5 Flash — quota-friendly, routed to f35 tiers
+    assert gemini_agy_tier("gemini-3.5-flash-high") == "f35-high"
+    assert gemini_agy_tier("gemini-3.5-flash-low") == "f35-low"
+    assert gemini_agy_tier("gemini-3.5-flash") == "f35"

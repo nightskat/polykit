@@ -247,6 +247,7 @@ def _dispatch_gemini(
 
     is_agy_model = (
         model == "auto"
+        or model.startswith("gemini-3.6-flash")
         or model.startswith("gemini-3.5-flash")
         or model.startswith("gemini-3.1-pro")
     )
@@ -292,7 +293,7 @@ def _dispatch_gemini(
     # --- Lane 2: gemini CLI ---
     gemini_bin = shutil.which("gemini")
     if gemini_bin:
-        cli_model = "gemini-2.5-flash" if model == "auto" else model
+        cli_model = "gemini-3.5-flash" if model == "auto" else model
         try:
             res = runner(
                 [gemini_bin, "-m", cli_model, "-p", prompt],

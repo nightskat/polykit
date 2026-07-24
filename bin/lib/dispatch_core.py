@@ -100,13 +100,19 @@ def build_grok_cmd(model: str, sandbox: str, workdir: str | None, fmt: str, prom
     return cmd
 
 def gemini_agy_tier(model: str) -> str:
-    if model.startswith("gemini-3.1-pro") and model.endswith("high"):
-        return "pro-high"
-    elif model.startswith("gemini-3.1-pro"):
-        return "pro-low"
-    elif model.endswith("high"):
+    # 3.1 Pro
+    if model.startswith("gemini-3.1-pro"):
+        return "pro-high" if model.endswith("high") else "pro-low"
+    # 3.5 Flash — quota-friendly, explicit opt-in (route to f35 tiers)
+    if model.startswith("gemini-3.5-flash"):
+        if model.endswith("high"):
+            return "f35-high"
+        if model.endswith("low"):
+            return "f35-low"
+        return "f35"
+    # 3.6 Flash (newest) + auto default + bare effort suffixes
+    if model.endswith("high"):
         return "high"
-    elif model.endswith("low"):
+    if model.endswith("low"):
         return "low"
-    else:
-        return "med"
+    return "med"
