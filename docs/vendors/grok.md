@@ -24,6 +24,12 @@ grok        # lần đầu sẽ dẫn qua auth
 ## PII
 ❌ KHÔNG gửi PII thật. Xem `../CHIA-VIEC.md` §PII.
 
+## Điểm yếu đã ghi nhận bằng thực chiến
+**2026-07-30**: 2 lần timeout liên tiếp (120s rồi 480s) với task codegen dài (~250 dòng
+Python) qua CLI dispatch — trong khi cùng ngày trả lời brief phân tích ~5KB tốt trong
+thời hạn. → Lane phù hợp: ý kiến/second-opinion/phân tích ngắn. KHÔNG giao codegen dài
+qua dispatch; cần Grok code thì chia task ≤50 dòng hoặc đổi lane.
+
 ## Sự cố thường gặp
 - 402 (hết credit) → doctor chuyển state `quota_capped`, dispatch degrade — không crash.
   Đó là hành vi thiết kế (milestone M2).
