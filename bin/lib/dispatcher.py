@@ -28,20 +28,24 @@ def _classify_completed(vendor: str, model: str, res) -> DispatchResult:
     quota (402/insufficient credit/exhausted) → skipped/quota_capped, KHÔNG crash,
     KHÔNG coi là lỗi generic. Dùng chung cho codex/claude/grok."""
     stdout = res.stdout or ""
+    # `auto` = để CLI tự chọn → không suy ra được model thật, để None thay vì bịa.
+    served = None if model == "auto" else model
     if res.returncode == 0:
         return DispatchResult(status="ok", vendor=vendor, model=model,
                               summary=f"{vendor} completed successfully",
-                              stdout=stdout, exit_code=0)
+                              stdout=stdout, exit_code=0, served_model=served)
     stderr = res.stderr or ""
     warnings = stderr.splitlines()[:20]
     if is_quota_error(stderr, res.returncode):
         return DispatchResult(status="skipped", vendor=vendor, model=model,
                               summary=f"{vendor} quota-capped (402/exhausted)",
                               warnings=warnings, stdout=stdout,
-                              exit_code=res.returncode, reason="quota_capped")
+                              exit_code=res.returncode, reason="quota_capped",
+                              served_model=served)
     return DispatchResult(status="error", vendor=vendor, model=model,
                           summary=f"{vendor} failed with exit code {res.returncode}",
-                          warnings=warnings, stdout=stdout, exit_code=res.returncode)
+                          warnings=warnings, stdout=stdout, exit_code=res.returncode,
+                          served_model=served)
 
 def run_vendor(
     vendor: str,
@@ -155,6 +159,7 @@ def run_vendor(
                 warnings=[],
                 stdout=res.stdout or "",
                 exit_code=0,
+                served_model=None if model == "auto" else model,
             )
 
         elif vendor == "grok":
@@ -184,9 +189,15 @@ def run_vendor(
             from lib.openrouter import or_dispatch
             r = or_dispatch(prompt, model=model, timeout=validated_timeout)
             if r.ok:
+                # Router OR (auto/fusion/free) chọn model khác hẳn cái đã gọi —
+                # ghi lại để biết tiền đi đâu (bench 03/08: fusion→opus-5 ~$1/lượt).
+                summary = "openrouter completed successfully"
+                if r.served_model and r.served_model != model:
+                    summary += f" (served: {r.served_model})"
                 return DispatchResult(status="ok", vendor=vendor, model=model,
-                                      summary="openrouter completed successfully",
-                                      stdout=r.text, exit_code=0)
+                                      summary=summary,
+                                      stdout=r.text, exit_code=0,
+                                      served_model=r.served_model)
             if r.quota_capped:
                 return DispatchResult(status="skipped", vendor=vendor, model=model,
                                       summary="openrouter quota-capped (402/429)",
@@ -268,6 +279,9 @@ def _dispatch_gemini(
                 env=env,
             )
             if res.returncode == 0 and res.stdout and res.stdout.strip():
+                # Slug thật do agy.sh quyết (tier→model), không hard-code lại ở đây
+                # để khỏi lệch khi wrapper đổi — ghi lane+tier là thứ chắc chắn đúng.
+                served = f"agy:{tier}" if agy_bin else "agy:default"
                 return DispatchResult(
                     status="ok",
                     vendor="gemini",
@@ -276,6 +290,7 @@ def _dispatch_gemini(
                     warnings=[],
                     stdout=res.stdout,
                     exit_code=0,
+                    served_model=served,
                 )
             else:
                 reason = "exit code nonzero" if res.returncode != 0 else "empty output"
@@ -313,6 +328,7 @@ def _dispatch_gemini(
                     warnings=deg_warnings,
                     stdout=res.stdout,
                     exit_code=0,
+                    served_model=cli_model,
                 )
             else:
                 reason = "exit code nonzero" if res.returncode != 0 else "empty output"
@@ -363,6 +379,7 @@ def _dispatch_gemini(
                     warnings=deg_warnings,
                     stdout=stdout,
                     exit_code=0,
+                    served_model=api_model,
                 )
             else:
                 warnings.append("lane 3 failed: empty text response")

@@ -20,11 +20,15 @@ def append_evidence(record: dict, path=None) -> bool:
     except Exception:
         return False
 
-def make_record(vendor: str, model: str, status: str, now: str, reason: str | None = None, latency_ms: int | None = None) -> dict:
+def make_record(vendor: str, model: str, status: str, now: str, reason: str | None = None,
+                latency_ms: int | None = None, served_model: str | None = None) -> dict:
+    # `model` = đã YÊU CẦU, `served_model` = đã CHẠY THẬT (None khi vendor không cho biết).
+    # Với router OpenRouter hai giá trị này lệch nhau và chi phí lệch tới trăm lần.
     return {
         "ts": now,
         "vendor": vendor,
         "model": model,
+        "served_model": served_model,
         "status": status,
         "reason": reason,
         "latency_ms": latency_ms

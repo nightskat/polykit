@@ -17,6 +17,10 @@ class DispatchResult:
     stdout: str = ""
     exit_code: int | None = None
     reason: str | None = None
+    # Model THẬT đã chạy, khi biết được. `model` là thứ ĐÃ YÊU CẦU — với `auto`
+    # hoặc router OR thì hai giá trị này khác nhau, và chênh lệch chi phí có thể
+    # gấp trăm lần. None = vendor không cho biết (vd codex auto).
+    served_model: str | None = None
 
     def __post_init__(self):
         # P4: mọi trạng thái non-ok phải có exit_code + reason cụ thể, không null.

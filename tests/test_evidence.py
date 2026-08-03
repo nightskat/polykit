@@ -36,6 +36,7 @@ def test_make_record_fields():
         "ts": "2026-07-13T22:00:00Z",
         "vendor": "grok",
         "model": "grok-2",
+        "served_model": None,  # không truyền → None, không bịa
         "status": "quota_capped",
         "reason": None,
         "latency_ms": None

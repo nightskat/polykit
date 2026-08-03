@@ -43,9 +43,15 @@ def main():
         append_evidence(make_record(
             result.vendor, result.model, result.status,
             datetime.now(timezone.utc).isoformat(), reason=result.reason,
+            served_model=result.served_model,
         ))
     except Exception:
         pass
+
+    # Model thật khác model đã gọi (router OR, lane agy, gemini auto) → báo ở stderr.
+    # KHÔNG in ra stdout: stdout phải sạch để pipe sang lệnh khác.
+    if result.served_model and result.served_model != args.model:
+        sys.stderr.write(f"[polykit] served: {result.served_model}\n")
 
     if args.result_json:
         print(json.dumps(result.to_dict(), indent=2))

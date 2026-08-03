@@ -22,6 +22,11 @@ class ORResult:
     error: str | None = None
     quota_capped: bool = False
     http_code: int | None = None
+    # Model THẬT đã phục vụ request. Với router (`openrouter/auto`, `fusion`, `free`...)
+    # nó khác hẳn model đã yêu cầu — bench 03/08: auto→gemini-2.5-flash-lite,
+    # fusion→claude-opus-5 (~$1/lượt khi prompt mở). Không log cái này = mù chi phí.
+    served_model: str | None = None
+    provider: str | None = None
 
 def get_or_key(env: dict[str, str] | None = None) -> str | None:
     if env is None:
@@ -71,7 +76,11 @@ def or_dispatch(
         resp = opener(req, timeout=timeout)
         data = json.loads(resp.read().decode("utf-8"))
         text = data["choices"][0]["message"]["content"]
-        return ORResult(ok=True, text=text)
+        # `model`/`provider` chỉ có trong response — router không báo trước.
+        # Response cũ/mock thiếu field → None, không được làm hỏng ca ok.
+        served = data.get("model") if isinstance(data, dict) else None
+        provider = data.get("provider") if isinstance(data, dict) else None
+        return ORResult(ok=True, text=text, served_model=served, provider=provider)
     except urllib.error.HTTPError as e:
         code = e.code
         body_txt = ""
