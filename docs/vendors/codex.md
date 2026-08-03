@@ -1,6 +1,6 @@
 # Codex (OpenAI) — code review & audit lane
 
-> Cập nhật 2026-08-03. Version live: `/polykit:doctor`. Catalog live: `codex debug models`.
+> Số liệu LIVE: [SNAPSHOT.md](SNAPSHOT.md) — máy sinh mỗi thứ 2 12:00. Ghi chú tay cập nhật 2026-08-03. Version live: `/polykit:doctor`. Catalog live: `codex debug models`.
 > Snapshot lúc viết: **codex-cli 0.146.0**, default **`gpt-5.6-sol`** (0.145 default là terra —
 > default đổi theo bản CLI, đừng ghim vào script).
 

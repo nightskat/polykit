@@ -19,6 +19,8 @@ from lib.dispatch_core import (
     build_codex_cmd,
     build_claude_cmd,
     build_grok_cmd,
+    build_agy_cmd,
+    AGY_DEFAULT_MODEL,
     gemini_agy_tier,
 )
 
@@ -181,6 +183,27 @@ def run_vendor(
             finally:
                 if os.path.exists(temp_prompt_path):
                     os.unlink(temp_prompt_path)
+
+        elif vendor == "agy":
+            # Codex review: `auto` mà ghim slug cứng thì catalog đổi mùa là gãy.
+            # Ưu tiên chọn từ catalog LIVE vừa probe được; hết cách mới dùng hằng số.
+            resolved = model
+            if model == "auto":
+                catalog = list(getattr(probe, "models", []) or [])
+                if catalog:
+                    resolved = (AGY_DEFAULT_MODEL if AGY_DEFAULT_MODEL in catalog
+                                else next((m for m in catalog if m.startswith("gemini-")),
+                                          catalog[0]))
+            cmd = build_agy_cmd(resolved, prompt)
+            res = runner([shutil.which("agy") or "agy"] + cmd[1:],
+                         capture_output=True, text=True,
+                         timeout=validated_timeout, env=env)
+            out = _classify_completed(vendor, model, res)
+            # served_model = slug ĐÃ GỬI. agy không báo lại model thật đã chạy,
+            # nên đây là ý định, không phải bằng chứng (Grok P1) — ghi rõ để
+            # đừng nhầm với served_model của OpenRouter (đọc từ response).
+            out.served_model = build_agy_cmd(resolved, "")[2]
+            return out
 
         elif vendor == "gemini":
             return _dispatch_gemini(prompt, model, validated_timeout, runner, env)

@@ -1,6 +1,6 @@
 # Gemini (Google) — bulk & value lane
 
-> Cập nhật 2026-08-03. Version live: `/polykit:doctor`. Snapshot lúc viết: **gemini-cli 0.53.1**.
+> Số liệu LIVE: [SNAPSHOT.md](SNAPSHOT.md) — máy sinh mỗi thứ 2 12:00. Ghi chú tay cập nhật 2026-08-03. Version live: `/polykit:doctor`. Snapshot lúc viết: **gemini-cli 0.53.1**.
 > ⚠️ Gemini CLI **không có lệnh `models list`** — muốn catalog live phải hỏi API (xem dưới)
 > hoặc đọc tier trong `agy.sh`.
 
@@ -30,13 +30,13 @@ Rơi dần, lane sau thắng thì result gắn warning `degraded`:
 
 | Lane | Là gì | Ghi chú |
 |---|---|---|
-| 1. `agy` | **CLI riêng của Antigravity** — quota riêng, model riêng (có cả 3.6, Claude, GPT-OSS) | **Không phải sản phẩm Gemini.** Xem [agy.md](agy.md). PolyKit gọi nó ở đây chỉ vì code chưa tách vendor |
+| 1. `agy` | **CLI riêng của Antigravity** — quota riêng, model riêng (có cả 3.6, Claude, GPT-OSS) | **Không phải sản phẩm Gemini.** Từ 0.4.0 agy là **vendor riêng** (`/polykit:dispatch agy`); lane này giữ lại để tương thích ngược. Xem [agy.md](agy.md) |
 | 2. `gemini` CLI | Gemini CLI, auth Google | 8 model, **chưa có 3.6** |
 | 3. API | REST `generativelanguage.googleapis.com`, cần `GEMINI_API_KEY` | Catalog rộng nhất (33 model) |
 
 PolyKit map tier agy tự động trong `gemini_agy_tier()`: `auto` hoặc `gemini-3.6-*` → tier 3.6,
 `gemini-3.5-flash*` → `f35*`, `gemini-3.1-pro*` → `pro-*`. Slug **không phải Gemini** (Claude,
-GPT-OSS trong agy) đi đường này sẽ trượt lane 1 — phải gọi `agy` tay, xem [agy.md](agy.md).
+GPT-OSS trong agy) đi đường này sẽ trượt lane 1 — gọi thẳng `/polykit:dispatch agy <slug>`.
 
 Máy không có Antigravity: lane 1 tự degrade xuống CLI. `agy` là tiện ích máy-riêng, không phải
 thành phần bắt buộc của PolyKit.
@@ -75,4 +75,4 @@ việc có đáp án kiểm chứng được. Xem `../CHIA-VIEC.md` §Gate.
 ## Sự cố thường gặp
 - Quota lane chính → chuyển `agy`/OR free (xem `/polykit:failover`).
 - Headless subprocess trong sandbox hay timeout — chạy từ terminal user, đừng nhét vào sandbox.
-- `agy models` đôi lúc trả output rỗng → doctor giữ catalog cũ + đánh dấu `stale` (hành vi đúng).
+- `agy models` đôi lúc trả rỗng → vendor `agy` báo `ready` + `error: catalog_empty` (hành vi đúng: không bịa list).

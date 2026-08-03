@@ -216,3 +216,38 @@ def save_json(path, data):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def render_snapshot(state: dict, now: str) -> str:
+    """Bảng catalog do MÁY sinh — chống trôi docs.
+
+    Docs viết tay chỉ ghi 'cập nhật ngày X' rồi thối dần; file này được watcher
+    ghi đè mỗi lần chạy (thứ 2 12:00) nên luôn khớp máy. Docs vendor trỏ vào đây
+    thay vì chép số vào từng trang.
+    """
+    lines = [
+        "# Snapshot vendor — MÁY SINH, ĐỪNG SỬA TAY",
+        "",
+        f"> Sinh lúc {now} bởi `bin/watcher.py --snapshot`. Mỗi lần chạy ghi đè toàn bộ.",
+        "> Sai lệch với thực tế = watcher chưa chạy, không phải docs sai.",
+        "",
+        "| Vendor | State | Version | Số model | Ghi chú |",
+        "|---|---|---|---|---|",
+    ]
+    vendors = state.get("vendors", {})
+    for name in vendors:
+        v = vendors[name] or {}
+        models = v.get("models") or []
+        note = v.get("error") or ""
+        lines.append(
+            f"| `{name}` | {v.get('state')} | {v.get('cli_version') or '—'} "
+            f"| {len(models) if models else '—'} | {note} |"
+        )
+    for name in vendors:
+        models = (vendors[name] or {}).get("models") or []
+        if not models:
+            continue
+        lines += ["", f"## Catalog `{name}` ({len(models)} slug)", ""]
+        lines += [f"- `{m}`" for m in models]
+    lines.append("")
+    return "\n".join(lines)

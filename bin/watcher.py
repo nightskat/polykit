@@ -72,6 +72,8 @@ def run_watch(state=None, now=None, notifier=None, detector=None) -> dict:
 def main():
     parser = argparse.ArgumentParser(description="M4 PolyKit Watcher — Alert changes weekly")
     parser.add_argument("--dry-run", action="store_true", help="Chạy thử không gửi alert qua notifier thực tế")
+    parser.add_argument("--snapshot", metavar="PATH",
+                        help="Ghi bảng catalog máy-sinh ra PATH (chống trôi docs)")
     args = parser.parse_args()
     
     if args.dry_run:
@@ -86,6 +88,36 @@ def main():
     else:
         result = run_watch()
         
+    if args.snapshot:
+        # Snapshot đọc state.json vừa được doctor/run_watch làm mới. Ghi lỗi
+        # KHÔNG được làm hỏng watcher — alert quan trọng hơn file docs.
+        try:
+            from lib.state_store import read_state
+            from datetime import datetime, timezone
+            st = read_state()
+            if st:
+                path = Path(args.snapshot)
+                # Codex review: --snapshot nhận path bất kỳ → gõ nhầm là ghi đè
+                # source file. Chỉ cho ghi khi file CHƯA có, hoặc đã mang dấu
+                # máy-sinh ở dòng đầu. Ghi atomic qua .tmp rồi replace.
+                marker = "MÁY SINH"
+                if path.exists():
+                    head = path.read_text(encoding="utf-8", errors="replace")[:200]
+                    if marker not in head:
+                        raise RuntimeError(
+                            f"{path} không phải file máy-sinh (thiếu dấu '{marker}') — từ chối ghi đè")
+                path.parent.mkdir(parents=True, exist_ok=True)
+                tmp = path.with_suffix(path.suffix + ".tmp")
+                tmp.write_text(
+                    watcher.render_snapshot(st, datetime.now(timezone.utc).isoformat()),
+                    encoding="utf-8")
+                tmp.replace(path)
+                result["snapshot"] = str(path)
+            else:
+                result["snapshot_error"] = "state.json chưa có — chạy doctor trước"
+        except Exception as e:
+            result["snapshot_error"] = f"{type(e).__name__}: {e}"
+
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
 if __name__ == "__main__":

@@ -103,6 +103,19 @@ def build_grok_cmd(model: str, sandbox: str, workdir: str | None, fmt: str, prom
         ])
     return cmd
 
+# Model mặc định của lane agy khi gọi `auto`. GIỮ ĐÚNG default sẵn có của
+# ~/scripts/agy.sh (3.6 Flash Medium) — Grok P1: đổi default ngầm là phá kỳ vọng
+# của mọi lệnh đang chạy, và tier `-high` đốt quota im lặng.
+AGY_DEFAULT_MODEL = "gemini-3.6-flash-medium"
+
+
+def build_agy_cmd(model: str, prompt: str) -> list[str]:
+    """Gọi THẲNG binary agy, không qua agy.sh — wrapper chỉ có 8 tier Gemini,
+    trong khi agy còn phục vụ claude-*/gpt-oss-*."""
+    slug = AGY_DEFAULT_MODEL if model == "auto" else model
+    return ["agy", "--model", slug, "-p", prompt]
+
+
 def gemini_agy_tier(model: str) -> str:
     # 3.1 Pro
     if model.startswith("gemini-3.1-pro"):

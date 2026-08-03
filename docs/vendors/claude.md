@@ -1,6 +1,6 @@
 # Claude — host & orchestrator
 
-> Cập nhật 2026-08-03. Version live: `/polykit:doctor` (đọc live, đừng tin số trong docs).
+> Số liệu LIVE: [SNAPSHOT.md](SNAPSHOT.md) — máy sinh mỗi thứ 2 12:00. Ghi chú tay cập nhật 2026-08-03. Version live: `/polykit:doctor` (đọc live, đừng tin số trong docs).
 > Snapshot lúc viết: **Claude Code 2.1.220**.
 
 ## Model đang có (snapshot 2026-08-03)

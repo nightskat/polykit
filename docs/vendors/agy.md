@@ -1,6 +1,6 @@
 # Agy (Antigravity) — CLI riêng, lane riêng
 
-> Cập nhật 2026-08-03. Version live: `agy --version`. Catalog live: `agy models`.
+> Số liệu LIVE: [SNAPSHOT.md](SNAPSHOT.md) — máy sinh mỗi thứ 2 12:00. Ghi chú tay cập nhật 2026-08-03. Version live: `agy --version`. Catalog live: `agy models`.
 > Snapshot lúc viết: **agy 1.1.9**, binary `~/.local/bin/agy` (~165MB, self-contained).
 
 **Agy KHÔNG phải một lane của Gemini.** Đây là CLI độc lập của Antigravity:
@@ -46,19 +46,25 @@ Wrapper tiện tay `~/scripts/agy.sh` — sinh ra vì agy **không lưu được
 Wrapper chỉ có 8 tier Gemini; 3 model Claude/GPT-OSS **cố ý không hard-code** vì availability
 đổi theo mùa.
 
-## Vị trí trong PolyKit (đang lệch — biết để không mắc bẫy)
-Code hiện tại **chưa có vendor `agy`** trong `REGISTRY`. `dispatch.py` coi agy là *lane 1 của
-vendor `gemini`*, và `is_agy_model()` chỉ nhận `auto` + slug `gemini-3.6/3.5/3.1-pro`. Hệ quả:
+## Vị trí trong PolyKit (đã tách, từ 0.4.0)
+`agy` là **vendor đầy đủ** trong `REGISTRY`:
 
-- `/polykit:dispatch gemini -- "…"` → **đi agy** (lane 1) nếu có `agy.sh`. ✅
-- `/polykit:dispatch gemini claude-sonnet-4-6 -- "…"` → agy bị bỏ qua ("model not supported"),
-  rơi xuống Gemini CLI rồi **fail**. ❌ Muốn dùng Claude/GPT-OSS của agy: gọi tay
-  `agy --model claude-sonnet-4-6 -p "…"`.
-- `doctor` **không** báo trạng thái agy: agy chết → không hiện `not_installed`, chỉ thấy
-  dispatch gemini tự degrade xuống lane 2.
+```
+/polykit:doctor                                   # có dòng agy + số slug catalog
+/polykit:dispatch agy -- "<prompt>"               # auto = chọn từ catalog LIVE
+/polykit:dispatch agy claude-sonnet-4-6 -- "…"    # slug không-Gemini chạy được
+```
 
-→ Backlog: tách `agy` thành vendor riêng trong `REGISTRY` (detect `agy`, `agy models` làm
-catalog, quota riêng) để doctor/watcher nhìn thấy nó. Xem `../BACKLOG.md`.
+- **Catalog động**: `detect()` chạy `agy models` và điền vào `state.json` → `watcher` diff
+  được model vào/ra. Không có danh sách cứng nào trong code (đổi mùa là chuyện thường).
+- **Catalog rỗng mà vẫn auth** → state `ready` + `error: catalog_empty`. Không im lặng khoe
+  khoẻ, cũng không bịa list dự phòng.
+- **Auth-check rớt vì hết quota** → `quota_capped`, không phải `installed_not_authed`
+  (bảo đi login lại khi thật ra chỉ hết quota là sai lane).
+- **`auto`** ưu tiên `gemini-3.6-flash-medium` **nếu còn trong catalog**; mất thì lấy slug
+  `gemini-*` đầu tiên; hết nữa thì slug đầu danh sách.
+- **Tương thích ngược**: `/polykit:dispatch gemini` vẫn có lane 1 = agy như cũ, không đổi
+  hành vi, không hard-fail.
 
 ## Điểm yếu đã ghi nhận bằng thực chiến
 **Case 2026-07-30 (file BCTC, bản "FIXED" do lane agy làm):** để ép bảng cân đối "đẹp", model

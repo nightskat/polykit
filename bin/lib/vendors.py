@@ -1,10 +1,12 @@
 from __future__ import annotations
 import os
+import re
 import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from lib.states import VendorProbe
+from lib.quota_error import is_quota_error
 
 @dataclass(frozen=True)
 class VendorSpec:
@@ -19,6 +21,10 @@ class VendorSpec:
     assume_authed: bool = False
     # Vendor API-key: env chứa key. binary=None → detect theo key, không theo which().
     api_key_env: list[str] | None = None
+    # Vendor có catalog ĐỘNG (agy): lệnh liệt kê model. Chọn mở rộng schema thay vì
+    # viết detector riêng — giữ MỘT đường detect() để fixture-hoá đồng nhất
+    # (Grok red-team chê cả 2 phương án; đây là cái ít fork control-flow hơn).
+    models_cmd: list[str] | None = None
 
 REGISTRY: dict[str, VendorSpec] = {
     "codex": VendorSpec(
@@ -49,6 +55,18 @@ REGISTRY: dict[str, VendorSpec] = {
         auth_hint="chạy `grok` để auth",
         version_cmd=["grok", "--version"],
         auth_check_cmd=["grok", "inspect"],
+    ),
+    "agy": VendorSpec(
+        name="agy",
+        binary="agy",
+        auth_hint="chạy `agy` để auth Antigravity",
+        version_cmd=["agy", "--version"],
+        # `agy models` vừa là auth-check vừa là nguồn catalog. Rủi ro đã biết
+        # (Grok P0): lỗi mạng/API listing cũng làm returncode != 0 → báo
+        # installed_not_authed dù credential còn sống. Chấp nhận có ý thức: thà
+        # skip nhầm một lane (degrade) còn hơn báo ready rồi nổ lúc dispatch.
+        auth_check_cmd=["agy", "models"],
+        models_cmd=["agy", "models"],
     ),
     "openrouter": VendorSpec(
         name="openrouter",
@@ -82,6 +100,34 @@ def _detect_api_key_vendor(spec: VendorSpec) -> VendorProbe:
         error=None,
     )
 
+# Slug model hợp lệ: chữ thường/số/`.`/`-`/`_`, không khoảng trắng, ≤64 ký tự.
+# Lọc allowlist thay vì split thô (Grok P1): banner, mã màu ANSI, dòng
+# "Available models:" hay warning trên stdout sẽ không lọt vào catalog.
+_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9._/-]{0,63}$")
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+
+
+def parse_models(stdout: str) -> list[str]:
+    """Lấy slug ở TOKEN ĐẦU mỗi dòng.
+
+    Codex review: `agy models` có thể in dạng bảng `<slug>  <mô tả>` hoặc
+    `* <slug> (default)` — bắt cả dòng thì mất sạch catalog và báo nhầm
+    catalog_empty. Đổi lại phải chặt hơn: token phải chứa `-`, `.`, `_` hoặc `/`
+    để chữ thường đơn lẻ ("models", "default") không lọt vào catalog.
+    """
+    out: list[str] = []
+    for raw in (stdout or "").splitlines():
+        line = _ANSI_RE.sub("", raw).strip().lstrip("*-• \t").strip()
+        if not line:
+            continue
+        token = line.split()[0].rstrip(",;")
+        if not _SLUG_RE.match(token) or not any(c in token for c in "-._/"):
+            continue
+        if token not in out:
+            out.append(token)
+    return out
+
+
 def detect(spec: VendorSpec, which=shutil.which, runner=subprocess.run) -> VendorProbe:
     if spec.binary is None:
         return _detect_api_key_vendor(spec)
@@ -101,6 +147,8 @@ def detect(spec: VendorSpec, which=shutil.which, runner=subprocess.run) -> Vendo
     version = None
     authed = False
     error = None
+    quota_capped = False
+    models: list[str] = []
 
     try:
         if spec.version_cmd:
@@ -114,9 +162,31 @@ def detect(spec: VendorSpec, which=shutil.which, runner=subprocess.run) -> Vendo
             cmd = [abs_path] + spec.auth_check_cmd[1:]
             res = runner(cmd, capture_output=True, text=True, timeout=10)
             authed = (res.returncode == 0)
+            # Codex review: auth-check rớt vì HẾT QUOTA không phải là "chưa auth".
+            # Credential vẫn sống → authed=True + quota_capped để máy trạng thái
+            # ra `quota_capped`, đúng lane failover thay vì bảo user đi login lại.
+            if not authed and is_quota_error(res.stderr or "", res.returncode):
+                authed, quota_capped = True, True
+                error = error or f"quota (exit {res.returncode})"
         else:
             # Không có cách kiểm auth: chỉ ready nếu policy assume_authed (host claude).
             authed = spec.assume_authed
+
+        # Catalog động (agy): hỏi CLI, KHÔNG hardcode danh sách dự phòng — model
+        # Antigravity đổi theo mùa, list cứng sẽ nói dối và làm watcher mù
+        # (Grok P0). Catalog rỗng mà vẫn auth = ready + error='catalog_empty':
+        # giữ tín hiệu sự cố thay vì im lặng khoe khoẻ.
+        if authed and spec.models_cmd:
+            same_cmd = spec.models_cmd == spec.auth_check_cmd
+            if same_cmd:
+                models = parse_models(res.stdout or "") or parse_models(res.stderr or "")
+            else:
+                mres = runner([abs_path] + spec.models_cmd[1:],
+                              capture_output=True, text=True, timeout=10)
+                models = (parse_models(mres.stdout or "") or parse_models(mres.stderr or "")
+                          ) if mres.returncode == 0 else []
+            if not models:
+                error = error or "catalog_empty"
     except subprocess.TimeoutExpired:
         error = "timeout"
         authed = False
@@ -129,9 +199,9 @@ def detect(spec: VendorSpec, which=shutil.which, runner=subprocess.run) -> Vendo
         name=spec.name,
         path=abs_path,
         authed=authed,
-        quota_capped=False,
+        quota_capped=quota_capped,
         version=version,
-        models=[],
+        models=models,
         error=error
     )
 

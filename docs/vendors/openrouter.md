@@ -1,6 +1,6 @@
 # OpenRouter — free tier & bypass cap
 
-> Cập nhật 2026-08-03. OR là lane **API-key**, không phải CLI — doctor không track state machine
+> Số liệu LIVE: [SNAPSHOT.md](SNAPSHOT.md) — máy sinh mỗi thứ 2 12:00. Ghi chú tay cập nhật 2026-08-03. OR là lane **API-key**, không phải CLI — doctor không track state machine
 > cho nó (không có `not_installed/authed`); có key là chạy, sai key thì dispatch báo lỗi mềm.
 
 ## Model free đang sống (snapshot 2026-08-03 — 17 slug)

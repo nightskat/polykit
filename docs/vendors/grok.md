@@ -1,6 +1,6 @@
 # Grok (xAI) — lane phụ / second opinion
 
-> Cập nhật 2026-08-03. Version live: `/polykit:doctor`. Catalog live: `grok models`.
+> Số liệu LIVE: [SNAPSHOT.md](SNAPSHOT.md) — máy sinh mỗi thứ 2 12:00. Ghi chú tay cập nhật 2026-08-03. Version live: `/polykit:doctor`. Catalog live: `grok models`.
 > Snapshot lúc viết: **grok CLI 0.2.118 [stable]**.
 
 ## Model CLI đang có (snapshot 2026-08-03)
