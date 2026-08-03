@@ -1,7 +1,26 @@
 # OpenRouter — free tier & bypass cap
 
-> Cập nhật 2026-07-30. OR là lane **API-key**, không phải CLI — doctor không track state machine
+> Cập nhật 2026-08-03. OR là lane **API-key**, không phải CLI — doctor không track state machine
 > cho nó (không có `not_installed/authed`); có key là chạy, sai key thì dispatch báo lỗi mềm.
+
+## Model free đang sống (snapshot 2026-08-03 — 17 slug)
+Watcher tự diff danh sách này mỗi lần chạy; **danh sách dưới hết hạn nhanh nhất trong repo.**
+
+| Nhóm | Slug |
+|---|---|
+| Default PolyKit | `nvidia/nemotron-3-nano-30b-a3b:free` ✅ còn sống |
+| Router | `openrouter/free` (tự chọn model free) |
+| NVIDIA Nemotron | `nemotron-3-nano-omni-30b-a3b-reasoning`, `nemotron-3-super-120b-a12b`, `nemotron-3-ultra-550b-a55b`, `nemotron-nano-12b-v2-vl` (vision), `nemotron-nano-9b-v2`, `nemotron-3.5-content-safety` — đều `:free` |
+| Google | `google/gemma-4-26b-a4b-it:free`, `google/gemma-4-31b-it:free` |
+| Khác | `openai/gpt-oss-20b:free`, `cohere/north-mini-code:free`, `inclusionai/ling-3.0-flash:free`, `poolside/laguna-s-2.1:free`, `poolside/laguna-xs-2.1:free` |
+| Không phải chat | `google/lyria-3-clip-preview`, `google/lyria-3-pro-preview` (sinh nhạc) |
+
+Đã chết: `google/gemini-2.0-flash-exp:free` (404 từ 13/07 — chính là lý do đổi default sang
+nemotron). Lấy list live **đúng tiêu chí watcher đang dùng** (`pricing.prompt == "0"`, chứ
+không phải lọc theo hậu tố `:free` — nên `openrouter/free` và `lyria-3-*` mới lọt vào):
+```
+curl -s https://openrouter.ai/api/v1/models | python3 -c "import sys,json;print('\n'.join(sorted(m['id'] for m in json.load(sys.stdin)['data'] if m.get('pricing',{}).get('prompt')=='0')))"
+```
 
 ## Cài & auth
 1. Lấy key free: [openrouter.ai/keys](https://openrouter.ai/keys). Nạp $10 một lần → free tier

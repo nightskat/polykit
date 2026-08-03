@@ -1,6 +1,20 @@
 # Claude — host & orchestrator
 
-> Cập nhật 2026-07-30. Model/version hiện tại: chạy `/polykit:doctor` (đọc live, đừng tin số trong docs).
+> Cập nhật 2026-08-03. Version live: `/polykit:doctor` (đọc live, đừng tin số trong docs).
+> Snapshot lúc viết: **Claude Code 2.1.220**.
+
+## Model đang có (snapshot 2026-08-03)
+Claude Code quản model, **không qua PolyKit** — đổi bằng `/model` trong session hoặc `--model`.
+
+| Model | ID | Dùng khi |
+|---|---|---|
+| Opus 5 | `claude-opus-5` | Orchestrate, review, việc khó |
+| Sonnet 5 | `claude-sonnet-5` | Hub mặc định, việc thường |
+| Haiku 4.5 | `claude-haiku-4-5-20251001` | Q&A ngắn, việc cơ khí |
+| Fable 5 | `claude-fable-5` | — |
+
+Lane dispatch (`/polykit:dispatch claude`) luôn ép `--effort low --permission-mode plan
+--tools ""` bất kể model — không dùng làm worker.
 
 ## Vai trò trong PolyKit
 - **Host**: PolyKit là Claude Code plugin — Claude là nơi ra lệnh, tổng hợp, review.

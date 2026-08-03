@@ -1,7 +1,12 @@
 # Grok (xAI) — lane phụ / second opinion
 
-> Cập nhật 2026-07-30. Model/version hiện tại: chạy `/polykit:doctor`. Snapshot lúc viết:
-> grok CLI 0.2.x, model `grok-4.5`.
+> Cập nhật 2026-08-03. Version live: `/polykit:doctor`. Catalog live: `grok models`.
+> Snapshot lúc viết: **grok CLI 0.2.118 [stable]**.
+
+## Model CLI đang có (snapshot 2026-08-03)
+| Slug | Ghi chú |
+|---|---|
+| `grok-4.5` | **Default và là model DUY NHẤT** CLI liệt kê — không cần ghim `-m` |
 
 ## Cài & auth
 ```

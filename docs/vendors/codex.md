@@ -1,8 +1,22 @@
 # Codex (OpenAI) — code review & audit lane
 
-> Cập nhật 2026-07-30. Model/version hiện tại: chạy `/polykit:doctor`. Snapshot lúc viết:
-> codex-cli 0.145.x, default `gpt-5.6-terra`; còn `gpt-5.6-sol/luna`, `gpt-5.5`, `gpt-5.4`,
-> `gpt-5.4-mini`, `codex-auto-review`.
+> Cập nhật 2026-08-03. Version live: `/polykit:doctor`. Catalog live: `codex debug models`.
+> Snapshot lúc viết: **codex-cli 0.146.0**, default **`gpt-5.6-sol`** (0.145 default là terra —
+> default đổi theo bản CLI, đừng ghim vào script).
+
+## Model CLI đang có (snapshot 2026-08-03)
+| Slug | Effort mặc định | Ghi chú |
+|---|---|---|
+| `gpt-5.6-sol` | low | **Default CLI**. Frontier agentic coding |
+| `gpt-5.6-terra` | medium | Default cũ của 0.145 |
+| `gpt-5.6-luna` | medium | — |
+| `gpt-5.5` | medium | Lane review nhanh đã bench nội bộ |
+| `gpt-5.4` | medium | Lane adversarial cũ |
+| `gpt-5.4-mini` | medium | Rẻ nhất |
+| `codex-auto-review` | medium | Ẩn (`visibility: hide`) — CLI tự dùng, không gọi tay |
+
+Effort hỗ trợ (mọi model 5.6): `low · medium · high · xhigh · max · ultra`.
+Bump effort trước khi bump model.
 
 ## Cài & auth
 ```
