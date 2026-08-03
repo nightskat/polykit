@@ -77,8 +77,12 @@ def main():
     if args.dry_run:
         def dry_notifier(msg):
             print(f"[DRY RUN] {msg}", file=sys.stderr)
-            return True
+            # Trả False — CHƯA gửi thật. Trả True thì run_watch tưởng đã báo xong,
+            # ghi đè baseline + alert-hash, và lần chạy launchd thật sau đó im lặng:
+            # dry-run NUỐT MẤT cảnh báo. Cùng luật thành thật như failover --dry-run.
+            return False
         result = run_watch(notifier=dry_notifier)
+        result["dry_run"] = True
     else:
         result = run_watch()
         

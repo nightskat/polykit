@@ -145,3 +145,29 @@ def test_watcher_notifier_raise():
     res = run_watch(state=state_b, notifier=raising_notifier)
     assert res["action"] == "alert"
     assert res["notified"] is False
+
+
+def test_dry_run_khong_duoc_nuot_canh_bao(monkeypatch, capsys):
+    """--dry-run phải trả notified=False.
+
+    Bug thật 2026-08-03: dry_notifier trả True → run_watch tưởng đã báo xong, ghi
+    đè baseline + alert-hash; lần launchd chạy thật sau đó thấy 'no_change' và im
+    lặng. Chạy thử một cái là mất luôn cảnh báo (đã nuốt mất bump grok 0.2.114→118).
+    """
+    import sys
+    import watcher as watcher_main
+
+    captured = {}
+
+    def fake_run_watch(state=None, now=None, notifier=None, detector=None):
+        captured["notifier"] = notifier
+        return {"action": "noop", "reason": "no_change"}
+
+    monkeypatch.setattr(watcher_main, "run_watch", fake_run_watch)
+    monkeypatch.setattr(sys, "argv", ["watcher.py", "--dry-run"])
+    watcher_main.main()
+
+    out = capsys.readouterr()
+    assert captured["notifier"] is not None
+    assert captured["notifier"]("thử") is False, "dry-run báo đã gửi = nuốt cảnh báo thật"
+    assert '"dry_run": true' in out.out
