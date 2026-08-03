@@ -30,6 +30,28 @@ Hai gate này áp cho MỌI vendor, mọi task số liệu — không phải ph�
 - OpenRouter nghiêm nhất: không bao giờ, kể cả "chỉ một cái tên".
 - Áp cho cả file đính kèm, screenshot, và dữ liệu nhét trong prompt.
 
+## Vai của từng lane (cập nhật 2026-08-03)
+
+Nghĩ theo **vai trong một đội**, không theo "model nào giỏi hơn":
+
+| Vai | Lane | Việc đúng vai |
+|---|---|---|
+| Người quyết | **bạn** | Chốt scope, ký, việc pháp nhân: submit, tiền, dữ liệu thật |
+| Điều phối + nghiệm thu | **Claude host** | Chia việc, khử trùng lặp, tổng hợp, phán xét kết quả vendor |
+| Việc cơ khí nhiều bước | **Claude lane rẻ** (Sonnet/Haiku) | Đọc file, bóc email, duyệt web — đừng để lane đắt gõ tay |
+| Senior + phản biện | **Codex** | Dựng code, adversarial review có cấu trúc |
+| QA / "đập" | **Grok** | Red-team, tìm giả định lạc quan, bắt số ảo. Không dùng một mình |
+| Maker | **agy** (Antigravity) | Draft, prose, đọc tài liệu dài. **Quota riêng** với Gemini CLI |
+| Dự phòng maker | **Gemini CLI/API** | Bulk OCR ảnh, long-doc — kênh xả khi agy hết quota |
+| Ca đêm | **OpenRouter free** | Việc "lặp N lần, không cần thông minh": classify, tag, batch |
+| Hồ sơ mật | **Công cụ cục bộ** | OCR/tìm kiếm on-device — lane duy nhất được chạm dữ liệu thật |
+| Thư ký khuôn chặt | **Model on-device** (macOS 26+) | CHỈ gán nhãn cố định + trích xuất theo schema |
+
+⚠️ **Model on-device nhỏ (~3B) — hai điều cấm, đo thật 31/07/2026 trên M1 8GB:**
+hỏi tự do thì nó *diễn vai gọi tool* rồi dừng thay vì trả lời; và tính tiền nhiều bước
+thì **sai gấp 10 lần** trong khi trình bày rất mạch lạc. Chất lượng tỉ lệ thuận với độ
+chặt của khuôn — có schema thì tốt, thả tự do thì thành rác.
+
 ## Bảng chia việc theo loại task
 
 | Loại task | Maker | Checker | Ghi chú |
@@ -37,11 +59,27 @@ Hai gate này áp cho MỌI vendor, mọi task số liệu — không phải ph�
 | Code mới / refactor | Claude host | Codex | Codex review adversarial |
 | Review code | Codex | — | Lane số 1 |
 | Audit số liệu / văn bản | Codex | Claude + validator | Nhớ gate câu-hỏi |
-| Prose/classify/OCR bulk | Gemini (agy nếu có) | Claude spot-check | Value lane |
+| Prose/classify/OCR bulk | agy (hoặc Gemini CLI) | Claude spot-check | Value lane |
 | OCR batch >50 / classify volume | OpenRouter free | Validator + spot-check | 1K RPD |
+| Gán nhãn cố định / trích xuất schema | Model on-device | Validator | 0đ, không rời máy |
 | Second opinion / debate | Grok | — | Không dùng một mình |
-| Việc có PII thật | Claude host | Claude host | Không dispatch |
+| Việc có dữ liệu thật | Claude host + lane cục bộ | Claude host | Không dispatch |
 | Orchestrate / tổng hợp | Claude host | người | — |
+
+## Luật "vendor cố định không được ngồi chơi"
+
+Lane trả phí cố định (agy, Codex, Grok) mà cả tuần 0 lượt = đang đốt tiền. Đếm bằng
+chính log của PolyKit — cột `served_model` là model **chạy thật**, khác cột `model` đã gọi:
+
+```
+python3 -c "
+import json,collections,datetime,pathlib
+from lib.paths import user_state_dir   # hoặc trỏ thẳng tới dispatch-log.jsonl
+p=pathlib.Path(user_state_dir('polykit'))/'dispatch-log.jsonl'
+cut=(datetime.datetime.now(datetime.timezone.utc)-datetime.timedelta(days=7)).isoformat()
+c=collections.Counter(json.loads(l)['vendor'] for l in p.read_text().splitlines() if json.loads(l)['ts']>=cut)
+print(c)"
+```
 
 ## Quy trình dispatch 1 task (chuẩn)
 
