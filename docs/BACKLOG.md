@@ -5,7 +5,7 @@
 
 ## Việc của chính PolyKit
 
-### Tách `agy` (Antigravity) thành vendor riêng — ghi 2026-08-03
+### ✅ XONG 2026-08-03 (v0.4.0) — Tách `agy` (Antigravity) thành vendor riêng
 Hiện `agy` bị nhét làm lane 1 của vendor `gemini`, nhưng nó là **CLI độc lập**: binary riêng
 (`~/.local/bin/agy` v1.1.9), quota riêng, inventory riêng — 11 slug gồm cả `claude-sonnet-4-6`,
 `claude-opus-4-6-thinking`, `gpt-oss-120b-medium` (xem `vendors/agy.md`).
@@ -16,9 +16,11 @@ Hệ quả của việc nhét chung:
   chỉ nhận slug `gemini-*`).
 - `watcher` không diff được catalog agy → 3.6 vào/ra không ai báo.
 
-Việc cần làm khi mở: thêm `VendorSpec("agy", binary="agy", version_cmd=["agy","--version"])`
-vào `REGISTRY`, dùng `agy models` làm nguồn catalog, giữ lane-1-của-gemini như đường tương
-thích ngược. Kèm test fixture cho ca máy không có agy.
+Đã làm đúng như dự kiến + `models_cmd` để catalog vào state.json. Còn hở, ghi lại để khỏi quên:
+- `codex`/`grok` chưa có `models_cmd` → cột "Số model" trong SNAPSHOT.md để `—`.
+  `codex debug models` trả JSON (parse_models chỉ hiểu dòng-slug), `grok models` in banner.
+- launchd bỏ lỡ lịch khi máy TẮT hẳn qua thứ 2 12:00 → chạy bù lúc boot, nhưng nếu tắt cả
+  tuần thì mất một kỳ. Chưa có cơ chế "quá hạn N ngày thì chạy ngay".
 
 ## Repos tham khảo
 
