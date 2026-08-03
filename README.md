@@ -34,6 +34,7 @@ Chạy `/polykit:doctor` bất cứ lúc nào để xem cái nào chưa sẵn s�
 | **Codex** | Cài Codex CLI → `codex login` | [docs/vendors/codex.md](docs/vendors/codex.md) |
 | **Gemini** | Cài Gemini CLI → chạy `gemini` rồi `/auth`. (Hoặc chỉ cần `GEMINI_API_KEY` cho lane API) | [docs/vendors/gemini.md](docs/vendors/gemini.md) |
 | **Grok** | Cài Grok CLI → `grok` để auth | [docs/vendors/grok.md](docs/vendors/grok.md) |
+| **Agy** (Antigravity) | CLI riêng, quota riêng. PolyKit **chưa** có vendor `agy` — hiện gọi nhờ trong lane 1 của `gemini` | [docs/vendors/agy.md](docs/vendors/agy.md) |
 | **OpenRouter** | Lấy key **free** tại [openrouter.ai/keys](https://openrouter.ai/keys), rồi 1 trong 2: `export OPENROUTER_API_KEY=...` (Windows: `setx OPENROUTER_API_KEY ...`), **hoặc** ghi vào file `~/.config/openrouter/key` (bền, không cần export mỗi shell). Model free đổi theo mùa — xem `/polykit:watcher`, đừng hardcode | [docs/vendors/openrouter.md](docs/vendors/openrouter.md) |
 
 **Chia việc đa vendor** (maker–checker, gate chống bịa số/sửa-theo-giả-định, luật PII):

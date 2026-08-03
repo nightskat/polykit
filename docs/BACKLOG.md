@@ -3,6 +3,23 @@
 > Repo/ý tưởng để mở khi PARKED items được kích hoạt (pain lặp ≥3 lần).
 > KHÔNG phải cam kết build — là kho tham khảo có chủ đích.
 
+## Việc của chính PolyKit
+
+### Tách `agy` (Antigravity) thành vendor riêng — ghi 2026-08-03
+Hiện `agy` bị nhét làm lane 1 của vendor `gemini`, nhưng nó là **CLI độc lập**: binary riêng
+(`~/.local/bin/agy` v1.1.9), quota riêng, inventory riêng — 11 slug gồm cả `claude-sonnet-4-6`,
+`claude-opus-4-6-thinking`, `gpt-oss-120b-medium` (xem `vendors/agy.md`).
+
+Hệ quả của việc nhét chung:
+- `doctor` mù với agy — agy chết chỉ thấy dispatch gemini âm thầm tụt lane.
+- 3 model không-Gemini của agy **không gọi được** qua `/polykit:dispatch` (`is_agy_model()`
+  chỉ nhận slug `gemini-*`).
+- `watcher` không diff được catalog agy → 3.6 vào/ra không ai báo.
+
+Việc cần làm khi mở: thêm `VendorSpec("agy", binary="agy", version_cmd=["agy","--version"])`
+vào `REGISTRY`, dùng `agy models` làm nguồn catalog, giữ lane-1-của-gemini như đường tương
+thích ngược. Kèm test fixture cho ca máy không có agy.
+
 ## Repos tham khảo
 
 ### OpenUsage — `github.com/robinebers/openusage` (MIT, Swift, 3k★)

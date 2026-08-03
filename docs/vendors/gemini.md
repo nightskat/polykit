@@ -25,33 +25,21 @@ API trả **33 model `gemini-*`** (03/08). Nhóm dùng được cho text/vision:
 Lane **CLI** hẹp hơn API: 8 model (2.5-flash/lite/pro, 3-flash/pro-preview, 3.1-flash-lite-preview,
 3.1-pro-preview, 3.5-flash) — **chưa có 3.6**. Muốn 3.6 phải đi lane `agy`.
 
-## Hai lane
-| Lane | Là gì | Khi nào |
+## Ba lane khi `/polykit:dispatch gemini`
+Rơi dần, lane sau thắng thì result gắn warning `degraded`:
+
+| Lane | Là gì | Ghi chú |
 |---|---|---|
-| `gemini` (CLI chính) | Gemini CLI, auth Google | Mặc định |
-| `agy` (Antigravity) | Wrapper `agy.sh` bọc Antigravity CLI — quota RIÊNG với Gemini CLI, model mới hơn | Bulk rẻ, prose/classify — value winner; kênh xả khi lane chính hết quota |
+| 1. `agy` | **CLI riêng của Antigravity** — quota riêng, model riêng (có cả 3.6, Claude, GPT-OSS) | **Không phải sản phẩm Gemini.** Xem [agy.md](agy.md). PolyKit gọi nó ở đây chỉ vì code chưa tách vendor |
+| 2. `gemini` CLI | Gemini CLI, auth Google | 8 model, **chưa có 3.6** |
+| 3. API | REST `generativelanguage.googleapis.com`, cần `GEMINI_API_KEY` | Catalog rộng nhất (33 model) |
 
-### Lane `agy` chi tiết (cập nhật 2026-08-03)
-Antigravity CLI không lưu được default model → wrapper `agy.sh` ghim model qua `--model`
-mỗi lần gọi. **Default: Gemini 3.6 Flash (Medium) — model mới nhất.**
+PolyKit map tier agy tự động trong `gemini_agy_tier()`: `auto` hoặc `gemini-3.6-*` → tier 3.6,
+`gemini-3.5-flash*` → `f35*`, `gemini-3.1-pro*` → `pro-*`. Slug **không phải Gemini** (Claude,
+GPT-OSS trong agy) đi đường này sẽ trượt lane 1 — phải gọi `agy` tay, xem [agy.md](agy.md).
 
-| Gọi | Slug thật gửi qua `--model` (03/08) |
-|---|---|
-| `agy.sh "<prompt>"` | `gemini-3.6-flash-medium` (default) |
-| `agy.sh -t low\|high "<prompt>"` | `gemini-3.6-flash-low` / `-high` |
-| `agy.sh -t f35[-low\|-high] "<prompt>"` | `gemini-3.5-flash-medium` / `-low` / `-high` — **tier tiết kiệm quota**, dùng cho bulk |
-| `agy.sh -t pro-low\|pro-high "<prompt>"` | `gemini-3.1-pro-low` / `-high` — long-doc, việc khó |
-| `agy.sh -- --model <slug> --effort high -p "…"` | Bypass wrapper (Claude/GPT-OSS trong Antigravity không có tier tắt) |
-
-PolyKit map tier tự động trong `gemini_agy_tier()`: model `auto` hoặc `gemini-3.6-*` → tier
-3.6, `gemini-3.5-flash*` → `f35*`, `gemini-3.1-pro*` → `pro-*`.
-
-Quy tắc chọn: việc thường → default 3.6 · bulk/volume → `f35` · khó/dài → `pro-high`.
-Lưu ý: `agy models` thỉnh thoảng trả output rỗng → doctor giữ catalog cũ + đánh dấu `stale`
-(catalog trong state.json có thể cũ hơn thực tế script — script mới là nguồn đúng của lane này).
-
-Máy mới không có Antigravity/`agy.sh`: lane tự degrade, dùng CLI chính. `agy` là tiện ích
-máy-riêng, không phải thành phần bắt buộc của PolyKit.
+Máy không có Antigravity: lane 1 tự degrade xuống CLI. `agy` là tiện ích máy-riêng, không phải
+thành phần bắt buộc của PolyKit.
 
 ## Cài & auth
 ```
