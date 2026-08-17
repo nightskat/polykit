@@ -5,18 +5,26 @@
     "Mặc định của MỌI CLI đều là tầng model rẻ nhất của nó. Không ghim model = nhận tầng đáy.",
     "Mã thoát của các CLI này KHÔNG đáng tin — cả agy/codex/grok đều có kiểu chết mà vẫn exit 0. Nghiệm thu bằng kích thước file kết quả.",
     "Quota tính theo HỌ model, không theo vendor: agy có Gemini / Claude / GPT-OSS là ba túi quota riêng, họ Google nhiều nhất.",
-    "models PHẢI là list các string, hoặc null nếu chưa biết. zero_quota_cmds PHẢI là mảng các chuỗi lệnh shell đầy đủ."
+    "models PHẢI là list các string, hoặc null nếu chưa biết. zero_quota_cmds PHẢI là mảng các chuỗi lệnh shell đầy đủ.",
+    "CHỈ đăng ký vendor có MODEL + QUOTA riêng. opencode/goose/zeroclaw là LỚP VỎ gọi OpenRouter — không model riêng, không quota riêng, chỉ khác cú pháp; đăng ký chúng là đăng ký 3 vỏ cho cùng một nhân, và là gốc của mọi lỗi 'model bịa'/'served_model null'. Cần OpenRouter thì gọi thẳng vendor `openrouter`. jules khác LOẠI (làm PR trên repo từ xa, không nhận prompt) nên không thuộc dispatch. Cài 4 cái đó là để xem UI/harness, chưa test tử tế — ghi ở docs/vendors/, không ở đây."
   ],
   "vendors": {
     "agy": {
       "binary": "agy",
       "auth_hint": "chạy `agy` để auth (Antigravity account)",
       "headless": "agy --print '<prompt>'",
-      "headless_aliases": ["-p", "--prompt"],
+      "headless_aliases": [
+        "-p",
+        "--prompt"
+      ],
       "auto_approve": "--dangerously-skip-permissions",
       "model_flag": "--model",
       "effort_flag": "--effort",
-      "effort_values": ["low", "medium", "high"],
+      "effort_values": [
+        "low",
+        "medium",
+        "high"
+      ],
       "timeout_flag": "--print-timeout",
       "timeout_default": "5m",
       "workdir_flag": null,
@@ -25,16 +33,30 @@
       "resume": "--continue | -c | --conversation <ID>",
       "list_models": "agy models",
       "models": [
-        "gemini-3.7-flash-high", "gemini-3.7-flash-medium", "gemini-3.7-flash-low",
-        "gemini-3.6-flash-high", "gemini-3.5-flash-high", "gemini-3.1-pro-high", "gemini-3.1-pro-low",
-        "claude-sonnet-4-6", "claude-opus-4-6-thinking",
+        "gemini-3.7-flash-high",
+        "gemini-3.7-flash-medium",
+        "gemini-3.7-flash-low",
+        "gemini-3.6-flash-high",
+        "gemini-3.5-flash-high",
+        "gemini-3.1-pro-high",
+        "gemini-3.1-pro-low",
+        "claude-sonnet-4-6",
+        "claude-opus-4-6-thinking",
         "gpt-oss-120b-medium"
       ],
       "default_model": "gemini-3.7-flash-high",
       "default_model_note": "Tuan chỉnh tay 17/08 (trước đó 3.6). Mặc định ăn ngay ở phiên --print.",
       "quota": "Gói $20/tháng. Quota RIÊNG theo HỌ model, hạ tầng Google — KHÔNG đụng thuê bao Anthropic. Đo 17/08: Gemini tuần còn 87%, Claude/GPT tuần còn 95%. Họ Google rộng nhất.",
       "verify_cmd": "agy -p '/model'",
-      "zero_quota_cmds": ["agy -p '/model'", "agy -p '/usage'", "agy -p '/config'", "agy -p '/changelog'", "agy -p '/help'", "agy -p '/permissions'", "agy -p '/hooks'"],
+      "zero_quota_cmds": [
+        "agy -p '/model'",
+        "agy -p '/usage'",
+        "agy -p '/config'",
+        "agy -p '/changelog'",
+        "agy -p '/help'",
+        "agy -p '/permissions'",
+        "agy -p '/hooks'"
+      ],
       "traps": [
         "KHÔNG TTY (nohup/nền) → lỗi `bubbletea: could not open TTY` in ra STDOUT, exit 0 → THÀNH CÔNG GIẢ",
         "Có thể NUỐT PROMPT ĐẦU TIÊN khi đi kiểm tư cách tài khoản — chỉ ở lần gọi đầu sau khi nghỉ lâu (Tuan đã va thật)",
@@ -57,11 +79,17 @@
       "output_format": null,
       "resume": "--resume <session>",
       "list_models": "curl -H 'Authorization: Bearer $DEEPSEEK_API_KEY' https://api.deepseek.com/models",
-      "models": ["deepseek-v4-pro", "deepseek-v4-flash"],
+      "models": [
+        "deepseek-v4-pro",
+        "deepseek-v4-flash"
+      ],
       "default_model": "deepseek-v4-flash",
       "quota": "Trả theo lượt. Số dư: curl .../user/balance. Đo 17/08: $0,39 cho 4 việc thật. Giảm giá 16:30-00:30 UTC (23:30-07:30 giờ VN).",
       "verify_cmd": "dsh --profile headless --dump-config",
-      "zero_quota_cmds": ["dsh --profile headless --dump-config", "dsh --profile headless --dump-default-config"],
+      "zero_quota_cmds": [
+        "dsh --profile headless --dump-config",
+        "dsh --profile headless --dump-default-config"
+      ],
       "traps": [
         "deepseek-v4-flash TRẢ VỀ RỖNG trên task nhiều bước — đã tái hiện 2 lần (14/08, 16/08). Việc thật phải ghim v4-pro",
         "Không đọc Keychain — key phải bơm qua biến môi trường, thiếu thì MISSING_CREDENTIAL",
@@ -83,7 +111,10 @@
       "schema_flag": "--json-schema",
       "resume": "-c, --continue",
       "list_models": "grok models",
-      "models": ["grok-4.6", "grok-4.5"],
+      "models": [
+        "grok-4.6",
+        "grok-4.5"
+      ],
       "default_model": "grok-4.6",
       "quota": "Trong sub xAI. Tuan chưa bao giờ dùng hết.",
       "verify_cmd": "grok models",
@@ -104,11 +135,21 @@
       "output_format": "--json (JSONL stream) | -o FILE (ghi câu trả lời cuối ra file) | --output-schema FILE",
       "resume": "codex exec resume [--last | SESSION_ID]",
       "list_models": "codex debug models",
-      "models": ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "codex-auto-review"],
+      "models": [
+        "gpt-5.6-sol",
+        "gpt-5.6-terra",
+        "gpt-5.6-luna",
+        "gpt-5.5",
+        "gpt-5.4",
+        "gpt-5.4-mini",
+        "codex-auto-review"
+      ],
       "default_model": "gpt-5.6-terra",
       "quota": "Gói ChatGPT — giới hạn 5 giờ + tuần.",
       "verify_cmd": "codex doctor",
-      "zero_quota_cmds": ["codex doctor"],
+      "zero_quota_cmds": [
+        "codex doctor"
+      ],
       "traps": [
         "THIẾU `< /dev/null` là TREO đợi EOF — đo thật: exit 124 khi timeout. In `Reading additional input from stdin...`",
         "Ngoài git repo → exit 1, cần --skip-git-repo-check",
@@ -146,48 +187,10 @@
       "default_model": "claude-opus-5",
       "quota": "~$200/tháng Anthropic. ĐẮT NHẤT — dành cho điều phối/nghiệm thu, không gõ tay việc cơ khí.",
       "verify_cmd": "claude --version",
-      "traps": ["`claude models` tưởng là lệnh nhưng bị hiểu là prompt → tốn một lượt vô ích"],
+      "traps": [
+        "`claude models` tưởng là lệnh nhưng bị hiểu là prompt → tốn một lượt vô ích"
+      ],
       "vai": "Orchestrator + nghiệm thu."
-    },
-    "opencode": {
-      "binary": "opencode",
-      "headless": "opencode run '<prompt>' < /dev/null",
-      "workdir_flag": "--dir",
-      "output_format": "--format default|json",
-      "list_models": "opencode models [provider]",
-      "default_model": "qwen/qwen3.7-flash",
-      "provider_note": "openrouter",
-      "quota": "OpenRouter, trả theo lượt",
-      "vai": "CHƯA GIAO VIỆC BAO GIỜ — cần quyết: giao việc thật hay gỡ."
-    },
-    "goose": {
-      "binary": "goose",
-      "workdir_flag": null,
-      "workdir_note": "Kế thừa CWD, phải `cd` trước",
-      "output_format": "--output-format text|json|stream-json (cần thêm -q để ra JSON sạch)",
-      "list_models": "goose local-models list (chỉ model local)",
-      "default_model": "google/gemini-2.5-flash",
-      "provider_note": "openrouter",
-      "vai": "CHƯA GIAO VIỆC BAO GIỜ — cần quyết."
-    },
-    "zeroclaw": {
-      "binary": "zeroclaw",
-      "workdir_flag": null,
-      "workdir_note": "Qua env ZEROCLAW_WORKSPACE",
-      "list_models": "zeroclaw models list",
-      "default_model": "openrouter/free",
-      "quota": "MIỄN PHÍ (OpenRouter free tier)",
-      "vai": "CHƯA GIAO VIỆC BAO GIỜ — ứng viên cho lane rác/ca đêm."
-    },
-    "jules": {
-      "binary": "jules",
-      "workdir_flag": null,
-      "repo_flag": "--repo <owner/repo>",
-      "output_format": "Không có --json; `remote list` ra bảng text, `remote pull` ra git diff",
-      "list_models": "Không có — chạy qua Google Cloud SWE-bot backend",
-      "default_model": "Google Jules Agent",
-      "provider_note": "không expose tên model",
-      "vai": "Coding bất đồng bộ trên repo. DẠO NÀY ÍT DÙNG — cần xem lại vai."
     }
   }
 }

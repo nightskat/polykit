@@ -4,16 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Trạng thái hiện tại
 
-**v0.1 code hoàn chỉnh — 6/6 milestone xong (M1a→M1b→M1c→M3→M2→M4).** 65 test pass.
+**v0.1 code hoàn chỉnh — 6/6 milestone xong (M1a→M1b→M1c→M3→M2→M4).** 152 test pass.
 Đọc `SPEC.md` (v0.1.2) cho scope/nguyên tắc, `docs/M1A-INVENTORY.md` cho quyết định gom tooling.
 
 ### Chạy
 ```
-python bin/doctor.py            # trạng thái vendor (state machine)
-echo "prompt" | python bin/dispatch.py <codex|gemini|claude|grok> [model] --result-json
-python bin/failover.py --pressure 85     # quota failover proactive/reactive
-python bin/watcher.py --dry-run          # diff model/version weekly
-~/.pyenv/versions/3.11.8/bin/python -m pytest tests/ -q   # 65 test
+python3 bin/doctor.py            # trạng thái vendor (state machine)
+# Ví dụ dispatch:
+printf "prompt" | python3 bin/dispatch.py agy auto --result-json
+python3 bin/failover.py --pressure 85 --dry-run # quota failover proactive/reactive
+python3 bin/watcher.py --dry-run          # diff model/version weekly
+~/.pyenv/versions/3.11.8/bin/python -m pytest tests/ -q               # 152 test
 ```
 
 ### Map module → milestone

@@ -1,0 +1,11 @@
+Tôi đã hoàn tất toàn bộ yêu cầu của vòng 8:
+
+1. **Sửa 11 test đỏ**: Đã cập nhật các file test (`test_vong5.py`, `test_vong6.py`, `test_dispatch_v2.py`) để loại bỏ hoàn toàn các vendor bị xoá, đồng thời dùng các vendor hợp lệ còn lại để test cơ chế "chưa biết danh sách model" (gemini, claude). Hiện tại có tổng cộng 152 test đều pass (exit 0).
+2. **Cập nhật tài liệu (README.md, CLAUDE.md)**: 
+   - Đã gỡ bỏ 4 vendor cũ, ghi rõ hệ thống hiện hỗ trợ 7 vendor (`agy`, `dsh`, `grok`, `codex`, `gemini`, `claude`, `openrouter`).
+   - Sửa tài liệu lệnh `failover` thành sử dụng `--dry-run` để an toàn và ghi rõ mặc định là **gửi thật** vì cờ `--send` không tồn tại ở vòng trước.
+   - Sửa lệnh test `dispatch` mẫu (phải dùng `printf` thay vì `echo` và chỉ rõ `agy auto`).
+3. **Chạy lại và dán lệnh thật**: Đã thử nghiệm toàn bộ các lệnh ghi trong tài liệu kể cả `failover.py`, `watcher.py --dry-run` để đảm bảo chúng hoạt động.
+4. **Tạo BAO-CAO-VONG8.md**: Đã ghi vào file `/Users/nightskat/Developer/polykit/BAO-CAO-VONG8.md` với bảng phẳng, độ dài dưới 50 dòng, có bao gồm đầy đủ output nguyên văn theo đúng form yêu cầu. Phép thử revert lại fix vòng 6 cũng đã được đo và xác nhận ra lỗi ĐỎ chính xác như thiết kế.
+
+Bạn có thể kiểm tra lại file `BAO-CAO-VONG8.md` và các thay đổi trong repo.

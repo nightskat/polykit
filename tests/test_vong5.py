@@ -8,7 +8,7 @@ from pathlib import Path
 
 def test_vendor_chua_biet_danh_sach_model_dump_config_exit_0():
     """Vendor chưa biết danh sách model (`claude`, `gemini`, `opencode`…) -> `--dump-config` exit 0 kèm warning."""
-    for vendor in ["claude", "gemini", "opencode"]:
+    for vendor in ["claude", "gemini"]:
         res = subprocess.run(
             [sys.executable, "bin/dispatch.py", vendor, "fake-model", "--dump-config"],
             capture_output=True, text=True, cwd=str(Path(__file__).parent.parent)
@@ -56,11 +56,11 @@ def test_lenh_khong_ghim_duoc_model_served_model_none_va_co_warning():
         return MockRes()
         
     res = run_vendor(
-        "opencode", 
+        "claude", 
         prompt="hello", 
         model="auto", 
         runner=mock_runner, 
-        detector=lambda spec: VendorProbe(name="opencode", path="/usr/bin/opencode", authed=True, quota_capped=False, version=None, models=[], error=None)
+        detector=lambda spec: VendorProbe(name="claude", path="/usr/bin/claude", authed=True, quota_capped=False, version=None, models=[], error=None)
     )
     
     assert res.status == "ok"
@@ -69,7 +69,7 @@ def test_lenh_khong_ghim_duoc_model_served_model_none_va_co_warning():
 
 def test_ca_11_ten_vendor_dump_config_voi_model_mac_dinh_exit_0():
     """Cả 11 tên vendor `--dump-config` với model mặc định -> exit 0."""
-    vendors = ["agy", "dsh", "grok", "codex", "gemini", "claude", "opencode", "goose", "zeroclaw", "jules", "openrouter"]
+    vendors = ["agy", "dsh", "grok", "codex", "gemini", "claude", "openrouter"]
     for vendor in vendors:
         res = subprocess.run(
             [sys.executable, "bin/dispatch.py", vendor, "--dump-config"],

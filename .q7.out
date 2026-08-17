@@ -1,0 +1,14 @@
+Bắt đầu vòng 7: đọc spec/báo cáo/docs rồi chạy lại lệnh thật — không tin số khai, ghi file ngay khi có chỗ hỏng đầu tiên.Đã có spec và docs. Tiếp theo chạy lệnh thật: cảnh báo trùng, pytest, dump-config, và mọi ví dụ trong README/CLAUDE.Đang đọc logic cảnh báo và chạy song song các lệnh bắt buộc.`commands/dispatch.md` vẫn liệt kê 5 vendor. Tiếp theo chạy hết lệnh bắt buộc và đối chiếu từng số trong báo cáo.Cảnh báo trùng đã hết. Tiếp tục chạy pytest, dump-config, và mọi lệnh ví dụ trong docs.Phát hiện đầu tiên: `python3 -m pytest` trong CLAUDE.md fail (3.14 không có pytest) — maker khai 152 passed. Ghi file rồi chạy nốt các lệnh còn lại.README ghi `--send` và mặc định dry-run — CLI thì không. Đang chạy nốt ví dụ và kiểm lệnh giả.Lệnh CLAUDE.md có `<agy|dsh|...>` — shell sẽ hiểu là redirect. Chạy nguyên văn và các lệnh còn lại.Lệnh mẫu đang treo — dừng ngay rồi chạy lại có timeout.Đã đủ bằng chứng. Đang ghi báo cáo cuối: lệnh mẫu trong CLAUDE.md vừa gãy, vừa đẻ process vendor thật.**HỎNG 4 CHỖ** — ghi ở `DAP-VONG7.md` (37 dòng).
+
+Vá warning trùng **đã xong**. Tài liệu cho người lạ **gãy**. `$PY -m pytest` = `152 passed` EXIT 0. 11/11 `--dump-config` EXIT 0.
+
+| # | Mức | Chỗ hỏng | Bằng chứng |
+|---|---|---|---|
+| 1 | 🔴 | `CLAUDE.md` đổi `$PY -m pytest` (chạy được) → `python3 -m pytest` | `No module named pytest` **EXIT 1**. Maker khai `152 passed in 11.53s`. |
+| 2 | 🔴 | Copy nguyên khối dispatch 11 vendor trong `CLAUDE.md` | zsh biến thành pipeline: goose panic, dsh thiếu profile, gemini… **EXIT 127**. |
+| 3 | 🟡 | README/`commands/failover.md` bịa `--send`, bảo mặc định dry-run | `--send` → `unrecognized arguments` **EXIT 2**. Không `--dry-run` = gửi Telegram thật. |
+| 4 | 🟡 | Soát docs nửa vời | `/polykit:dispatch` còn 5 vendor. `doctor.py` in 7/11. Schema thiếu `default_model`/`model_override`. Còn `detect 4 vendor`. |
+
+**Vòng 6 đã hết:** text + JSON in warning đúng 1 lần, vẫn còn trên text. Revert filter → `got 2` EXIT 1; restore → pass.
+
+**Khai khống:** hết `python` trần, hết dispatch không prompt. Còn: `python3 -m pytest` (không chạy) và watcher `agy ready→auth_unverified` (thật = `no_change`).

@@ -209,9 +209,11 @@ def main():
             # Print failure details to stderr
             sys.stderr.write(f"ERROR: {result.summary}\n")
             if result.warnings:
-                sys.stderr.write("Warnings:\n")
-                for warning in result.warnings:
-                    sys.stderr.write(f"  - {warning}\n")
+                filtered_warnings = [w for w in result.warnings if "không nhận cờ model" not in w]
+                if filtered_warnings:
+                    sys.stderr.write("Warnings:\n")
+                    for warning in filtered_warnings:
+                        sys.stderr.write(f"  - {warning}\n")
 
     sys.exit(0 if result.status == "ok" else 1)
 

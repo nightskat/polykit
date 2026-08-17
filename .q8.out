@@ -1,0 +1,14 @@
+Bắt đầu vòng 8: đọc spec, báo cáo maker, rồi chạy từng lệnh — không tin số chưa tự đo.Đọc README, CLAUDE, DAP vòng 7 và failover để lấy danh sách lệnh cần chạy thật.Chạy pytest, dump-config 7 tên, `--help`, rồi lần lượt lệnh trong README/CLAUDE.Pytest 152 passed. `commands/failover.md` vẫn còn `--send` — ghi file rồi chạy nốt lệnh tài liệu.Dump-config 7/7 thoát 0. Đợi lệnh CLAUDE.md (agy đang chạy) và song song kiểm failover, revert, README.Watcher maker khai lệch. Tiếp: revert vòng 6, soi test remap, và kiểm failover không `--dry-run` qua notifier giả.Đã thấy `commands/failover.md` sót `--send` và watcher maker khai lệch. Tiếp: revert vòng 6, grok `served_model`, failover giả notifier.Claude bị gán `served_model=None` dù `build_claude_cmd` có `--model` — đo thật rồi revert.Lệnh song song đã đụng file revert — chạy lại nhánh error/quota trên code đã khôi phục, rồi failover giả notifier.Đủ bằng chứng. Viết báo cáo cuối: Claude nói dối `served_model`, failover gửi thật, tài liệu sót.**HỎNG 4 CHỖ.** Báo cáo: `DAP-VONG8.md`.
+
+`$PY -m pytest tests/ -q` → **152 passed, 0 failed**. 7/7 `--dump-config` exit 0. 4 vendor đã gỡ không còn trong `--help`.
+
+| # | Mức | Lỗi mới |
+|---|---|---|
+| 1 | 🔴 | Remap test `opencode`→`claude` rồi **đổi nhánh claude**: `served_model=null` + warning «không nhận cờ model». Lệnh thật là `--model claude-opus-5`. Evidence giấu model đã ghim. Test vong6 **khoá đúng hành vi sai**. |
+| 2 | 🔴 | `commands/failover.md` vẫn `--send` → **EXIT 2**. Thiếu `--dry-run` trên CLI **gọi notifier thật** (`notified: true`). README nói plugin «mặc định GỬI THẬT» — plugin **luôn** gắn `--dry-run`. |
+| 3 | 🟡 | `commands/dispatch.md` còn 5 vendor, thiếu `agy` `dsh`. |
+| 4 | 🟡 | Test «thêm vendor = sửa JSON» đổi sang `claude` hardcoded. `CLAUDE.md` M1b còn `detect 4 vendor`. |
+
+**Việc giao đã xanh:** pytest không bị cắt · 7 dump-config · 4 tên gỡ bị argparse từ chối · revert vòng 6 → 3 test đỏ (`Expected None, got claude-opus-5`) · khối CLAUDE.md hết `<a|b|c>` và hết `python3 -m pytest`.
+
+**Khai khống:** `python` trần / `python3 -m pytest` / dispatch thiếu prompt — **hết**. Watcher họ ghi `agy ready→auth_unverified; agy -14 models` — **lệch**, thực tế `{"action":"noop","reason":"no_change"}`.

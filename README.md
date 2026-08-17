@@ -19,39 +19,46 @@ Xong. Mở session mới, gõ `/polykit:doctor` xem trạng thái.
 |---|---|
 | `/polykit:doctor` | Bảng trạng thái mọi vendor (`ready` / `installed_not_authed` / `auth_unverified` / `not_installed` / `quota_capped`) + hint phù hợp |
 | `/polykit:dispatch <vendor> [model] -- <prompt>` | Giao task; vendor thiếu → degraded result, không lỗi |
-| `/polykit:failover --pressure N` | Quota còn thấp → gợi ý handoff (mặc định `--dry-run`, thêm `--send` để ping Telegram thật) |
+| `/polykit:failover --pressure N` | Quota còn thấp → gợi ý handoff (mặc định GỬI THẬT, thêm `--dry-run` để an toàn không gửi) |
 | `/polykit:watcher` | Diff model/version vendor so tuần trước, báo khi đổi |
 
-Chạy trực tiếp không qua Claude cũng được: `python3 bin/doctor.py`, `echo "prompt" | python3 bin/dispatch.py codex --result-json`, v.v.
+Chạy trực tiếp không qua Claude cũng được: `python3 bin/doctor.py`, `printf "prompt" | python3 bin/dispatch.py codex --result-json`, v.v.
+
+Các cờ mở rộng của `bin/dispatch.py`:
+- `--doctor`: Chạy lệnh `verify_cmd` cho vendor và in trạng thái.
+- `--allow-unknown-model`: Cho phép gọi các model không có mặt trong danh sách JSON.
+- `--no-traps`: Ẩn các cảnh báo trap trên stderr.
+- `--dump-config`: In cấu hình vendor và thoát.
 
 ## Vendor — cài & auth
-Chạy `/polykit:doctor` bất cứ lúc nào để xem cái nào chưa sẵn sàng + lệnh auth cụ thể.
-**User guide đầy đủ từng vendor** (thế mạnh, điểm yếu đã ghi nhận, PII, sự cố): `docs/vendors/`.
+Chạy `/polykit:doctor` bất cứ lúc nào để xem cái nào chưa sẵn sàng + lệnh auth cụ thể. PolyKit hỗ trợ 7 vendor: `agy, dsh, grok, codex, gemini, claude, openrouter`.
 
-| Vendor | Cách sẵn sàng | Guide |
-|---|---|---|
-| **Claude** | Đã auth sẵn qua Claude Code (host) | [docs/vendors/claude.md](docs/vendors/claude.md) |
-| **Codex** | Cài Codex CLI → `codex login` | [docs/vendors/codex.md](docs/vendors/codex.md) |
-| **Gemini** | Cài Gemini CLI → chạy `gemini` rồi `/auth`. (Hoặc chỉ cần `GEMINI_API_KEY` cho lane API) | [docs/vendors/gemini.md](docs/vendors/gemini.md) |
-| **Grok** | Cài Grok CLI → `grok` để auth | [docs/vendors/grok.md](docs/vendors/grok.md) |
-| **Agy** (Antigravity) | CLI riêng, quota riêng. PolyKit **chưa** có vendor `agy` — hiện gọi nhờ trong lane 1 của `gemini` | [docs/vendors/agy.md](docs/vendors/agy.md) |
-| **OpenRouter** | Lấy key **free** tại [openrouter.ai/keys](https://openrouter.ai/keys), rồi 1 trong 2: `export OPENROUTER_API_KEY=...` (Windows: `setx OPENROUTER_API_KEY ...`), **hoặc** ghi vào file `~/.config/openrouter/key` (bền, không cần export mỗi shell). Model free đổi theo mùa — xem `/polykit:watcher`, đừng hardcode | [docs/vendors/openrouter.md](docs/vendors/openrouter.md) |
+| Vendor | Cách sẵn sàng |
+|---|---|
+| **Claude** | Đã auth sẵn qua Claude Code (host). |
+| **Codex** | Cài Codex CLI → `codex login`. |
+| **Gemini** | Cài Gemini CLI → chạy `gemini` rồi `/auth`. Hoặc chỉ cần biến môi trường `GEMINI_API_KEY`. |
+| **Grok** | Cài Grok CLI → `grok` để auth. |
+| **Agy** | Cài Antigravity CLI → chạy `agy` để auth. |
+| **Dsh** | Cài Dsh CLI → export `DEEPSEEK_API_KEY=...` trong môi trường (bắt buộc, ví dụ qua `~/.zshrc`). |
+| **OpenRouter** | Ghi API key vào file `~/.config/openrouter/key` hoặc export `OPENROUTER_API_KEY`. |
 
-**Chia việc đa vendor** (maker–checker, gate chống bịa số/sửa-theo-giả-định, luật PII):
-[docs/CHIA-VIEC.md](docs/CHIA-VIEC.md).
+## Tuỳ biến JSON (config/vendors.json)
+Người dùng có thể thêm vendor mới bằng cách chỉnh sửa JSON schema với các trường:
+- `headless`: Lệnh chạy CLI dạng không-cần-người-dùng (ví dụ: `vendor-cli -p '<prompt>'`).
+- `model_flag`: Cờ dùng để chỉ định model (ví dụ: `-m` hoặc `--model`).
+- `models`: Danh sách các model hỗ trợ (list các string).
+- `traps`: Danh sách các cảnh báo, lỗi tiềm ẩn khi dùng vendor (list string).
+- `zero_quota_cmds`: Lệnh chạy không tốn token dùng để verify auth (`--doctor`).
 
 ## Mac vs Windows
 - **doctor / dispatch / failover**: chạy y hệt cả hai (Python stdlib).
 - **watcher tự chạy hàng tuần**: Mac dùng `launchd`, Windows dùng `schtasks` — tự chọn theo OS. Linux: chạy watcher thủ công (cron adapter chưa làm).
-- Ping Telegram (failover `--send`): mặc định trỏ script của tác giả. Máy khác đặt `POLYKIT_NOTIFIER` trỏ script gửi tin của bạn, hoặc bỏ qua (chỉ hiện message).
 
 ## Nguyên tắc
 - Vendor thiếu/chưa auth/hết quota → **degrade rõ ràng**, không bao giờ crash.
 - Claude lane bị **giới hạn** (plan-mode, không tool) theo ToS — không dùng làm worker.
 - State (cache) tự sinh; xoá được, tự tạo lại.
-- **PII thật (tên/CIF/MST/số dư khách hàng) không rời Claude host** — muốn dispatch phải khử
-  định danh trước. Chi tiết: `docs/CHIA-VIEC.md` §PII.
-- Docs không phải nguồn sự thật về model/version — `/polykit:doctor` mới là. Số trong docs chỉ
-  là snapshot có ghi ngày.
+- Các PII thật phải khử định danh trước khi dispatch.
 
 MIT. Repo: github.com/nightskat/polykit

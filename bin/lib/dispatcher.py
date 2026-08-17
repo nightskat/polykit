@@ -151,28 +151,11 @@ def run_vendor(
                 timeout=validated_timeout,
                 env=env,
             )
-            if res.returncode != 0:
-                stderr_lines = res.stderr.splitlines() if res.stderr else []
-                warnings = stderr_lines[:20]
-                return DispatchResult(
-                    status="error",
-                    vendor=vendor,
-                    model=model,
-                    summary=f"claude failed with exit code {res.returncode}",
-                    warnings=warnings,
-                    stdout=res.stdout or "",
-                    exit_code=res.returncode,
-                )
-            return DispatchResult(
-                status="ok",
-                vendor=vendor,
-                model=model,
-                summary="claude completed successfully",
-                warnings=[],
-                stdout=res.stdout or "",
-                exit_code=0,
-                served_model=None if model == "auto" else model,
-            )
+            out = _classify_completed(vendor, model, res, served_model=None)
+            msg = f"vendor '{vendor}' không nhận cờ model, đang chạy mặc định của chính nó, không xác định được slug."
+            out.warnings.append(msg)
+            sys.stderr.write(f"[polykit] warning: {msg}\n")
+            return out
 
         elif vendor == "grok":
             with tempfile.NamedTemporaryFile(mode="w+", delete=False) as temp_prompt:

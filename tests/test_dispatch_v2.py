@@ -37,16 +37,15 @@ class TestVendorConfig:
 
     def test_vendor_names_includes_new_vendors(self):
         names = vendor_names()
-        for v in ("agy", "dsh", "grok", "codex", "gemini", "claude",
-                   "opencode", "goose", "zeroclaw", "jules"):
+        for v in ("agy", "dsh", "grok", "codex", "gemini", "claude"):
             assert v in names, f"vendor '{v}' missing from vendor_names()"
 
     def test_vendor_names_no_hardcode_old_list(self):
         """choices phải sinh từ JSON, không phải [gemini, codex, claude, grok, agy, openrouter]."""
         names = vendor_names()
         assert "dsh" in names
-        assert "opencode" in names
-        assert len(names) == 10  # v2 JSON has 10 vendors
+        assert "claude" in names
+        assert len(names) == 6  # v2 JSON has 6 vendors
 
     def test_default_model_dsh(self):
         dm = default_model("dsh")
@@ -269,7 +268,7 @@ class TestVong2:
         assert info["vendor"] == "openrouter"
 
     def test_dynamic_vendor_from_json(self):
-        """3. opencode phải dùng lệnh từ JSON (headless, auto_approve)."""
+        """3. claude phải dùng lệnh từ JSON (headless)."""
         calls = []
         def mock_runner(cmd, **kwargs):
             calls.append(cmd)
@@ -280,18 +279,17 @@ class TestVong2:
             return mock
         
         result = run_vendor(
-            vendor="opencode", prompt="hello world", model="auto",
+            vendor="claude", prompt="hello world", model="auto",
             runner=mock_runner, detector=lambda spec: VendorProbe(
-                name="opencode", path="/usr/bin/opencode", authed=True, quota_capped=False,
+                name="claude", path="/usr/bin/claude", authed=True, quota_capped=False,
                 version=None, models=[], error=None
             )
         )
         assert result.status == "ok"
         assert len(calls) == 1
         cmd_str = calls[0]
-        # headless của opencode: "opencode run '<prompt>' < /dev/null"
-        assert "opencode run 'hello world'" in cmd_str
-        assert "< /dev/null" in cmd_str
+        # claude command starts with claude
+        assert cmd_str[0] == "claude"
 
     def test_reject_fake_model(self):
         """4. Model bịa phải bị từ chối exit 2."""

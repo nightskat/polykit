@@ -1,0 +1,11 @@
+Đã hoàn tất các yêu cầu của Vòng 7.
+
+1. **Vá lỗi cảnh báo in trùng**: Đã sửa tại `bin/dispatch.py`, bảo vệ nhánh in lại mảng `warnings[]` trong chế độ text (nếu mảng lỗi chứa cảnh báo `không nhận cờ model` vốn đã được in trực tiếp ra stderr từ `run_vendor` trong `bin/lib/dispatcher.py` thì sẽ bỏ qua để không in lặp lại). Thay đổi này giữ nguyên cảnh báo ở chế độ `--result-json` và text mode nhánh success.
+2. **Cập nhật Test (Revert test đỏ)**: Đã thêm `test_vong7_text_duplicate_warning` tại `tests/test_vong6.py` để đếm chính xác số lần xuất hiện của dòng cảnh báo ở `res.stderr` (expect == 1). Lệnh `pytest tests/ -q` pass toàn bộ (152 passed).
+3. **Cập nhật tài liệu**: Đã soát và chạy thử toàn bộ lệnh trong `CLAUDE.md` và `README.md`. 
+   - Thay thế `python` bằng `python3`.
+   - Cập nhật số lượng danh sách vendor lên 11 và số test lên 152.
+   - Bổ sung tài liệu giải thích cấu trúc/schema mới trong `config/vendors.json` (headless, models, traps,...).
+   - Thêm phần giải thích các tuỳ chọn cờ mới `--doctor`, `--no-traps`, `--allow-unknown-model`.
+   - Cập nhật hướng dẫn thêm `DEEPSEEK_API_KEY` cho vendor `dsh`.
+4. **Báo cáo**: Đã tạo file `BAO-CAO-VONG7.md` thỏa mãn các ràng buộc cứng và chứa tất cả log chạy thực tế theo đúng yêu cầu.
