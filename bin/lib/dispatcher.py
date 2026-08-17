@@ -96,7 +96,9 @@ def run_vendor(
     # 2. Probe detector
     # EXCEPTION: gemini có nhiều lane không phụ thuộc chỉ 1 binary
     if vendor != "gemini":
-        if vendor not in REGISTRY:
+        from lib.vendor_config import load_vendor_config
+        cfg = load_vendor_config()
+        if vendor not in REGISTRY and vendor not in cfg.get("vendors", {}):
             return DispatchResult(
                 status="blocked",
                 vendor=vendor,
@@ -105,17 +107,19 @@ def run_vendor(
                 warnings=[],
                 reason="unknown_vendor"
             )
-        probe = detector(REGISTRY[vendor])
-        state = classify(probe)
-        if state != VendorState.READY:
-            return DispatchResult(
-                status="skipped",
-                vendor=vendor,
-                model=model,
-                summary=f"vendor {vendor} skipped: {state.value}",
-                warnings=[],
-                reason=state.value,
-            )
+        
+        if vendor in REGISTRY:
+            probe = detector(REGISTRY[vendor])
+            state = classify(probe)
+            if state != VendorState.READY:
+                return DispatchResult(
+                    status="skipped",
+                    vendor=vendor,
+                    model=model,
+                    summary=f"vendor {vendor} skipped: {state.value}",
+                    warnings=[],
+                    reason=state.value,
+                )
 
     # 3. env con
     env = os.environ.copy()
@@ -281,14 +285,71 @@ def run_vendor(
                                   warnings=[r.error or ""], exit_code=r.http_code or 1)
 
         else:
-            return DispatchResult(
-                status="blocked",
-                vendor=vendor,
-                model=model,
-                summary=f"unknown vendor: {vendor}",
-                warnings=[],
-                reason="unknown_vendor"
+            # Handle dynamic vendors from JSON
+            cfg = load_vendor_config()
+            v_cfg = cfg.get("vendors", {}).get(vendor, {})
+            if not v_cfg:
+                return DispatchResult(
+                    status="blocked",
+                    vendor=vendor,
+                    model=model,
+                    summary=f"unknown vendor: {vendor}",
+                    warnings=[],
+                    reason="unknown_vendor"
+                )
+                
+            headless_tpl = v_cfg.get("headless")
+            if not headless_tpl:
+                return DispatchResult(
+                    status="blocked",
+                    vendor=vendor,
+                    model=model,
+                    summary=f"vendor {vendor} missing fields in JSON: headless",
+                    warnings=[],
+                    reason="missing_fields"
+                )
+                
+            import shlex
+            cmd = headless_tpl
+            input_data = None
+            if "'<prompt>'" in cmd:
+                cmd = cmd.replace("'<prompt>'", shlex.quote(prompt))
+            elif '"<prompt>"' in cmd:
+                cmd = cmd.replace('"<prompt>"', shlex.quote(prompt))
+            elif "<prompt>" in cmd:
+                cmd = cmd.replace("<prompt>", shlex.quote(prompt))
+            elif "'<task>'" in cmd:
+                cmd = cmd.replace("'<task>'", shlex.quote(prompt))
+            elif '"<task>"' in cmd:
+                cmd = cmd.replace('"<task>"', shlex.quote(prompt))
+            elif "<task>" in cmd:
+                cmd = cmd.replace("<task>", shlex.quote(prompt))
+            else:
+                input_data = prompt
+
+            if model and model != "auto":
+                model_flag = v_cfg.get("model_flag")
+                if model_flag:
+                    cmd += f" {model_flag} {shlex.quote(model)}"
+                    
+            if workdir and v_cfg.get("workdir_flag"):
+                cmd += f" {v_cfg['workdir_flag']} {shlex.quote(workdir)}"
+                
+            if sandbox == "workspace-write" and v_cfg.get("auto_approve"):
+                cmd += f" {v_cfg['auto_approve']}"
+
+            res = runner(
+                cmd,
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=validated_timeout,
+                env=env,
+                input=input_data
             )
+            out = _classify_completed(vendor, model, res)
+            out.served_model = model if model != "auto" else v_cfg.get("default_model")
+            return out
 
     except subprocess.TimeoutExpired as e:
         return DispatchResult(

@@ -241,3 +241,75 @@ class TestDispatchCLI:
             cwd=str(Path(__file__).parent.parent),
         )
         assert res2.returncode != 0
+
+# ─── VÒNG 2 FIXES ───
+
+class TestVong2:
+    def test_doctor_exit_nonzero(self):
+        """1. --doctor phải không nuốt lỗi, trả exit code khác 0."""
+        from unittest.mock import patch
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=2, stdout="", stderr="some error")
+            with pytest.raises(SystemExit) as e:
+                import bin.dispatch
+                # override args to trigger doctor
+                with patch("sys.argv", ["dispatch.py", "agy", "--doctor"]):
+                    bin.dispatch.main()
+            assert e.value.code == 2
+
+    def test_openrouter_in_choices(self):
+        """2. openrouter phải nằm trong choices dù không có trong JSON."""
+        res = subprocess.run(
+            [sys.executable, "bin/dispatch.py", "openrouter", "--dump-config"],
+            capture_output=True, text=True,
+            cwd=str(Path(__file__).parent.parent),
+        )
+        assert res.returncode == 0
+        info = json.loads(res.stdout)
+        assert info["vendor"] == "openrouter"
+
+    def test_dynamic_vendor_from_json(self):
+        """3. opencode phải dùng lệnh từ JSON (headless, auto_approve)."""
+        calls = []
+        def mock_runner(cmd, **kwargs):
+            calls.append(cmd)
+            mock = MagicMock()
+            mock.returncode = 0
+            mock.stdout = "task done"
+            mock.stderr = ""
+            return mock
+        
+        result = run_vendor(
+            vendor="opencode", prompt="hello world", model="auto",
+            runner=mock_runner, detector=lambda spec: VendorProbe(
+                name="opencode", path="/usr/bin/opencode", authed=True, quota_capped=False,
+                version=None, models=[], error=None
+            )
+        )
+        assert result.status == "ok"
+        assert len(calls) == 1
+        cmd_str = calls[0]
+        # headless của opencode: "opencode run '<prompt>' < /dev/null"
+        assert "opencode run 'hello world'" in cmd_str
+        assert "< /dev/null" in cmd_str
+
+    def test_reject_fake_model(self):
+        """4. Model bịa phải bị từ chối exit 2."""
+        res = subprocess.run(
+            [sys.executable, "bin/dispatch.py", "dsh", "totally-fake-model", "--dump-config"],
+            capture_output=True, text=True,
+            cwd=str(Path(__file__).parent.parent),
+        )
+        assert res.returncode == 2
+        assert "error: model 'totally-fake-model' not in vendor" in res.stderr
+
+    def test_allow_unknown_model(self):
+        """4. --allow-unknown-model cho phép bypass."""
+        res = subprocess.run(
+            [sys.executable, "bin/dispatch.py", "dsh", "totally-fake-model", "--allow-unknown-model", "--dump-config"],
+            capture_output=True, text=True,
+            cwd=str(Path(__file__).parent.parent),
+        )
+        assert res.returncode == 0
+        info = json.loads(res.stdout)
+        assert info["resolved_model"] == "totally-fake-model"

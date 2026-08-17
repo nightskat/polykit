@@ -35,6 +35,10 @@ def _run_doctor(vendor_name: str) -> int:
         sys.stderr.write(f"[polykit] vendor '{vendor_name}' không có verify_cmd/zero_quota_cmds\n")
         return 1
 
+    # Fix: dsh --dump-config lacks --profile headless in JSON
+    if vendor_name == "dsh" and vcmd == "dsh --dump-config":
+        vcmd = "dsh --profile headless --dump-config"
+
     # Chạy verify_cmd
     if vcmd:
         sys.stderr.write(f"[polykit] doctor: running `{vcmd}` ...\n")
@@ -62,8 +66,10 @@ def _run_doctor(vendor_name: str) -> int:
     for zqc in zq[:2]:  # chạy tối đa 2 lệnh
         sys.stderr.write(f"[polykit] doctor: running zero-quota `{zqc}` ...\n")
         try:
-            # zqc có thể là subcommand (vd "--dump-config") hoặc lệnh đầy đủ
-            if zqc.startswith("--") or zqc.startswith("-"):
+            # Fix: zqc của agy là nội bộ (/model, /usage)
+            if vendor_name == "agy" and zqc.startswith("/"):
+                full_cmd = f"agy -p '{zqc}'"
+            elif zqc.startswith("--") or zqc.startswith("-"):
                 full_cmd = f"{vendor_name} {zqc}"
             else:
                 full_cmd = zqc
@@ -74,8 +80,15 @@ def _run_doctor(vendor_name: str) -> int:
             sys.stdout.write(res.stdout)
             if res.stderr:
                 sys.stderr.write(res.stderr)
-        except Exception:
-            pass
+            if res.returncode != 0:
+                sys.stderr.write(f"[polykit] zero-quota cmd exited {res.returncode}\n")
+                return res.returncode
+        except subprocess.TimeoutExpired:
+            sys.stderr.write(f"[polykit] zero-quota cmd timed out (15s)\n")
+            return 124
+        except Exception as e:
+            sys.stderr.write(f"[polykit] zero-quota cmd error: {e}\n")
+            return 1
 
     sys.stderr.write(f"[polykit] doctor: {vendor_name} OK\n")
     return 0
@@ -96,6 +109,13 @@ def main():
     parser.add_argument("--doctor", action="store_true", help="Run verify_cmd for the vendor, print status")
     parser.add_argument("--no-traps", action="store_true", help="Suppress trap warnings on stderr")
     parser.add_argument("--dump-config", action="store_true", help="Print resolved model+vendor config and exit (0 token)")
+    parser.add_argument("--allow-unknown-model", action="store_true", help="Allow models not listed in JSON")
+
+    # Fix: Add REGISTRY vendors not in JSON (like openrouter)
+    from lib.vendors import REGISTRY
+    for k in REGISTRY:
+        if k not in names:
+            names.append(k)
 
     args = parser.parse_args()
 
@@ -115,6 +135,20 @@ def main():
             dm = default_model(args.vendor, cfg)
             if dm:
                 resolved_model = dm
+
+    # Validate model
+    if resolved_model != "auto" and not args.allow_unknown_model:
+        vendor_data = cfg.get("vendors", {}).get(args.vendor, {})
+        valid_models_dict = vendor_data.get("models")
+        if isinstance(valid_models_dict, dict):
+            valid_models = []
+            for family_models in valid_models_dict.values():
+                valid_models.extend(family_models)
+            if valid_models and resolved_model not in valid_models:
+                sys.stderr.write(f"[polykit] error: model '{resolved_model}' not in vendor '{args.vendor}' valid models.\n")
+                sys.stderr.write(f"Valid models: {', '.join(valid_models)}\n")
+                sys.stderr.write(f"Use --allow-unknown-model to bypass.\n")
+                sys.exit(2)
 
     # --dump-config: in cấu hình đã resolve, thoát 0 token
     if args.dump_config:
