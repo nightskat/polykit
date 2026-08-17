@@ -43,6 +43,8 @@ def render_table(state: dict) -> str:
             hint = vdata.get("auth_hint")
             if hint:
                 lines.append(f"  -> {hint}")
+        elif v_state == "auth_unverified":
+            lines.append("  -> Probe phụ không xác minh được auth; thử dispatch nhỏ khi cần")
         elif v_state == "quota_capped":
             lines.append("  -> Hết quota — chuyển lane khác")
     return "\n".join(lines)

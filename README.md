@@ -17,7 +17,7 @@ Xong. Mở session mới, gõ `/polykit:doctor` xem trạng thái.
 ## Lệnh
 | Lệnh | Làm gì |
 |---|---|
-| `/polykit:doctor` | Bảng trạng thái mọi vendor (`ready` / `installed_not_authed` / `not_installed` / `quota_capped`) + hint auth |
+| `/polykit:doctor` | Bảng trạng thái mọi vendor (`ready` / `installed_not_authed` / `auth_unverified` / `not_installed` / `quota_capped`) + hint phù hợp |
 | `/polykit:dispatch <vendor> [model] -- <prompt>` | Giao task; vendor thiếu → degraded result, không lỗi |
 | `/polykit:failover --pressure N` | Quota còn thấp → gợi ý handoff (mặc định `--dry-run`, thêm `--send` để ping Telegram thật) |
 | `/polykit:watcher` | Diff model/version vendor so tuần trước, báo khi đổi |

@@ -1,19 +1,23 @@
 # Snapshot vendor — MÁY SINH, ĐỪNG SỬA TAY
 
-> Sinh lúc 2026-08-03T05:16:45.250844+00:00 bởi `bin/watcher.py --snapshot`. Mỗi lần chạy ghi đè toàn bộ.
+> Sinh lúc 2026-08-17T05:00:27.773557+00:00 bởi `bin/watcher.py --snapshot`. Mỗi lần chạy ghi đè toàn bộ.
 > Sai lệch với thực tế = watcher chưa chạy, không phải docs sai.
 
 | Vendor | State | Version | Số model | Ghi chú |
 |---|---|---|---|---|
-| `codex` | ready | codex-cli 0.146.0 | — |  |
-| `gemini` | ready | 0.53.1 | — |  |
-| `claude` | ready | 2.1.220 (Claude Code) | — |  |
-| `grok` | ready | grok 0.2.118 (1e1687c1cf6a) [stable] | — |  |
-| `agy` | ready | 1.1.10 | 11 |  |
+| `codex` | ready | codex-cli 0.147.0 | — |  |
+| `gemini` | ready | 0.55.1 | — |  |
+| `claude` | ready | 2.1.233 (Claude Code) | — |  |
+| `grok` | ready | grok 1.0.4 (d846eb93d94d) | — |  |
+| `agy` | ready | 1.1.13 | 14 |  |
 | `openrouter` | ready | — | — |  |
+| `dsh` | ready | 0.1.0-rc.6 | — |  |
 
-## Catalog `agy` (11 slug)
+## Catalog `agy` (14 slug)
 
+- `gemini-3.7-flash-high`
+- `gemini-3.7-flash-medium`
+- `gemini-3.7-flash-low`
 - `gemini-3.6-flash-high`
 - `gemini-3.6-flash-medium`
 - `gemini-3.6-flash-low`

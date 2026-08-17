@@ -1,21 +1,188 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "_ghi_chu": "v2 (17/08/2026): mở rộng từ {binary, auth_hint} thành sổ đăng ký đủ để dispatch mà không phải dò lại. Mọi trường đều do CHẠY LỆNH THẬT sinh ra — khảo sát 10 CLI bằng 3 vendor khác họ + 1 lượt checker khác họ. Nguồn đầy đủ: ~/Claude/Build/nghien-cuu/cli-registry/. Chỗ chưa kiểm được ghi rõ 'CHUA_KIEM'.",
+  "_luat": [
+    "Mặc định của MỌI CLI đều là tầng model rẻ nhất của nó. Không ghim model = nhận tầng đáy.",
+    "Mã thoát của các CLI này KHÔNG đáng tin — cả agy/codex/grok đều có kiểu chết mà vẫn exit 0. Nghiệm thu bằng kích thước file kết quả.",
+    "Quota tính theo HỌ model, không theo vendor: agy có Gemini / Claude / GPT-OSS là ba túi quota riêng, họ Google nhiều nhất."
+  ],
   "vendors": {
-    "codex": {
-      "binary": "codex",
-      "auth_hint": "chạy `codex login`"
+    "agy": {
+      "binary": "agy",
+      "auth_hint": "chạy `agy` để auth (Antigravity account)",
+      "headless": "agy --print '<prompt>'",
+      "headless_aliases": ["-p", "--prompt"],
+      "auto_approve": "--dangerously-skip-permissions",
+      "model_flag": "--model",
+      "effort_flag": "--effort",
+      "effort_values": ["low", "medium", "high"],
+      "timeout_flag": "--print-timeout",
+      "timeout_default": "5m",
+      "workdir_flag": null,
+      "add_dir_flag": "--add-dir",
+      "output_format": "--output-format text|json|stream-json (cờ TOÀN CỤC, đặt TRƯỚC lệnh con)",
+      "resume": "--continue | -c | --conversation <ID>",
+      "list_models": "agy models",
+      "models": {
+        "google": ["gemini-3.7-flash-high", "gemini-3.7-flash-medium", "gemini-3.7-flash-low", "gemini-3.6-flash-high", "gemini-3.5-flash-high", "gemini-3.1-pro-high", "gemini-3.1-pro-low"],
+        "anthropic": ["claude-sonnet-4-6", "claude-opus-4-6-thinking"],
+        "openai_oss": ["gpt-oss-120b-medium"]
+      },
+      "default_model": "gemini-3.7-flash-high",
+      "default_model_note": "Tuan chỉnh tay 17/08 (trước đó 3.6). Mặc định ăn ngay ở phiên --print.",
+      "quota": "Gói $20/tháng. Quota RIÊNG theo HỌ model, hạ tầng Google — KHÔNG đụng thuê bao Anthropic. Đo 17/08: Gemini tuần còn 87%, Claude/GPT tuần còn 95%. Họ Google rộng nhất.",
+      "verify_cmd": "agy -p \"/model\"",
+      "zero_quota_cmds": ["/model", "/usage", "/config", "/changelog", "/help", "/permissions", "/hooks"],
+      "traps": [
+        "KHÔNG TTY (nohup/nền) → lỗi `bubbletea: could not open TTY` in ra STDOUT, exit 0 → THÀNH CÔNG GIẢ",
+        "Có thể NUỐT PROMPT ĐẦU TIÊN khi đi kiểm tư cách tài khoản — chỉ ở lần gọi đầu sau khi nghỉ lâu (Tuan đã va thật)",
+        "Cờ sai → exit 2, lỗi ra stderr (báo đàng hoàng, KHÔNG phải exit 0 như bản ghi cũ)",
+        "--yolo KHÔNG tồn tại ở agy (đó là cờ gemini) — dùng --dangerously-skip-permissions",
+        "--print-timeout mặc định 5 PHÚT → việc dài phải nới, không thì mất trắng",
+        "agy models --output-format json → exit 1. Phải đặt cờ TRƯỚC: agy --output-format json models"
+      ],
+      "vai": "Maker chính. Có nhiều họ model nhất → làm được cả maker lẫn checker khác họ trong cùng một gói."
     },
-    "gemini": {
-      "binary": "gemini",
-      "auth_hint": "chạy `gemini` rồi /auth"
-    },
-    "claude": {
-      "binary": "claude",
-      "auth_hint": "đã auth qua Claude Code"
+    "dsh": {
+      "binary": "dsh",
+      "auth_hint": "export DEEPSEEK_API_KEY (lấy từ Keychain: security find-generic-password -a $USER -s DEEPSEEK_API_KEY -w)",
+      "headless": "dsh --profile headless '<task>'",
+      "auto_approve": null,
+      "model_flag": null,
+      "model_override": "KHÔNG có cờ. Phải viết file patch YAML rồi truyền --patch <file>: [{id: agent-default-model, config: {provider: deepseek-official, model: deepseek-v4-pro}}]",
+      "workdir_flag": null,
+      "workdir_note": "Luôn là thư mục gọi lệnh (process.cwd())",
+      "output_format": null,
+      "resume": "--resume <session>",
+      "list_models": "curl -H 'Authorization: Bearer $DEEPSEEK_API_KEY' https://api.deepseek.com/models",
+      "models": { "deepseek": ["deepseek-v4-pro", "deepseek-v4-flash"] },
+      "default_model": "deepseek-v4-flash",
+      "quota": "Trả theo lượt. Số dư: curl .../user/balance. Đo 17/08: $0,39 cho 4 việc thật. Giảm giá 16:30-00:30 UTC (23:30-07:30 giờ VN).",
+      "verify_cmd": "dsh --profile headless --dump-config",
+      "zero_quota_cmds": ["--dump-config", "--dump-default-config"],
+      "traps": [
+        "deepseek-v4-flash TRẢ VỀ RỖNG trên task nhiều bước — đã tái hiện 2 lần (14/08, 16/08). Việc thật phải ghim v4-pro",
+        "Không đọc Keychain — key phải bơm qua biến môi trường, thiếu thì MISSING_CREDENTIAL",
+        "Mất mạng giữa chừng → TRANSPORT error, mất trắng cả lượt (đã dính khi cúp điện). Luôn dặn agent GHI FILE SỚM",
+        "Sandbox có thể chặn ghi vào thư mục đích → nó ghi sang /tmp rồi báo lại, phải tự lấy về",
+        "--dump-config kiểm cấu hình mà KHÔNG tốn token — dùng để xác minh đã ghim đúng model"
+      ],
+      "vai": "Thợ máy rẻ. v4-pro cho việc thật, KHÔNG dùng flash cho task nhiều bước."
     },
     "grok": {
       "binary": "grok",
-      "auth_hint": "chạy `grok` để auth"
+      "auth_hint": "chạy `grok` để auth",
+      "headless": "grok -p '<prompt>'",
+      "prompt_file_flag": "--prompt-file <path>",
+      "auto_approve": "--permission-mode bypassPermissions",
+      "model_flag": null,
+      "workdir_flag": "--cwd",
+      "output_format": "--output-format plain|json|streaming-json|streaming-messages-json",
+      "schema_flag": "--json-schema",
+      "resume": "-c, --continue",
+      "list_models": "grok models",
+      "models": { "xai": ["grok-4.6", "grok-4.5"] },
+      "default_model": "grok-4.6",
+      "quota": "Trong sub xAI. Tuan chưa bao giờ dùng hết.",
+      "verify_cmd": "grok models",
+      "traps": [
+        "GIỚI HẠN SỐ LƯỢT (~9 turn) — việc dài bị cắt ngang. BẮT BUỘC ép 'ghi file ngay từ phát hiện đầu tiên', không thì mất sạch (đã mất 1 lượt)",
+        "Cờ sai → exit 2 (báo đàng hoàng)"
+      ],
+      "vai": "QA / đập. Mạnh nhất phiên 16-17/08: tìm 22 lỗi thật, kiểm lại đúng hết."
+    },
+    "codex": {
+      "binary": "codex",
+      "auth_hint": "chạy `codex login`",
+      "headless": "codex exec '<prompt>' < /dev/null",
+      "auto_approve": "--dangerously-bypass-approvals-and-sandbox",
+      "sandbox_flag": "-s read-only|workspace-write|danger-full-access",
+      "model_flag": "-m, --model",
+      "workdir_flag": "-C, --cd",
+      "output_format": "--json (JSONL stream) | -o FILE (ghi câu trả lời cuối ra file) | --output-schema FILE",
+      "resume": "codex exec resume [--last | SESSION_ID]",
+      "list_models": "codex debug models",
+      "models": { "openai": ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "codex-auto-review"] },
+      "default_model": "gpt-5.6-terra",
+      "quota": "Gói ChatGPT — giới hạn 5 giờ + tuần.",
+      "verify_cmd": "codex doctor",
+      "zero_quota_cmds": ["codex debug models", "codex doctor"],
+      "traps": [
+        "THIẾU `< /dev/null` là TREO đợi EOF — đo thật: exit 124 khi timeout. In `Reading additional input from stdin...`",
+        "Ngoài git repo → exit 1, cần --skip-git-repo-check",
+        "Gọi TUI khi không có TTY → `stdin is not a terminal`, exit 1",
+        "Cờ sai → exit 2",
+        "`codex debug models` đổ ~278KB (kèm cả system prompt) — nhớ cắt output"
+      ],
+      "vai": "Review code, phản biện có cấu trúc."
+    },
+    "gemini": {
+      "binary": "gemini",
+      "auth_hint": "AI Studio key; `gemini` rồi /auth",
+      "headless": "gemini -p '<prompt>'",
+      "auto_approve": "-y | --yolo | --approval-mode yolo",
+      "model_flag": "-m, --model",
+      "output_format": "-o, --output-format text|json|stream-json",
+      "resume": "-r, --resume latest|<index> | --session-file | --session-id",
+      "list_models": "CHUA_KIEM",
+      "models": "CHUA_KIEM",
+      "default_model": "CHUA_KIEM",
+      "quota": "CHUA_KIEM",
+      "verify_cmd": "gemini --version",
+      "traps": [
+        "Ở thư mục lạ → exit 55, 'not running in a trusted directory' — KHÔNG phải treo (sổ khảo sát ghi 'hay treo' là SAI, đã đính chính bằng đo thật 17/08)",
+        "Cờ sai → exit 1"
+      ],
+      "vai": "Long-context, @url. Sổ CHƯA ĐẦY ĐỦ — cần khảo sát lại."
+    },
+    "claude": {
+      "binary": "claude",
+      "auth_hint": "đã auth qua Claude Code",
+      "headless": "claude -p '<prompt>'",
+      "output_format": "--output-format json",
+      "list_models": "KHÔNG có lệnh liệt kê — `claude models` bị hiểu là PROMPT rồi tự chạy một lượt",
+      "default_model": "claude-opus-5",
+      "quota": "~$200/tháng Anthropic. ĐẮT NHẤT — dành cho điều phối/nghiệm thu, không gõ tay việc cơ khí.",
+      "verify_cmd": "claude --version",
+      "traps": ["`claude models` tưởng là lệnh nhưng bị hiểu là prompt → tốn một lượt vô ích"],
+      "vai": "Orchestrator + nghiệm thu."
+    },
+    "opencode": {
+      "binary": "opencode",
+      "headless": "opencode run '<prompt>' < /dev/null",
+      "workdir_flag": "--dir",
+      "output_format": "--format default|json",
+      "list_models": "opencode models [provider]",
+      "default_model": "qwen/qwen3.7-flash (provider openrouter)",
+      "quota": "OpenRouter, trả theo lượt",
+      "vai": "CHƯA GIAO VIỆC BAO GIỜ — cần quyết: giao việc thật hay gỡ."
+    },
+    "goose": {
+      "binary": "goose",
+      "workdir_flag": null,
+      "workdir_note": "Kế thừa CWD, phải `cd` trước",
+      "output_format": "--output-format text|json|stream-json (cần thêm -q để ra JSON sạch)",
+      "list_models": "goose local-models list (chỉ model local)",
+      "default_model": "google/gemini-2.5-flash (provider openrouter)",
+      "vai": "CHƯA GIAO VIỆC BAO GIỜ — cần quyết."
+    },
+    "zeroclaw": {
+      "binary": "zeroclaw",
+      "workdir_flag": null,
+      "workdir_note": "Qua env ZEROCLAW_WORKSPACE",
+      "list_models": "zeroclaw models list",
+      "default_model": "openrouter/free",
+      "quota": "MIỄN PHÍ (OpenRouter free tier)",
+      "vai": "CHƯA GIAO VIỆC BAO GIỜ — ứng viên cho lane rác/ca đêm."
+    },
+    "jules": {
+      "binary": "jules",
+      "workdir_flag": null,
+      "repo_flag": "--repo <owner/repo>",
+      "output_format": "Không có --json; `remote list` ra bảng text, `remote pull` ra git diff",
+      "list_models": "Không có — chạy qua Google Cloud SWE-bot backend",
+      "default_model": "Google Jules Agent (không expose tên model)",
+      "vai": "Coding bất đồng bộ trên repo. DẠO NÀY ÍT DÙNG — cần xem lại vai."
     }
   }
 }

@@ -20,7 +20,10 @@ from lib.dispatch_core import (
     build_claude_cmd,
     build_grok_cmd,
     build_agy_cmd,
+    build_dsh_cmd,
+    write_dsh_patch,
     AGY_DEFAULT_MODEL,
+    DSH_DEFAULT_MODEL,
     gemini_agy_tier,
 )
 
@@ -204,6 +207,53 @@ def run_vendor(
             # đừng nhầm với served_model của OpenRouter (đọc từ response).
             out.served_model = build_agy_cmd(resolved, "")[2]
             return out
+
+        elif vendor == "dsh":
+            # dsh KHÔNG có cờ --model → viết file patch YAML rồi truyền --patch.
+            # 🔴 auto → deepseek-v4-pro (KHÔNG phải flash — flash trả rỗng trên task nhiều bước).
+            resolved = model
+            if model == "auto":
+                resolved = DSH_DEFAULT_MODEL
+
+            # Tạo patch file tạm
+            patch_path = None
+            try:
+                with tempfile.NamedTemporaryFile(
+                    mode="w", suffix=".yaml", delete=False, prefix="dsh-patch-"
+                ) as pf:
+                    patch_path = pf.name
+                    write_dsh_patch(resolved, patch_path)
+
+                cmd = build_dsh_cmd(resolved, patch_path)
+                # Append task prompt as positional arg
+                cmd.append(prompt)
+
+                # Inject DEEPSEEK_API_KEY from Keychain nếu chưa có trong env
+                if "DEEPSEEK_API_KEY" not in env:
+                    try:
+                        key_res = subprocess.run(
+                            ["security", "find-generic-password", "-a",
+                             os.environ.get("USER", ""), "-s", "DEEPSEEK_API_KEY", "-w"],
+                            capture_output=True, text=True, timeout=5,
+                        )
+                        if key_res.returncode == 0 and key_res.stdout.strip():
+                            env["DEEPSEEK_API_KEY"] = key_res.stdout.strip()
+                    except Exception:
+                        pass  # best-effort
+
+                res = runner(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=validated_timeout,
+                    env=env,
+                )
+                out = _classify_completed(vendor, model, res)
+                out.served_model = resolved
+                return out
+            finally:
+                if patch_path and os.path.exists(patch_path):
+                    os.unlink(patch_path)
 
         elif vendor == "gemini":
             return _dispatch_gemini(prompt, model, validated_timeout, runner, env)

@@ -34,8 +34,9 @@ State máy-riêng KHÔNG nằm trong repo — path do `platformdirs` quyết
 ## Nguyên tắc
 
 ### P1. Graceful degradation — testable (Codex #1, #2, #5)
-Vendor state machine: `not_installed` → `installed_not_authed` → `ready` → `quota_capped`.
+Vendor state machine: `not_installed` → `installed_not_authed` hoặc `auth_unverified` → `ready` → `quota_capped`.
 - `installed_not_authed` → doctor + dispatch in hướng dẫn auth cụ thể ("chạy `codex login`"), KHÔNG lỗi.
+- `auth_unverified` → probe phụ (catalog/session) không kết luận được auth; doctor không bắt người dùng login lại.
 - Bỏ lane KHÔNG im lặng: warning vào result JSON + doctor hiển thị lý do (Codex #5).
 - **Ma trận acceptance** (test bằng fixture, mock detect):
 
@@ -59,7 +60,7 @@ Vendor state machine: `not_installed` → `installed_not_authed` → `ready` →
 ### P4. Task + result contract — minimal nhưng enforce (Codex #7)
 - Task YAML required: `objective, expected_output, timeout`. Malformed → lỗi rõ ràng, không chạy.
 - Result JSON required: `status, summary, warnings[]`. Vendor bị skip → degraded result
-  `{status:"skipped", reason:"not_authed|not_installed|quota_capped"}` — cùng schema, không null.
+  `{status:"skipped", reason:"not_authed|auth_unverified|not_installed|quota_capped"}` — cùng schema, không null.
 
 ### P5. Cross-platform — bằng THIẾT KẾ, chứng minh trên mac (v0.1.2 descope)
 - Python 3.11+ cho mọi logic; `pathlib` + `platformdirs`, cấm hardcode `/Users/...`.

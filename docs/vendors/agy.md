@@ -61,6 +61,7 @@ Wrapper chỉ có 8 tier Gemini; 3 model Claude/GPT-OSS **cố ý không hard-co
   khoẻ, cũng không bịa list dự phòng.
 - **Auth-check rớt vì hết quota** → `quota_capped`, không phải `installed_not_authed`
   (bảo đi login lại khi thật ra chỉ hết quota là sai lane).
+- **`agy models` lỗi/rỗng không có dấu auth lỗi** → `auth_unverified`, không kết luận người dùng đã logout. Cần dispatch nhỏ khi thật sự cần xác nhận runtime.
 - **`auto`** ưu tiên `gemini-3.6-flash-medium` **nếu còn trong catalog**; mất thì lấy slug
   `gemini-*` đầu tiên; hết nữa thì slug đầu danh sách.
 - **Tương thích ngược**: `/polykit:dispatch gemini` vẫn có lane 1 = agy như cũ, không đổi

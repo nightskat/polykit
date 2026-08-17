@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 class VendorState(str, Enum):
     NOT_INSTALLED = "not_installed"
     INSTALLED_NOT_AUTHED = "installed_not_authed"
+    AUTH_UNVERIFIED = "auth_unverified"
     READY = "ready"
     QUOTA_CAPPED = "quota_capped"
 
@@ -12,7 +13,7 @@ class VendorState(str, Enum):
 class VendorProbe:
     name: str
     path: str | None
-    authed: bool
+    authed: bool | None
     quota_capped: bool
     version: str | None = None
     models: list[str] = field(default_factory=list)
@@ -20,10 +21,12 @@ class VendorProbe:
 
 def classify(probe: VendorProbe) -> VendorState:
     # Precedence bám máy trạng thái tuyến tính của spec:
-    # not_installed → installed_not_authed → ready → quota_capped.
+    # not_installed → installed_not_authed/auth_unverified → ready → quota_capped.
     # Phải authed trước rồi mới có thể quota_capped (cap khi chưa auth là probe vô nghĩa).
     if probe.path is None:
         return VendorState.NOT_INSTALLED
+    if probe.authed is None:
+        return VendorState.AUTH_UNVERIFIED
     if not probe.authed:
         return VendorState.INSTALLED_NOT_AUTHED
     if probe.quota_capped:

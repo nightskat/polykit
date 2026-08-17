@@ -54,6 +54,25 @@ def test_not_authed_when_auth_returncode_nonzero():
     assert classify(p) is VendorState.INSTALLED_NOT_AUTHED
 
 
+def test_non_authoritative_auth_probe_is_unverified_not_not_authed():
+    """Probe phụ (catalog/session) hỏng không được kết luận là mất auth."""
+    candidate = VendorSpec(
+        name="x", binary="x", auth_hint="hint",
+        version_cmd=["x", "--version"], auth_check_cmd=["x", "catalog"],
+        auth_check_authoritative=False,
+    )
+
+    def runner(cmd, **kw):
+        if "--version" in cmd:
+            return FakeCompleted(returncode=0, stdout="v1")
+        return FakeCompleted(returncode=1)
+
+    p = detect(candidate, which=fake_which("/bin/x"), runner=runner)
+    assert p.authed is None
+    assert p.error == "auth_probe_unverified (exit 1)"
+    assert classify(p) is VendorState.AUTH_UNVERIFIED
+
+
 def test_version_ignored_on_nonzero_returncode():
     """Regression Codex #2: stderr lỗi KHÔNG được dùng làm version."""
     def runner(cmd, **kw):

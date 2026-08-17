@@ -133,3 +133,33 @@ def gemini_agy_tier(model: str) -> str:
     if model.endswith("low"):
         return "low"
     return "med"
+
+
+# 🔴 deepseek-v4-flash TRẢ VỀ RỖNG trên task nhiều bước — vendors.json ghi
+# default_model = flash nhưng dispatch PHẢI override auto → pro.
+DSH_DEFAULT_MODEL = "deepseek-v4-pro"
+
+
+def build_dsh_cmd(model: str, patch_file: str) -> list[str]:
+    """Tạo command line cho dsh.
+
+    dsh KHÔNG có cờ --model. Phải viết file patch YAML rồi truyền --patch.
+    patch_file do caller tạo (tempfile) với nội dung:
+    - id: agent-default-model
+      config: {provider: deepseek-official, model: <slug>}
+    """
+    cmd = ["dsh", "--profile", "headless"]
+    if model != "auto":
+        cmd.extend(["--patch", patch_file])
+    return cmd
+
+
+def write_dsh_patch(model_slug: str, path: str) -> None:
+    """Ghi file YAML patch cho dsh --patch. Chỉ dùng stdlib (yaml đơn giản)."""
+    content = (
+        f"- id: agent-default-model\n"
+        f"  config: {{provider: deepseek-official, model: {model_slug}}}\n"
+    )
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+
