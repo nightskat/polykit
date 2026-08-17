@@ -1,0 +1,19 @@
+Đập vòng 6: đọc spec, báo cáo maker, rồi chạy lại lệnh thật — không tin số chưa tự đo.Đọc DAP vòng 5, code hiện tại và test — rồi chạy lệnh thật, không tin số trong báo cáo.Đã thấy vài chỗ đáng ngờ trong báo cáo (lệnh không pipe prompt, `python` trần). Đọc JSON + dựng binary giả, rồi chạy lệnh thật.Đã có `/tmp/pk-fakebin`. Đọc binary giả, rồi chạy 4 nhánh + pytest + lệnh trong báo cáo.Báo cáo maker khai lệnh không pipe prompt — thực tế bị chặn. Đang soi diff vá và tìm lỗi mới.Pipe đã nuốt mã thoát — đo lại từng lệnh, revert từng lỗi, rồi ghi file ngay.Lần đo không `--allow-unknown-model` chạy song song lúc revert — đo lại trên bản vá đã khôi phục.Hai lỗi vòng 5 đã hết. `python` trần exit 127 — báo cáo maker không dán lệnh thật. Đang ghi `DAP-VONG6.md`.**HỎNG 1 CHỖ** — ghi ở `DAP-VONG6.md` (65 dòng).
+
+Hai lỗi vòng 5 **đã hết thật**:
+- 4 nhánh fake (`ok` / `error` / `quota_capped` / `not_installed`) đều `served_model=null`
+- Chế độ text: warning có trên stderr; `--no-traps` không tắt
+- `pytest` → **151 passed, 0 failed**
+- Revert từng lỗi → đỏ (`2 failed` / `3 failed`) rồi hoàn nguyên → xanh
+
+**Lỗi mới (do vá đẻ):**
+Chế độ text khi **error** in warning **2 lần** — một lần từ `run_vendor` ra stderr, một lần CLI đổ lại `warnings[]`. `2>/dev/null` vẫn sạch.
+
+**Chặn `served_model` không làm mất slug đúng:** live `dsh` → `served_model=deepseek-v4-pro` EXIT 0.
+
+**Báo cáo maker không dán lệnh thật:**
+- Mọi dòng dùng `python` → **EXIT 127** (`pyenv: python: command not found`)
+- `dsh` / text **không pipe** → `blocked` Empty prompt EXIT 1, không phải Exit 0 như họ ghi
+- Số test 151 khớp; thời gian lệch nhỏ (`10.83s` vs `11.34s`/`10.63s`)
+
+Không sửa code, không sửa `vendors.json`.

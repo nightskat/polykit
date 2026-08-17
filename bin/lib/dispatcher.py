@@ -28,13 +28,16 @@ from lib.dispatch_core import (
 )
 
 
-def _classify_completed(vendor: str, model: str, res) -> DispatchResult:
+def _classify_completed(vendor: str, model: str, res, served_model: str | None = False) -> DispatchResult:
     """M2: map kết quả subprocess → DispatchResult. returncode!=0 kèm dấu hiệu
     quota (402/insufficient credit/exhausted) → skipped/quota_capped, KHÔNG crash,
     KHÔNG coi là lỗi generic. Dùng chung cho codex/claude/grok."""
     stdout = res.stdout or ""
     # `auto` = để CLI tự chọn → không suy ra được model thật, để None thay vì bịa.
-    served = None if model == "auto" else model
+    if served_model is False:
+        served = None if model == "auto" else model
+    else:
+        served = served_model
     if res.returncode == 0:
         return DispatchResult(status="ok", vendor=vendor, model=model,
                               summary=f"{vendor} completed successfully",
@@ -360,13 +363,12 @@ def run_vendor(
                 env=env,
                 input=input_data
             )
-            out = _classify_completed(vendor, model, res)
-            if out.status == "ok":
-                if cmd_has_model:
-                    out.served_model = model
-                else:
-                    out.served_model = None
-                    out.warnings.append(f"vendor '{vendor}' không nhận cờ model, đang chạy mặc định của chính nó, không xác định được slug.")
+            served = model if cmd_has_model else None
+            out = _classify_completed(vendor, model, res, served_model=served)
+            if not cmd_has_model:
+                msg = f"vendor '{vendor}' không nhận cờ model, đang chạy mặc định của chính nó, không xác định được slug."
+                out.warnings.append(msg)
+                sys.stderr.write(f"[polykit] warning: {msg}\n")
             return out
 
     except subprocess.TimeoutExpired as e:
