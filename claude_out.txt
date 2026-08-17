@@ -1,3 +1,0 @@
-[polykit] error: model list for vendor 'claude' is unknown, cannot validate 'totally-fake-model'
-Use --allow-unknown-model to bypass.
-exit: 2

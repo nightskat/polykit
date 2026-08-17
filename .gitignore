@@ -8,3 +8,9 @@ __pycache__/
 .maker*.err
 .qa*.out
 .qa*.err
+
+# file tạm do agent để lại khi chạy thử
+*_out.txt
+one_off.py
+[model]
+__pycache__/
