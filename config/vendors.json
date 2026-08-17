@@ -155,7 +155,8 @@
       "workdir_flag": "--dir",
       "output_format": "--format default|json",
       "list_models": "opencode models [provider]",
-      "default_model": "qwen/qwen3.7-flash (provider openrouter)",
+      "default_model": "qwen/qwen3.7-flash",
+      "provider_note": "openrouter",
       "quota": "OpenRouter, trả theo lượt",
       "vai": "CHƯA GIAO VIỆC BAO GIỜ — cần quyết: giao việc thật hay gỡ."
     },
@@ -165,7 +166,8 @@
       "workdir_note": "Kế thừa CWD, phải `cd` trước",
       "output_format": "--output-format text|json|stream-json (cần thêm -q để ra JSON sạch)",
       "list_models": "goose local-models list (chỉ model local)",
-      "default_model": "google/gemini-2.5-flash (provider openrouter)",
+      "default_model": "google/gemini-2.5-flash",
+      "provider_note": "openrouter",
       "vai": "CHƯA GIAO VIỆC BAO GIỜ — cần quyết."
     },
     "zeroclaw": {
@@ -183,7 +185,8 @@
       "repo_flag": "--repo <owner/repo>",
       "output_format": "Không có --json; `remote list` ra bảng text, `remote pull` ra git diff",
       "list_models": "Không có — chạy qua Google Cloud SWE-bot backend",
-      "default_model": "Google Jules Agent (không expose tên model)",
+      "default_model": "Google Jules Agent",
+      "provider_note": "không expose tên model",
       "vai": "Coding bất đồng bộ trên repo. DẠO NÀY ÍT DÙNG — cần xem lại vai."
     }
   }

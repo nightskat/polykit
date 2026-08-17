@@ -338,10 +338,12 @@ def run_vendor(
             else:
                 input_data = prompt
 
+            cmd_has_model = False
             if model and model != "auto":
                 model_flag = v_cfg.get("model_flag")
                 if model_flag:
                     cmd += f" {model_flag} {shlex.quote(model)}"
+                    cmd_has_model = True
                     
             if workdir and v_cfg.get("workdir_flag"):
                 cmd += f" {v_cfg['workdir_flag']} {shlex.quote(workdir)}"
@@ -360,7 +362,11 @@ def run_vendor(
             )
             out = _classify_completed(vendor, model, res)
             if out.status == "ok":
-                out.served_model = model if model != "auto" else v_cfg.get("default_model")
+                if cmd_has_model:
+                    out.served_model = model
+                else:
+                    out.served_model = None
+                    out.warnings.append(f"vendor '{vendor}' không nhận cờ model, đang chạy mặc định của chính nó, không xác định được slug.")
             return out
 
     except subprocess.TimeoutExpired as e:

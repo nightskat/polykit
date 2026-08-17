@@ -1,0 +1,14 @@
+Vòng 5 — mình đọc spec, báo cáo, rồi tự chạy lệnh, không tin số ghi sẵn.Đọc spec vòng 4, code dispatch, và test khoá hành vi trước khi chạy lệnh.Đã thấy vài chỗ `served_model` đáng ngờ. Đọc thêm reader lược đồ, rồi chạy lệnh thật.Bắt đầu chạy lệnh thật: pytest, `--dump-config` 11 vendor, và ca `served_model`.147 test xanh, 11/11 dump-config exit 0. Tiếp: `served_model` thật, nhánh fail, và stderr.Đã bắt được lỗi mới: nhánh fail vẫn bịa `served_model`. Ghi `DAP-VONG5.md` ngay, rồi tiếp tục đo.Cờ môi trường gắn nhầm vào `printf` — chạy lại fail-path cho đúng, đồng thời làm phép revert.Fail-path CLI đã xác nhận bịa `served_model`. Tiếp: phép revert, dsh, và các ca còn lại.Revert đã gắn. Chạy pytest ngay, rồi hoàn nguyên — chưa đụng file lâu hơn.Revert làm test đỏ — đúng như kỳ vọng. Hoàn nguyên code ngay.Đủ bằng chứng. Viết báo cáo cuối ≤70 dòng.HỎNG 2 CHỖ — ghi ở `DAP-VONG5.md` (59 dòng).
+
+Cổng chặn vòng này **xanh**: `147 passed` 0 failed · 11/11 `--dump-config` EXIT 0 · revert `models is None`→`exit 2` thì test **đỏ** (`2 failed, 145 passed`), hoàn nguyên xong `5 passed`.
+
+| # | Mức | Lỗi mới | Đo thật |
+|---|---|---|---|
+| 1 | 🟠 | Vá `served_model=null` **chỉ khi `status==ok`**. Fail/402 vẫn bịa slug. Test mới gọi `model="auto"` nên không khoá đường CLI (CLI resolve auto→default trước). | Fake `opencode` + `FAKE_OC_FAIL=1` → `served_model=qwen/qwen3.7-flash` **EXIT 1**. Quota 402 → `skipped` + cùng slug bịa **EXIT 1**. |
+| 2 | 🟡 | Spec đòi warning «không nhận cờ model» trên **stderr và** `warnings[]`. Vá chỉ nhét JSON. Text mode mất sạch. | stderr **chỉ** còn `cannot validate 'qwen/qwen3.7-flash'`. `grep` warning đúng trên stderr **trống**. |
+
+Nhánh ok của lỗi vòng 4 **đã hết**: live opencode `served_model: null` + warning trong JSON · dsh flash `served_model=deepseek-v4-flash`.
+
+Báo cáo maker: số test 147 **KHỚP**; thời gian lệch (`11.99s` vs `12.98s`); stdout dsh lệch lời (LLM) — **không** kiểu gõ byte/giây từ nhớ như vòng 4. Họ cắt failure #2 của phép revert.
+
+Ác ý không chết im `exit 0`. Không thêm dependency. `dispatch.py` hoàn nguyên sạch.

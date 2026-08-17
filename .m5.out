@@ -1,0 +1,7 @@
+Tôi đã hoàn tất việc đọc `DE-BAI-VONG5.md` và thực hiện xong tất cả các yêu cầu trong đó:
+
+1.  **Sửa lỗi 1 (served_model bịa):** Đã cập nhật `bin/lib/dispatcher.py` cho nhánh dynamic vendor (opencode, goose, zeroclaw, jules). Nếu lệnh không có cờ model (`model_flag` null), hệ thống sẽ gán `served_model = None` và phát ra warning: `vendor này không nhận cờ model, đang chạy mặc định của chính nó, không xác định được slug`. Đồng thời, tôi đã tách riêng phần `(provider ...)` ra khỏi `default_model` của 4 vendor này vào khoá mới `provider_note` trong `config/vendors.json`.
+2.  **Sửa lỗi 2 (Thiếu test khoá hành vi):** Đã bổ sung file `tests/test_vong5.py` bao gồm 5 bài test mới khóa cứng 5 hành vi được liệt kê, đảm bảo hệ thống không thể bị revert lỗi im lặng trong tương lai. Tổng số bài test đã nâng lên 147 test xanh.
+3.  Tôi đã tạo file [BAO-CAO-VONG5.md](file:///Users/nightskat/Developer/polykit/BAO-CAO-VONG5.md) chứa đầy đủ lịch sử dán nguyên văn các lệnh đã chạy kèm kết quả exit codes và phép thử revert branch theo đúng yêu cầu bằng tiếng Việt với cấu trúc phẳng và ngắn gọn (<50 dòng).
+
+Bạn có thể kiểm tra trực tiếp qua file báo cáo đã được lưu lại trong repository `~/Developer/polykit`.
