@@ -41,29 +41,7 @@ def test_models_sai_dang_bao_loi_ro():
     finally:
         os.unlink(temp_path)
 
-@pytest.fixture
-def mock_cfg(monkeypatch):
-    import bin.lib.vendor_config as vendor_config
-    if hasattr(vendor_config.load_vendor_config, "cache_clear"):
-        vendor_config.load_vendor_config.cache_clear()
-    
-    def fake_load(*args, **kwargs):
-        return {
-            "schema_version": 3,
-            "vendors": {
-                "fakevendor": {
-                    "binary": "true",
-                    "headless": "true",
-                    "model_flag": None
-                }
-            }
-        }
-    monkeypatch.setattr(vendor_config, "load_vendor_config", fake_load)
-    yield
-    if hasattr(vendor_config.load_vendor_config, "cache_clear"):
-        vendor_config.load_vendor_config.cache_clear()
-
-def test_lenh_khong_ghim_duoc_model_served_model_none_va_co_warning(mock_cfg, capsys):
+def test_lenh_khong_ghim_duoc_model_served_model_none_va_co_warning(fake_vendors, capsys):
     """Lệnh không ghim được model -> served_model is None và có warning."""
     import sys
     import json
@@ -72,27 +50,12 @@ def test_lenh_khong_ghim_duoc_model_served_model_none_va_co_warning(mock_cfg, ca
     from unittest.mock import patch
     import bin.dispatch as dispatch
     
-    with patch.object(sys, 'argv', ["dispatch.py", "fakevendor", "fake-model", "--result-json"]):
-        with patch('sys.exit') as mock_exit:
+    with patch.object(sys, 'argv', ["dispatch.py", "fakevendor_no_flag", "fake-model", "--result-json", "--allow-unknown-model"]):
+        with patch('sys.exit'):
             with patch('shutil.which', return_value='/usr/bin/true'):
                 # Cần patch sys.stdin.read để giả lập pipe stdin
                 with patch('sys.stdin.read', return_value="hello"):
-                    with patch.object(dispatch, 'load_vendor_config') as mock_load:
-                        mock_load.return_value = {
-                            "schema_version": 3,
-                            "vendors": {
-                                "fakevendor": {
-                                    "binary": "true",
-                                    "headless": "true",
-                                    "model_flag": None
-                                }
-                            }
-                        }
-                        
-                        # Monkeypatch sys.modules['lib.vendor_config'] as well to catch internal imports
-                        import lib.vendor_config
-                        with patch.object(lib.vendor_config, 'load_vendor_config', mock_load):
-                            dispatch.main()
+                    dispatch.main()
                         
     out, err = capsys.readouterr()
     try:

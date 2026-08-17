@@ -281,28 +281,46 @@ def run_vendor(
                     reason="unknown_vendor"
                 )
                 
+            cmd_has_model = False
+            if model and model != "auto":
+                if v_cfg.get("model_flag"):
+                    cmd_has_model = True
+
+            served = model if cmd_has_model else None
+            warning_msg = None
+            if not cmd_has_model:
+                warning_msg = f"vendor '{vendor}' không nhận cờ model, đang chạy mặc định của chính nó, không xác định được slug."
+
+            def finalize(result: DispatchResult) -> DispatchResult:
+                if warning_msg:
+                    if warning_msg not in result.warnings:
+                        result.warnings.append(warning_msg)
+                    sys.stderr.write(f"[polykit] warning: {warning_msg}\n")
+                return result
+
             binary = v_cfg.get("binary")
             if binary and not shutil.which(binary):
-                return DispatchResult(
+                return finalize(DispatchResult(
                     status="skipped",
                     vendor=vendor,
                     model=model,
                     summary=f"vendor {vendor} skipped: not_installed",
                     warnings=[],
                     reason="not_installed",
-                    served_model=None if model == "auto" else model
-                )
+                    served_model=served
+                ))
 
             headless_tpl = v_cfg.get("headless")
             if not headless_tpl:
-                return DispatchResult(
+                return finalize(DispatchResult(
                     status="blocked",
                     vendor=vendor,
                     model=model,
                     summary=f"vendor {vendor} missing fields in JSON: headless",
                     warnings=[],
-                    reason="missing_fields"
-                )
+                    reason="missing_fields",
+                    served_model=served
+                ))
                 
             import shlex
             cmd = headless_tpl
@@ -322,12 +340,8 @@ def run_vendor(
             else:
                 input_data = prompt
 
-            cmd_has_model = False
-            if model and model != "auto":
-                model_flag = v_cfg.get("model_flag")
-                if model_flag:
-                    cmd += f" {model_flag} {shlex.quote(model)}"
-                    cmd_has_model = True
+            if cmd_has_model:
+                cmd += f" {v_cfg['model_flag']} {shlex.quote(model)}"
                     
             if workdir and v_cfg.get("workdir_flag"):
                 cmd += f" {v_cfg['workdir_flag']} {shlex.quote(workdir)}"
@@ -344,13 +358,8 @@ def run_vendor(
                 env=env,
                 input=input_data
             )
-            served = model if cmd_has_model else None
             out = _classify_completed(vendor, model, res, served_model=served)
-            if not cmd_has_model:
-                msg = f"vendor '{vendor}' không nhận cờ model, đang chạy mặc định của chính nó, không xác định được slug."
-                out.warnings.append(msg)
-                sys.stderr.write(f"[polykit] warning: {msg}\n")
-            return out
+            return finalize(out)
 
     except subprocess.TimeoutExpired as e:
         return DispatchResult(

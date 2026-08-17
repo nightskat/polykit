@@ -1,0 +1,12 @@
+Vòng 11 đóng băng — mình sẽ đọc spec + báo cáo, rồi chạy lại từng lệnh thật, không tin số chưa tự đo. Bắt đầu từ ràng buộc cứng và phạm vi 2 việc được phép.Phạm vi 5 file đã đụng. Đọc diff + fixture + test, rồi chạy lại từng lệnh maker khai — số nào không dán được sẽ ghi lệch.Diff nằm đúng 5 file trong phạm vi. Tiếp theo đọc dispatcher + test, rồi tự chạy pytest, dump-config, 4 nhánh vendor giả và phép revert.Phát hiện đầu: `python` trần exit 127 — lệnh `python one_off.py` trong báo cáo không chạy được. Ghi file ngay, rồi chạy pytest + 4 nhánh + dump-config.7/7 `--dump-config` đều exit 0. Pytest còn chạy — mình đo 4 nhánh vendor giả song song.4 nhánh đúng, 152 passed. Tiếp theo phép revert — điểm hở vòng 10 là inject warning mà test vẫn xanh.Inject warning → test_vong7 đỏ (exit 1). Khôi phục ngay, rồi thử revert nhánh `not_installed` xem test có còn khoá không.Revert `not_installed` vẫn xanh — Việc 2 chưa bị test khoá. Khôi phục code, rồi revert hai test còn lại.**HỎNG 2 CHỖ** — đã ghi `DAP-VONG11.md`.
+
+`$PY -m pytest tests/ -q` → `152 passed in 17.66s` **EXIT 0**. 7/7 `--dump-config` **EXIT 0**. `vendors.json` **0**. `dry-run` còn 3 dòng. Maker **không** đụng file ngoài 2 việc (`git diff --stat` = 5 file).
+
+| # | Mức | Chỗ hỏng | Đo thật |
+|---|---|---|---|
+| 1 | 🟠 | Việc 2 (`not_installed` thôi bịa) **không bị test khoá** | Gỡ `finalize` trên skip → `7 passed` **EXIT 0** |
+| 2 | 🟠 | Báo cáo khai `python one_off.py` | `python` → **EXIT 127**. `$PY one_off.py` thì 4 nhánh **đúng** |
+
+Việc giao thì **runtime xong**: no-flag 4 nhánh `served=None` + warning; có-cờ 4 nhánh `served=fake-4.6`. Inject warning → `test_vong7` **ĐỎ** (`got 2` **EXIT 1**) — lỗ vòng 10 đã hết. Bẻ `served=model` / bỏ `headless` → `test_lenh` / `test_dynamic` cũng ĐỎ.
+
+Báo cáo **có** mục HÀNH VI ĐÃ ĐỔI + PHÁT HIỆN THÊM. Số test dán đúng; thời gian lệch (`9.75s` / cổng `10.36s` / tôi `17.66s`). `python` trần **còn**. Không sửa code.

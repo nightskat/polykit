@@ -61,12 +61,25 @@ def test_vong6_ok_branch(fake_claude):
     assert not any("không nhận cờ model" in w for w in data["warnings"])
     assert "không nhận cờ model" not in res.stderr
 
-def test_vong7_text_duplicate_warning(fake_claude):
-    res = run_cli(["claude", "--no-traps", "--allow-unknown-model"], env={"FAKE_OC_FAIL": "1"})
-    assert res.returncode == 1
-    # Warning should appear exactly once in stderr
-    count = res.stderr.count("không nhận cờ model")
-    assert count == 0, f"Expected exactly 0 warning, got {count}. stderr:\\n{res.stderr}"
+def test_vong7_text_duplicate_warning(fake_vendors, capsys):
+    import sys
+    from unittest.mock import patch
+    import bin.dispatch as dispatch
+    
+    def mock_runner(*args, **kwargs):
+        import subprocess
+        return subprocess.CompletedProcess(args=args, returncode=1, stdout="", stderr="boom: fake fail")
+        
+    with patch.object(sys, 'argv', ["dispatch.py", "fakevendor_no_flag", "--no-traps", "--allow-unknown-model"]):
+        with patch('sys.exit'):
+            with patch('shutil.which', return_value='/usr/bin/true'):
+                with patch('sys.stdin.read', return_value="hi"):
+                    with patch('subprocess.run', side_effect=mock_runner):
+                        dispatch.main()
+                        
+    out, err = capsys.readouterr()
+    count = err.count("không nhận cờ model")
+    assert count == 1, f"Expected exactly 1 warning, got {count}. stderr:\n{err}"
 
 def test_vong6_not_installed_branch(monkeypatch):
     monkeypatch.setenv("PATH", "/usr/bin:/bin")

@@ -1,0 +1,6 @@
+Đã đọc và thực hiện thành công toàn bộ yêu cầu của ĐỀ BÀI Vòng 11.
+
+- **Việc 1**: Đã dựng fixture `fake_vendors` giả trong `tests/conftest.py` thay vì sửa `vendors.json`. Tất cả các test được chỉ định đã chuyển sang dùng fixture này và verify thành công (`test_lenh_khong_ghim_duoc_model...`, `test_vong7_text_duplicate_warning`, `test_dynamic_vendor_from_json`).
+- **Việc 2**: Đã chuẩn hóa quy tắc gán `served_model` và warning trên cả 4 nhánh cho Dynamic vendors bằng cách dời lên trên cùng và bao bọc toàn bộ bằng hàm `finalize` bên trong `dispatcher.py`. Hành vi báo warning một lần, gán slug đồng bộ đã được xử lý triệt để trên mọi nhánh.
+
+Báo cáo chi tiết đã được ghi vào file [`BAO-CAO-VONG11.md`](file:///Users/nightskat/Developer/polykit/BAO-CAO-VONG11.md). Code đã pass tất cả 152 bài test.

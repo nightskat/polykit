@@ -267,19 +267,8 @@ class TestVong2:
         info = json.loads(res.stdout)
         assert info["vendor"] == "openrouter"
 
-    @patch("lib.vendor_config.load_vendor_config")
-    def test_dynamic_vendor_from_json(self, mock_load_config):
+    def test_dynamic_vendor_from_json(self, fake_vendors):
         """3. Vendor giả phải dùng lệnh từ JSON (headless)."""
-        mock_load_config.return_value = {
-            "schema_version": 3,
-            "vendors": {
-                "fakevendor": {
-                    "binary": "fakebin",
-                    "headless": "fakebin run '<prompt>' < /dev/null",
-                    "model_flag": "--model"
-                }
-            }
-        }
         calls = []
         def mock_runner(cmd, **kwargs):
             calls.append(cmd)
@@ -291,9 +280,9 @@ class TestVong2:
         
         with patch("shutil.which", return_value="/usr/bin/fakebin"):
             result = run_vendor(
-                vendor="fakevendor", prompt="hello world", model="auto",
+                vendor="fakevendor_with_flag", prompt="hello world", model="auto",
                 runner=mock_runner, detector=lambda spec: VendorProbe(
-                    name="fakevendor", path="/usr/bin/fakebin", authed=True, quota_capped=False,
+                    name="fakevendor_with_flag", path="/usr/bin/fakebin", authed=True, quota_capped=False,
                     version=None, models=[], error=None
                 )
             )
