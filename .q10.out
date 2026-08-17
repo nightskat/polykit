@@ -1,0 +1,20 @@
+Bắt đầu vòng 10: đọc spec, báo cáo maker, rồi chạy lại từng lệnh — không tin dòng nào chưa tự xác nhận.Đọc code, tài liệu và chạy các lệnh chặn ngay — ghi file khi có phát hiện đầu tiên.Code đã đổi `served_model` trên nhánh skip — đọc dispatcher và chạy các lệnh chặn song song.Pytest và dump-config đã xanh. Đọc `dispatch.py` và tự chạy notifier, claude 4 nhánh, phép revert.Phát hiện chỗ `not_installed` gán `served_model=model` kể cả khi không có `model_flag`. Đang xác nhận bằng lệnh và phép revert.Đã thấy maker gỡ cảnh báo khỏi nhánh `claude` và gán `served_model` trên skip. Đang chạy lệnh thật và phép bẻ hành vi.Notifier và dump-config khớp. Tiếp: claude 4 nhánh, phép bẻ test, và vendor giả không có `model_flag`.Đã bắt được lỗi mới: `not_installed` bịa `served_model` khi vendor không có `model_flag`. Ghi file ngay, rồi làm phép revert.Hai phép revert chạy song song nên đụng file. Chạy lại từng phép, và kiểm tra `dispatcher.py` còn đúng không.Đủ chứng cứ. Viết lại `DAP-VONG10.md` đủ bảng, ≤70 dòng.Đủ bằng chứng. Viết `DAP-VONG10.md` đầy đủ, xếp theo mức thiệt hại.**HỎNG 2 CHỖ** — đã ghi `DAP-VONG10.md`.
+
+Gate vòng 10 **xanh**: `152 passed` · 7/7 `--dump-config` EXIT 0 · `vendors.json` sạch · `--dry-run` đã có lại · `--send` hết · `claude` 4/4 ra `served_model=claude-opus-5`.
+
+### Mới, do vá đẻ
+
+| # | Mức | Lỗi |
+|---|---|---|
+| 1 | 🔴 | Skip gán `served_model=model` **không nhìn `model_flag`**. Vendor giả không cờ: nhánh **ok** = `null` + warning; **not_installed** = `fake-4.6` + **0 warning**. Bịa slug trên đường thêm vendor JSON. |
+| 2 | 🟠 | `test_vong7` chuyển sang `claude` + assert `count==0`. Khoá «cảnh báo đúng 1 lần» mất. In trùng warning → `10 passed`. |
+
+### Việc vòng 9 — đã hết thật
+`--dry-run` trong plugin · notifier giả `true`/`false` · hết `--send` · test không-cờ **bẻ là đỏ** · `claude` 4 nhánh đúng.
+
+### HÀNH VI + khai số
+- Maker **có** mục HÀNH VI ĐÃ ĐỔI — khớp 2 dòng skip. **Không nêu** hệ quả `model_flag=null` (chính lỗ #1).
+- `152` **KHỚP**. Thời gian `7.95s` / tôi `8.49s` **LỆCH**. Thiếu dán revert + 4 nhánh claude.
+- `python` trần / thiếu prompt: **HẾT**.
+
+Không sửa code.

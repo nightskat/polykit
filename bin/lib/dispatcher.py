@@ -122,6 +122,7 @@ def run_vendor(
                     summary=f"vendor {vendor} skipped: {state.value}",
                     warnings=[],
                     reason=state.value,
+                    served_model=None if model == "auto" else model
                 )
 
     # 3. env con
@@ -151,11 +152,7 @@ def run_vendor(
                 timeout=validated_timeout,
                 env=env,
             )
-            out = _classify_completed(vendor, model, res, served_model=None)
-            msg = f"vendor '{vendor}' không nhận cờ model, đang chạy mặc định của chính nó, không xác định được slug."
-            out.warnings.append(msg)
-            sys.stderr.write(f"[polykit] warning: {msg}\n")
-            return out
+            return _classify_completed(vendor, model, res)
 
         elif vendor == "grok":
             with tempfile.NamedTemporaryFile(mode="w+", delete=False) as temp_prompt:
@@ -293,6 +290,7 @@ def run_vendor(
                     summary=f"vendor {vendor} skipped: not_installed",
                     warnings=[],
                     reason="not_installed",
+                    served_model=None if model == "auto" else model
                 )
 
             headless_tpl = v_cfg.get("headless")

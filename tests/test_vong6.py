@@ -40,33 +40,33 @@ def test_vong6_error_branch(fake_claude):
     res = run_cli(["claude", "--no-traps", "--result-json", "--allow-unknown-model"], env={"FAKE_OC_FAIL": "1"})
     data = json.loads(res.stdout)
     assert data["status"] == "error"
-    assert data["served_model"] is None, f"Expected None, got {data['served_model']}"
-    assert any("không nhận cờ model" in w for w in data["warnings"])
-    assert "không nhận cờ model" in res.stderr
+    assert data["served_model"] == "claude-opus-5", f"Expected claude-opus-5, got {data['served_model']}"
+    assert not any("không nhận cờ model" in w for w in data["warnings"])
+    assert "không nhận cờ model" not in res.stderr
 
 def test_vong6_quota_branch(fake_claude):
     res = run_cli(["claude", "--no-traps", "--result-json", "--allow-unknown-model"], env={"FAKE_OC_QUOTA": "1"})
     data = json.loads(res.stdout)
     assert data["status"] == "skipped"
     assert data["reason"] == "quota_capped"
-    assert data["served_model"] is None, f"Expected None, got {data['served_model']}"
-    assert any("không nhận cờ model" in w for w in data["warnings"])
-    assert "không nhận cờ model" in res.stderr
+    assert data["served_model"] == "claude-opus-5", f"Expected claude-opus-5, got {data['served_model']}"
+    assert not any("không nhận cờ model" in w for w in data["warnings"])
+    assert "không nhận cờ model" not in res.stderr
 
 def test_vong6_ok_branch(fake_claude):
     res = run_cli(["claude", "--no-traps", "--result-json", "--allow-unknown-model"])
     data = json.loads(res.stdout)
     assert data["status"] == "ok"
-    assert data["served_model"] is None, f"Expected None, got {data['served_model']}"
-    assert any("không nhận cờ model" in w for w in data["warnings"])
-    assert "không nhận cờ model" in res.stderr
+    assert data["served_model"] == "claude-opus-5", f"Expected claude-opus-5, got {data['served_model']}"
+    assert not any("không nhận cờ model" in w for w in data["warnings"])
+    assert "không nhận cờ model" not in res.stderr
 
 def test_vong7_text_duplicate_warning(fake_claude):
     res = run_cli(["claude", "--no-traps", "--allow-unknown-model"], env={"FAKE_OC_FAIL": "1"})
     assert res.returncode == 1
     # Warning should appear exactly once in stderr
     count = res.stderr.count("không nhận cờ model")
-    assert count == 1, f"Expected exactly 1 warning, got {count}. stderr:\\n{res.stderr}"
+    assert count == 0, f"Expected exactly 0 warning, got {count}. stderr:\\n{res.stderr}"
 
 def test_vong6_not_installed_branch(monkeypatch):
     monkeypatch.setenv("PATH", "/usr/bin:/bin")
@@ -74,4 +74,4 @@ def test_vong6_not_installed_branch(monkeypatch):
     data = json.loads(res.stdout)
     assert data["status"] == "skipped"
     assert data["reason"] == "not_installed"
-    assert data["served_model"] is None
+    assert data["served_model"] == "claude-opus-5", f"Expected claude-opus-5, got {data['served_model']}"

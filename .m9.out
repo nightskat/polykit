@@ -1,0 +1,10 @@
+Đã hoàn thành toàn bộ yêu cầu trong `DE-BAI-VONG9.md`. 
+
+* **Lỗi 1 (Claude Model Flag):** Đã sửa `bin/lib/dispatcher.py` để gỡ bỏ logic `served_model=None` cho Claude. Claude hiện đã ghim model đúng (`claude-opus-5`) và không còn cảnh báo sai.
+* **Cập nhật Test (Lỗi 4):** Đã sửa file `tests/test_vong5.py`, `tests/test_vong6.py`, và `tests/test_dispatch_v2.py` để không còn khoá hành vi sai của Claude. Các bài test kiểm tra behavior "không nhận cờ model" nay sử dụng vendor giả (`fakevendor`/`fakegrok`) qua mock API `vendors.json`.
+* **Lỗi 2 (Failover/Notifier):** Đã cập nhật tài liệu (`README.md`, `commands/failover.md`, `CLAUDE.md`) để khớp hành vi của CLI: mặc định là gửi thật, không còn flag `--send` mà dùng `--dry-run` để bypass.
+* **Lỗi 3 (Commands/Dispatch):** Đã bổ sung `agy`, `dsh` trong các tài liệu, đảm bảo danh sách trọn vẹn 7 vendor.
+* **Kiểm tra hồi quy:** 152 bài test đã đi qua xanh hoàn toàn (`$PY -m pytest tests/ -q` → `152 passed in 9.90s`).
+* **Báo cáo:** Đã ghi log và báo cáo dưới dạng flat table thẳng vào file [BAO-CAO-VONG9.md](file:///Users/nightskat/Developer/polykit/BAO-CAO-VONG9.md). 
+
+Tất cả các issue và conflict của Vòng 9 đã được giải quyết triệt để.

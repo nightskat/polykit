@@ -41,31 +41,68 @@ def test_models_sai_dang_bao_loi_ro():
     finally:
         os.unlink(temp_path)
 
-def test_lenh_khong_ghim_duoc_model_served_model_none_va_co_warning():
+@pytest.fixture
+def mock_cfg(monkeypatch):
+    import bin.lib.vendor_config as vendor_config
+    if hasattr(vendor_config.load_vendor_config, "cache_clear"):
+        vendor_config.load_vendor_config.cache_clear()
+    
+    def fake_load(*args, **kwargs):
+        return {
+            "schema_version": 3,
+            "vendors": {
+                "fakevendor": {
+                    "binary": "true",
+                    "headless": "true",
+                    "model_flag": None
+                }
+            }
+        }
+    monkeypatch.setattr(vendor_config, "load_vendor_config", fake_load)
+    yield
+    if hasattr(vendor_config.load_vendor_config, "cache_clear"):
+        vendor_config.load_vendor_config.cache_clear()
+
+def test_lenh_khong_ghim_duoc_model_served_model_none_va_co_warning(mock_cfg, capsys):
     """Lệnh không ghim được model -> served_model is None và có warning."""
-    from lib.dispatcher import run_vendor
-    from lib.states import VendorProbe
+    import sys
+    import json
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from unittest.mock import patch
+    import bin.dispatch as dispatch
     
-    calls = []
-    def mock_runner(cmd, **kwargs):
-        calls.append(cmd)
-        class MockRes:
-            returncode = 0
-            stdout = "ok"
-            stderr = ""
-        return MockRes()
+    with patch.object(sys, 'argv', ["dispatch.py", "fakevendor", "fake-model", "--result-json"]):
+        with patch('sys.exit') as mock_exit:
+            with patch('shutil.which', return_value='/usr/bin/true'):
+                # Cần patch sys.stdin.read để giả lập pipe stdin
+                with patch('sys.stdin.read', return_value="hello"):
+                    with patch.object(dispatch, 'load_vendor_config') as mock_load:
+                        mock_load.return_value = {
+                            "schema_version": 3,
+                            "vendors": {
+                                "fakevendor": {
+                                    "binary": "true",
+                                    "headless": "true",
+                                    "model_flag": None
+                                }
+                            }
+                        }
+                        
+                        # Monkeypatch sys.modules['lib.vendor_config'] as well to catch internal imports
+                        import lib.vendor_config
+                        with patch.object(lib.vendor_config, 'load_vendor_config', mock_load):
+                            dispatch.main()
+                        
+    out, err = capsys.readouterr()
+    try:
+        res = json.loads(out)
+    except json.JSONDecodeError:
+        pytest.fail(f"Expected JSON output, got: {out}")
         
-    res = run_vendor(
-        "claude", 
-        prompt="hello", 
-        model="auto", 
-        runner=mock_runner, 
-        detector=lambda spec: VendorProbe(name="claude", path="/usr/bin/claude", authed=True, quota_capped=False, version=None, models=[], error=None)
-    )
-    
-    assert res.status == "ok"
-    assert res.served_model is None
-    assert any("không nhận cờ model" in w for w in res.warnings)
+    assert res.get("status") == "ok", f"Expected ok but got: {out}\nStderr: {err}"
+    assert res.get("served_model") is None
+    assert any("không nhận cờ model" in w for w in res.get("warnings", []))
 
 def test_ca_11_ten_vendor_dump_config_voi_model_mac_dinh_exit_0():
     """Cả 11 tên vendor `--dump-config` với model mặc định -> exit 0."""

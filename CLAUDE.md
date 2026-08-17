@@ -20,7 +20,7 @@ python3 bin/watcher.py --dry-run          # diff model/version weekly
 ### Map module → milestone
 | Milestone | File chính | Acceptance đã đạt |
 |---|---|---|
-| M1b doctor | `bin/doctor.py`, `bin/lib/{states,vendors,state_store}.py` | detect 4 vendor, state.json schema_version=1 |
+| M1b doctor | `bin/doctor.py`, `bin/lib/{states,vendors,state_store}.py` | detect 7 vendor, state.json schema_version=1 |
 | M1c dispatch | `bin/dispatch.py`, `bin/lib/{dispatch_core,dispatcher}.py` | codex+gemini chạy thật, thiếu vendor→skipped, ToS negative test |
 | M3 failover | `bin/failover.py`, `bin/lib/{quota,handoff,notifier}.py` | pressure→ping trước, cap→ping reactive, lỗi lạ→im |
 | M2 grok | `bin/lib/{quota_error,evidence}.py` (+dispatcher) | 402→quota_capped không crash, evidence log |

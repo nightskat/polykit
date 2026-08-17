@@ -6,7 +6,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -267,8 +267,19 @@ class TestVong2:
         info = json.loads(res.stdout)
         assert info["vendor"] == "openrouter"
 
-    def test_dynamic_vendor_from_json(self):
-        """3. claude phải dùng lệnh từ JSON (headless)."""
+    @patch("lib.vendor_config.load_vendor_config")
+    def test_dynamic_vendor_from_json(self, mock_load_config):
+        """3. Vendor giả phải dùng lệnh từ JSON (headless)."""
+        mock_load_config.return_value = {
+            "schema_version": 3,
+            "vendors": {
+                "fakevendor": {
+                    "binary": "fakebin",
+                    "headless": "fakebin run '<prompt>' < /dev/null",
+                    "model_flag": "--model"
+                }
+            }
+        }
         calls = []
         def mock_runner(cmd, **kwargs):
             calls.append(cmd)
@@ -278,18 +289,19 @@ class TestVong2:
             mock.stderr = ""
             return mock
         
-        result = run_vendor(
-            vendor="claude", prompt="hello world", model="auto",
-            runner=mock_runner, detector=lambda spec: VendorProbe(
-                name="claude", path="/usr/bin/claude", authed=True, quota_capped=False,
-                version=None, models=[], error=None
+        with patch("shutil.which", return_value="/usr/bin/fakebin"):
+            result = run_vendor(
+                vendor="fakevendor", prompt="hello world", model="auto",
+                runner=mock_runner, detector=lambda spec: VendorProbe(
+                    name="fakevendor", path="/usr/bin/fakebin", authed=True, quota_capped=False,
+                    version=None, models=[], error=None
+                )
             )
-        )
         assert result.status == "ok"
         assert len(calls) == 1
         cmd_str = calls[0]
-        # claude command starts with claude
-        assert cmd_str[0] == "claude"
+        # assert lệnh được dựng từ trường headless
+        assert "fakebin run 'hello world' < /dev/null" in cmd_str
 
     def test_reject_fake_model(self):
         """4. Model bịa phải bị từ chối exit 2."""

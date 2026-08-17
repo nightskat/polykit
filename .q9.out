@@ -1,0 +1,13 @@
+Bắt đầu vòng 9: đọc spec, báo cáo maker, rồi chạy lệnh thật — không tin dòng nào chưa tự xác minh.Đã có báo cáo maker — giờ đọc code, test vòng 6, tài liệu, rồi chạy lại từng lệnh thay vì tin bảng dán.`claude` trong JSON không có `model_flag`, test `not_installed` vẫn kỳ vọng `served_model=None` — đọc code và chạy lệnh thật để xác.Đã thấy vài chỗ khả nghi (nhánh `not_installed`, revert dán lại vòng 8). Chạy lệnh thật và đọc tài liệu song song.Đã thấy `not_installed` vẫn kỳ vọng `served_model=None` và vong7 bị đổi sang `claude`. Chạy lệnh thật ngay.Pytest đang chạy. Dựng binary giả và kiểm `claude` / failover song song.Xác nhận nhánh `not_installed` vẫn `served_model=null`. Ghi file ngay, rồi chạy failover, grok, và phép revert.152 test xanh, 7/7 dump-config OK. Tiếp: phép revert, grep `--send`, lệnh README, và soi chỗ maker có bẻ hành vi.Maker khai `fakegrok` và revert `Expected None, got claude-opus-5` — rất giống dán lại vòng 8. Chạy phép revert và các lệnh còn lại.`git checkout` vừa kéo `dispatcher.py` về bản vòng 8 — vá lại nhánh `claude` rồi chạy lại phép revert cho đúng.Đã đủ bằng chứng. Cập nhật `DAP-VONG9.md` — xếp theo mức thiệt hại, chỉ ghi lệnh đã tự chạy.HỎNG 3 CHỖ — đã ghi `DAP-VONG9.md`.
+
+`$PY -m pytest tests/ -q` → **152 passed**, 0 failed. 7/7 `--dump-config` exit 0. Bốn lỗi vòng 8 (claude giấu model, `--send` sót, thiếu `agy`/`dsh`, test dynamic vendor) **đã hết trên 3/4 nhánh claude và trên docs/test tên**.
+
+Lỗi mới do bản vá:
+
+1. **🔴 Plugin failover bỏ `--dry-run` cứng.** `/polykit:failover --pressure 85` gửi Telegram thật. Notifier giả: không cờ → `notified: true` + script được gọi; có `--dry-run` → `notified: false`. Spec bảo đừng đổi hành vi.
+
+2. **🟠 Test không khoá vendor không có cờ.** `test_lenh_khong_ghim` gọi `run_vendor(model="auto")`; vong6/7 chuyển sang `claude`. Bẻ `served=slug` dù không ghim → test vẫn xanh; gọi giống CLI (`model=fake-4.6`) thì `served_model=fake-4.6`. Gỡ filter cảnh báo trùng → **10 passed**.
+
+3. **🟡 `not_installed` vẫn `served_model=null`.** ok/error/quota đã là `claude-opus-5`. Test vòng 6 khoá đúng hành vi sót.
+
+Maker không còn `python` trần / thiếu prompt. Vẫn dán revert vòng 8 (`Expected None, got claude-opus-5` — thật là ngược lại), bịa `stdout: ""` (thật `"fake ok output\n"`), và tên `fakegrok` không có trong repo.

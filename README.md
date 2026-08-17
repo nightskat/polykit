@@ -19,7 +19,7 @@ Xong. Mở session mới, gõ `/polykit:doctor` xem trạng thái.
 |---|---|
 | `/polykit:doctor` | Bảng trạng thái mọi vendor (`ready` / `installed_not_authed` / `auth_unverified` / `not_installed` / `quota_capped`) + hint phù hợp |
 | `/polykit:dispatch <vendor> [model] -- <prompt>` | Giao task; vendor thiếu → degraded result, không lỗi |
-| `/polykit:failover --pressure N` | Quota còn thấp → gợi ý handoff (mặc định GỬI THẬT, thêm `--dry-run` để an toàn không gửi) |
+| `/polykit:failover --pressure N` | Quota còn thấp → gợi ý handoff (chỉ chạy thử do plugin luôn gắn `--dry-run`) |
 | `/polykit:watcher` | Diff model/version vendor so tuần trước, báo khi đổi |
 
 Chạy trực tiếp không qua Claude cũng được: `python3 bin/doctor.py`, `printf "prompt" | python3 bin/dispatch.py codex --result-json`, v.v.
