@@ -1,0 +1,9 @@
+| Lệnh đã chạy | Output thật & Mã thoát |
+|---|---|
+| `~/.pyenv/versions/3.11.8/bin/python bin/dispatch.py dsh --doctor` | `[polykit] doctor: running dsh --profile headless --dump-config ...`<br/>`(bỏ qua output dài)`<br/>`[polykit] doctor: dsh OK`<br/>**EXIT: 0** |
+| `~/.pyenv/versions/3.11.8/bin/python bin/dispatch.py codex --doctor` | `[polykit] doctor: running codex doctor ...`<br/>`(bỏ qua output dài)`<br/>`[polykit] doctor: codex OK`<br/>(Kích thước output: 10211 bytes)<br/>**EXIT: 0** |
+| `~/.pyenv/versions/3.11.8/bin/python bin/dispatch.py agy --doctor` | `[polykit] doctor: running agy -p '/model' ...`<br/>`[polykit] doctor: running zero-quota agy -p '/usage' ...`<br/>`[polykit] doctor: agy OK`<br/>`(bỏ qua output quota)`<br/>**EXIT: 0** |
+| `~/.pyenv/versions/3.11.8/bin/python bin/dispatch.py claude totally-fake-model --dump-config` | `[polykit] error: model list for vendor 'claude' is unknown, cannot validate 'totally-fake-model'`<br/>`Use --allow-unknown-model to bypass.`<br/>**EXIT: 2** |
+| `echo hi \| env PATH=/usr/bin:/bin ~/.pyenv/versions/3.11.8/bin/python bin/dispatch.py opencode --result-json --allow-unknown-model` | `{ "status": "skipped", "vendor": "opencode", "model": "qwen/qwen3.7-flash (provider openrouter)", "summary": "vendor opencode skipped: not_installed", "warnings": [], "stdout": "", "exit_code": 1, "reason": "not_installed", "served_model": null }`<br/>**EXIT: 1** |
+| `~/.pyenv/versions/3.11.8/bin/python -m pytest tests/ -q` | `..............................................................................................................................................`<br/>`142 passed in 8.02s`<br/>**EXIT: 0** |
+| `~/.pyenv/versions/3.11.8/bin/python -c 'import json;json.load(open("config/vendors.json"))'` | *(Rỗng, không lỗi)*<br/>**EXIT: 0** |

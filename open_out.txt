@@ -1,0 +1,12 @@
+{
+  "status": "skipped",
+  "vendor": "opencode",
+  "model": "qwen/qwen3.7-flash (provider openrouter)",
+  "summary": "vendor opencode skipped: not_installed",
+  "warnings": [],
+  "stdout": "",
+  "exit_code": 1,
+  "reason": "not_installed",
+  "served_model": null
+}
+exit: 1

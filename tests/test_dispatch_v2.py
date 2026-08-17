@@ -33,7 +33,7 @@ from lib.states import VendorProbe
 class TestVendorConfig:
     def test_load_vendor_config_schema_v2(self):
         cfg = load_vendor_config()
-        assert cfg["schema_version"] == 2
+        assert cfg["schema_version"] == 3
 
     def test_vendor_names_includes_new_vendors(self):
         names = vendor_names()
@@ -72,7 +72,7 @@ class TestVendorConfig:
 
     def test_zero_quota_cmds_dsh(self):
         zq = vendor_zero_quota_cmds("dsh")
-        assert "--dump-config" in zq
+        assert "dsh --profile headless --dump-config" in zq
 
 
 # ─── dispatch_core.py: build_dsh_cmd ───

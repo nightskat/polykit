@@ -26,8 +26,8 @@ def load_vendor_config(path: Path | None = None) -> dict:
     p = path or _VENDORS_JSON
     with open(p, encoding="utf-8") as f:
         data = json.load(f)
-    if data.get("schema_version") != 2:
-        raise ValueError(f"vendors.json schema_version != 2 (got {data.get('schema_version')})")
+    if data.get("schema_version") != 3:
+        raise ValueError(f"vendors.json schema_version != 3 (got {data.get('schema_version')})")
     return data
 
 

@@ -35,12 +35,11 @@ def _run_doctor(vendor_name: str) -> int:
         sys.stderr.write(f"[polykit] vendor '{vendor_name}' không có verify_cmd/zero_quota_cmds\n")
         return 1
 
-    # Fix: dsh --dump-config lacks --profile headless in JSON
-    if vendor_name == "dsh" and vcmd == "dsh --dump-config":
-        vcmd = "dsh --profile headless --dump-config"
+    executed_cmds = set()
 
     # Chạy verify_cmd
     if vcmd:
+        executed_cmds.add(vcmd)
         sys.stderr.write(f"[polykit] doctor: running `{vcmd}` ...\n")
         try:
             res = subprocess.run(
@@ -64,17 +63,13 @@ def _run_doctor(vendor_name: str) -> int:
 
     # Chạy zero_quota_cmds nếu có
     for zqc in zq[:2]:  # chạy tối đa 2 lệnh
+        if zqc in executed_cmds:
+            continue
+        executed_cmds.add(zqc)
         sys.stderr.write(f"[polykit] doctor: running zero-quota `{zqc}` ...\n")
         try:
-            # Fix: zqc của agy là nội bộ (/model, /usage)
-            if vendor_name == "agy" and zqc.startswith("/"):
-                full_cmd = f"agy -p '{zqc}'"
-            elif zqc.startswith("--") or zqc.startswith("-"):
-                full_cmd = f"{vendor_name} {zqc}"
-            else:
-                full_cmd = zqc
             res = subprocess.run(
-                full_cmd, shell=True,
+                zqc, shell=True,
                 capture_output=True, text=True, timeout=15,
             )
             sys.stdout.write(res.stdout)
@@ -139,14 +134,15 @@ def main():
     # Validate model
     if resolved_model != "auto" and not args.allow_unknown_model:
         vendor_data = cfg.get("vendors", {}).get(args.vendor, {})
-        valid_models_dict = vendor_data.get("models")
-        if isinstance(valid_models_dict, dict):
-            valid_models = []
-            for family_models in valid_models_dict.values():
-                valid_models.extend(family_models)
-            if valid_models and resolved_model not in valid_models:
+        valid_models = vendor_data.get("models")
+        if valid_models is None:
+            sys.stderr.write(f"[polykit] error: model list for vendor '{args.vendor}' is unknown, cannot validate '{resolved_model}'\n")
+            sys.stderr.write(f"Use --allow-unknown-model to bypass.\n")
+            sys.exit(2)
+        elif isinstance(valid_models, list):
+            if resolved_model not in valid_models:
                 sys.stderr.write(f"[polykit] error: model '{resolved_model}' not in vendor '{args.vendor}' valid models.\n")
-                sys.stderr.write(f"Valid models: {', '.join(valid_models)}\n")
+                sys.stderr.write(f"Valid models: {', '.join(valid_models) if valid_models else '(empty)'}\n")
                 sys.stderr.write(f"Use --allow-unknown-model to bypass.\n")
                 sys.exit(2)
 

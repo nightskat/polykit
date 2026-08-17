@@ -298,6 +298,17 @@ def run_vendor(
                     reason="unknown_vendor"
                 )
                 
+            binary = v_cfg.get("binary")
+            if binary and not shutil.which(binary):
+                return DispatchResult(
+                    status="skipped",
+                    vendor=vendor,
+                    model=model,
+                    summary=f"vendor {vendor} skipped: not_installed",
+                    warnings=[],
+                    reason="not_installed",
+                )
+
             headless_tpl = v_cfg.get("headless")
             if not headless_tpl:
                 return DispatchResult(
@@ -348,7 +359,8 @@ def run_vendor(
                 input=input_data
             )
             out = _classify_completed(vendor, model, res)
-            out.served_model = model if model != "auto" else v_cfg.get("default_model")
+            if out.status == "ok":
+                out.served_model = model if model != "auto" else v_cfg.get("default_model")
             return out
 
     except subprocess.TimeoutExpired as e:
