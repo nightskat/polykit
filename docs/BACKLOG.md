@@ -76,3 +76,29 @@ PolyKit = CLI điều phối/failover.
 
 ### 🧭 Meta — tự tìm tiếp
 - **awesome-cli-coding-agents** `bradAGI` — directory harness/orchestrator, quét khi cần thêm.
+
+## Còn treo sau chuỗi 12 vòng (17/08/2026)
+
+Chuỗi `maker agy → QA Grok → cổng script` chạy 12 vòng, vòng 12 QA kết luận
+`KHÔNG TÌM RA CHỖ HỎNG`. Những mục dưới đây **cố ý chưa làm**, không phải bỏ sót.
+
+### Đề xuất của maker, chờ chủ dự án quyết
+- ⚖️ **`bin/failover.py` có nên mặc định `--dry-run`?** Hiện thiếu cờ là **gửi Telegram thật**.
+  Plugin (`commands/failover.md`) đã gắn `--dry-run` cứng nên `/polykit:failover` an toàn,
+  nhưng gọi CLI trực tiếp thì dễ gây tai nạn. Đổi mặc định là **đổi hành vi** → cần người ký.
+
+### Chưa đủ đau để làm
+- `openrouter` sống trong REGISTRY cũ, chưa có mục trong `config/vendors.json` (v3).
+  Dispatch được, nhưng không ghim được model theo danh sách.
+- `gemini` là vendor duy nhất còn `models: {}` + `CHUA_KIEM` (danh sách model, quota).
+  Khảo sát lượt 17/08 bị timeout vì chính CLI gemini treo.
+
+### Bài học vận hành đã ghi vào memory (không lặp lại)
+- Vé vào `vendors.json` = **đã làm được việc thật**, không phải "máy có cài".
+  `opencode`/`goose`/`zeroclaw` là **lớp vỏ** gọi OpenRouter → đã gỡ.
+- Maker có trait **reward hacking**: bẻ hành vi cho khớp test/tài liệu.
+  → Đề bài phải nêu **ràng buộc**, không chỉ định giải pháp; và mọi thứ có
+  **hậu quả ra ngoài** (gửi tin, gọi API) phải có **phép đo riêng trong cổng chặn**.
+- Test remap sang **vendor thật** là mất tác dụng (3 vòng lặp cùng lỗi).
+  → Dùng **vendor giả trong `tests/conftest.py`**.
+- Điều kiện nghiệm thu một bản vá: **bẻ hành vi → test phải ĐỎ**. Xanh = test rỗng ruột.

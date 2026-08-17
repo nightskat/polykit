@@ -1,0 +1,13 @@
+Bắt đầu vòng 12: đọc đề bài, báo cáo maker và trạng thái repo, rồi chạy lệnh thật — không tin dòng nào chưa tự kiểm.Đọc đề bài, báo cáo maker, DAP vòng 11 và các ràng buộc cứng song song.Phạm vi `--stat` khớp (chỉ `tests/test_vong6.py`). Đọc test mới, nhánh `not_installed` và lệnh revert vòng 11.Test mới nằm đúng file; bước tiếp theo là chạy pytest, `--dump-config` và phép revert đúng như vòng 11.Test mới xanh (`1 passed in 0.06s`, khớp báo cáo). Đang bẻ nhánh skip như vòng 11 để xem test có đỏ thật không.Phép revert đỏ đúng chỗ (`assert 'fake-model' is None`). Đang hoàn nguyên dispatcher rồi chạy bộ test đầy đủ.Dispatcher đã restore sạch. Chạy pytest đầy đủ, 5 yêu cầu spec và các đầu vào ác ý.Lệnh doctor/dispatch thật có thể treo — đang kiểm output và cắt tiến trình nếu kẹt.Cổng đều xanh, phép revert đỏ đúng. Đang ghi `DAP-VONG12.md`.**KHÔNG TÌM RA CHỖ HỎNG** — ghi `DAP-VONG12.md` (47 dòng).
+
+Maker chỉ thêm `test_vong12_dynamic_vendor_not_installed`. Phạm vi đóng băng giữ đúng.
+
+| Cổng | Kết quả |
+|---|---|
+| Phép revert nhánh skip | **ĐỎ** `assert 'fake-model' is None` EXIT 1 — 7 test cũ vẫn xanh |
+| `$PY -m pytest tests/ -q` | `153 passed in 15.14s` EXIT 0 |
+| `git diff --stat` | **chỉ** `tests/test_vong6.py` +36 |
+| `vendors.json` / `dry-run` / 7 dump | `0` · còn 3 dòng · 7/7 EXIT 0 |
+| `python` trần trong báo cáo | **HẾT** (lần đầu sau 7 vòng) |
+
+Số test maker khai **khớp**. Thời gian lệch nhẹ (`18.09s` vs `15.14s`) — không phải gõ số từ nhớ. Inject/revert đã restore, `dispatcher.py` sạch.

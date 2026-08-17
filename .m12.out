@@ -1,0 +1,8 @@
+Tôi đã hoàn thành yêu cầu bằng việc bổ sung hàm kiểm thử khóa nhánh `not_installed` và tạo file báo cáo.
+
+Dưới đây là tóm tắt các thao tác đã thực hiện:
+- Đọc và phân tích các file mã nguồn liên quan (`DAP-VONG11.md`, `bin/lib/dispatcher.py`, `tests/conftest.py`, `tests/test_vong5.py`, `tests/test_vong6.py`).
+- Thêm bài kiểm thử `test_vong12_dynamic_vendor_not_installed` vào trong file `tests/test_vong6.py` với cấu trúc mô phỏng đúng đầu vào.
+- Thực hiện nghiệm thu (phép bẻ nhánh để xác nhận bài kiểm thử phát hiện được lỗi, sau đó hoàn nguyên lại trạng thái đúng). 
+- Kiểm tra toàn bộ Test suite để đảm bảo không có bất kỳ rủi ro hay thay đổi cấu hình nào bị ảnh hưởng.
+- Xuất toàn bộ kết quả tổng kết vào file [BAO-CAO-VONG12.md](file:///Users/nightskat/Developer/polykit/BAO-CAO-VONG12.md).

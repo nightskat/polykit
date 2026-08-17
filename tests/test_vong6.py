@@ -88,3 +88,39 @@ def test_vong6_not_installed_branch(monkeypatch):
     assert data["status"] == "skipped"
     assert data["reason"] == "not_installed"
     assert data["served_model"] == "claude-opus-5", f"Expected claude-opus-5, got {data['served_model']}"
+
+def test_vong12_dynamic_vendor_not_installed(fake_vendors, capsys):
+    import sys
+    from unittest.mock import patch
+    import bin.dispatch as dispatch
+    import json
+    
+    # 1. fakevendor_no_flag
+    with patch.object(sys, 'argv', ["dispatch.py", "fakevendor_no_flag", "fake-model", "--result-json", "--allow-unknown-model"]):
+        with patch('sys.exit'):
+            with patch('shutil.which', return_value=None):
+                with patch('sys.stdin.read', return_value="hello"):
+                    dispatch.main()
+                    
+    out1, err1 = capsys.readouterr()
+    data1 = json.loads(out1)
+    assert data1["status"] == "skipped"
+    assert data1["reason"] == "not_installed"
+    assert data1["served_model"] is None
+    assert any("không nhận cờ model" in w for w in data1["warnings"])
+    assert "không nhận cờ model" in err1
+    
+    # 2. fakevendor_with_flag
+    with patch.object(sys, 'argv', ["dispatch.py", "fakevendor_with_flag", "fake-model", "--result-json", "--allow-unknown-model"]):
+        with patch('sys.exit'):
+            with patch('shutil.which', return_value=None):
+                with patch('sys.stdin.read', return_value="hello"):
+                    dispatch.main()
+                    
+    out2, err2 = capsys.readouterr()
+    data2 = json.loads(out2)
+    assert data2["status"] == "skipped"
+    assert data2["reason"] == "not_installed"
+    assert data2["served_model"] == "fake-model"
+    assert not any("không nhận cờ model" in w for w in data2["warnings"])
+    assert "không nhận cờ model" not in err2
