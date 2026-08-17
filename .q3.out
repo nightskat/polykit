@@ -1,0 +1,18 @@
+Tôi sẽ đọc spec, báo cáo và skill QA trước, rồi chạy lại từng lệnh thật — không tin dòng nào chưa tự verify.Đang đọc DAP vòng 2, lược đồ JSON và code đọc — rồi chạy pytest cùng các lệnh xác nhận ngay.JSON đã lên schema v3 và `dsh.default_model` đang là `flash` — tôi chạy pytest, doctor và dump-config ngay để xác nhận, không tin báo cáo.`dsh --doctor` và pytest khớp báo cáo. Tiếp theo tôi chạy lệnh dump-config và ca vendor thiếu `models` — chỗ lược đồ đổi dễ vỡ.Phát hiện đầu: `claude`/`opencode`/`goose`/`jules`/`zeroclaw` auto bị chặn vì thiếu `models`. Ghi `DAP-VONG3.md` ngay rồi tiếp tục chạy lệnh xác nhận.`openrouter` không có trong JSON — tôi kiểm xem ghim model có bị chặn nhầm, rồi chạy nốt ca ác ý và 5 yêu cầu spec.Đã đủ bằng chứng. Đang viết lại `DAP-VONG3.md` đầy đủ — 3 lỗi vòng 2 hết thật, lỗi mới là chặn nhầm khi `models` unknown.**HỎNG 2 CHỖ** — ghi ở `DAP-VONG3.md` (66 dòng). `pytest tests/ -q` → **142 passed, 0 failed**.
+
+### 3 lỗi vòng 2 — hết thật
+| Lỗi cũ | Nay |
+|---|---|
+| `dsh --doctor` luôn EXIT 1 | **EXIT 0** `dsh OK` |
+| `codex --doctor` ~304KB | stdout **10319B**, EXIT 0 |
+| agy in trùng `/model` | `/model` rồi `/usage`, EXIT 0 |
+| mất binary bịa `served_model` | `served_model=null` `skipped` EXIT 1 |
+| model bịa khi `models`≠dict | `claude totally-fake-model` **EXIT 2** |
+
+### Lỗi mới do bản vá
+1. 🔴 **`models is None` → chặn hết (EXIT 2)**. Spec bảo *nói rõ không chặn được*. `claude --dump-config` chết trên chính `claude-opus-5`. Cùng cửa: opencode/goose/jules/zeroclaw auto, `gemini gemini-2.5-pro`, `openrouter <slug>`. 5 vendor thiếu hẳn field `models`.
+2. 🟡 Nhánh đọc sót: `dict`/`str` vẫn **lọt im** (chỉ xử lý `None` và `list`).
+
+`--allow-unknown-model` mới qua được. `dsh auto` vẫn ra `deepseek-v4-pro`, không flash.
+
+BAO-CAO: 5/7 lệnh **KHỚP**; codex 10211→10319B và pytest 8.02s→1.00s = **LỆCH nhẹ**, không khai khống số test.

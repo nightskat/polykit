@@ -132,19 +132,19 @@ def main():
                 resolved_model = dm
 
     # Validate model
-    if resolved_model != "auto" and not args.allow_unknown_model:
+    if resolved_model != "auto":
         vendor_data = cfg.get("vendors", {}).get(args.vendor, {})
         valid_models = vendor_data.get("models")
         if valid_models is None:
-            sys.stderr.write(f"[polykit] error: model list for vendor '{args.vendor}' is unknown, cannot validate '{resolved_model}'\n")
-            sys.stderr.write(f"Use --allow-unknown-model to bypass.\n")
-            sys.exit(2)
+            if not args.allow_unknown_model:
+                sys.stderr.write(f"[polykit] warning: model list for vendor '{args.vendor}' is unknown, cannot validate '{resolved_model}'\n")
         elif isinstance(valid_models, list):
             if resolved_model not in valid_models:
-                sys.stderr.write(f"[polykit] error: model '{resolved_model}' not in vendor '{args.vendor}' valid models.\n")
-                sys.stderr.write(f"Valid models: {', '.join(valid_models) if valid_models else '(empty)'}\n")
-                sys.stderr.write(f"Use --allow-unknown-model to bypass.\n")
-                sys.exit(2)
+                if not args.allow_unknown_model:
+                    sys.stderr.write(f"[polykit] error: model '{resolved_model}' not in vendor '{args.vendor}' valid models.\n")
+                    sys.stderr.write(f"Valid models: {', '.join(valid_models)}\n")
+                    sys.stderr.write(f"Use --allow-unknown-model to bypass.\n")
+                    sys.exit(2)
 
     # --dump-config: in cấu hình đã resolve, thoát 0 token
     if args.dump_config:

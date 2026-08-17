@@ -28,6 +28,11 @@ def load_vendor_config(path: Path | None = None) -> dict:
         data = json.load(f)
     if data.get("schema_version") != 3:
         raise ValueError(f"vendors.json schema_version != 3 (got {data.get('schema_version')})")
+    for vendor_name, vendor_data in data.get("vendors", {}).items():
+        if "models" in vendor_data:
+            models_val = vendor_data["models"]
+            if models_val is not None and not isinstance(models_val, list):
+                raise ValueError(f"vendor '{vendor_name}' có trường 'models' sai dạng: {type(models_val).__name__}")
     return data
 
 

@@ -1,0 +1,16 @@
+Vòng 4: đọc spec, báo cáo maker và trạng thái repo trước, rồi chạy lệnh thật — không tin dòng nào chưa tự kiểm.Đã nắm spec vòng 4. Tiếp theo chạy lệnh thật và đọc code đọc `models` — không tin số trong báo cáo.Chạy pytest, dump-config 11 vendor và các lệnh trong báo cáo — ghi file ngay khi lệch.11 vendor dump-config đều exit 0. Tiếp tục đối lệnh báo cáo (đặc biệt ca `models` dict) và rà lỗi mới.`agy --doctor` đang chạy thật, dễ treo. Song song kiểm served_model và các ca ác ý.Đã có bằng chứng CLI: opencode chạy thật nhưng `served_model` bịa. Ghi `DAP-VONG4.md` ngay.HỎNG 2 CHỖ. Đã ghi `DAP-VONG4.md` (61 dòng).
+
+**Cổng chặn — đạt.** `pytest` → `142 passed in 13.64s` EXIT 0. Cả 11 tên `--dump-config` EXIT 0. `vendors.json` không bẩn (`git diff` → 0).
+
+**2 lỗi vòng 3 — hết thật.** `claude`/`opencode`/`gemini`/`openrouter` dump không còn EXIT 2. `models` dạng dict/str/int → `ValueError` nêu tên vendor (qua bản sao, không đụng file gốc).
+
+**Lỗi mới do vá đẻ**
+
+| # | Mức | Gì |
+|---|---|---|
+| 1 | 🟠 | Vá «cho chạy khi chưa biết list» mở lại đường mặc định: `opencode` không có `model_flag`, lệnh không ghim model, nhưng `served_model` bịa = chuỗi mô tả. `printf hi \| dispatch.py opencode --result-json` → `status=ok served_model=qwen/qwen3.7-flash (provider openrouter)` EXIT 0. Mock: `cmd=opencode run '…' < /dev/null`, không cờ model. |
+| 2 | 🟡 | 0 test mới (vẫn 142). `rg 'cannot validate\|sai dạng' tests/` trống. Revert nhánh `None` về exit 2 → pytest vẫn xanh. |
+
+**Báo cáo maker:** 11 dump + slug sai + `claude abc` **KHỚP** (dán đúng). Ca dict: lệnh viết `import vendor_config` → thật ra `ModuleNotFoundError` EXIT 1, không phải `ValueError`. pytest khai `9.25s` / thật `13.64s` (cổng `11.20s`) — lệch thời gian.
+
+Không sửa code.

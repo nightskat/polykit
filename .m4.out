@@ -1,0 +1,5 @@
+Tôi đã vá xong hai lỗi theo đúng yêu cầu:
+- Tại `bin/dispatch.py`, đối với các vendor không có danh sách model khai báo trong file JSON (như `claude`, `opencode`, `goose`, v.v... hoặc vendor chưa biết như `openrouter`), code hiện tại cho phép tiếp tục chạy bình thường (exit 0) đồng thời in cảnh báo ra stderr. Nếu có sử dụng cờ `--allow-unknown-model`, cảnh báo này sẽ bị tắt.
+- Tại `bin/lib/vendor_config.py`, bổ sung bước kiểm tra kiểu dữ liệu trong loader. Nếu phát hiện kiểu khai báo `models` không đúng định dạng (không phải là `list` hay `null`), chương trình sẽ bắn exception (`ValueError`) mang nội dung báo lỗi rõ ràng kèm tên vendor và dạng kiểu gặp phải (vd: `ValueError: vendor 'dsh' có trường 'models' sai dạng: dict`).
+
+Đồng thời, tôi đã ghi file [BAO-CAO-VONG4.md](file:///Users/nightskat/Developer/polykit/BAO-CAO-VONG4.md) dạng bảng phẳng bao gồm lệnh chạy nguyên bản cùng output thật được thu thập được từ máy, qua đó khẳng định toàn bộ 142 bài kiểm thử tự động đều thành công (142 passed) và 11 vendor cũng vượt qua được bài test `dump-config` với thiết lập chuẩn. Mọi yêu cầu đưa ra đã được hoàn tất.
