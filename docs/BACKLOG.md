@@ -102,3 +102,18 @@ Chuỗi `maker agy → QA Grok → cổng script` chạy 12 vòng, vòng 12 QA k
 - Test remap sang **vendor thật** là mất tác dụng (3 vòng lặp cùng lỗi).
   → Dùng **vendor giả trong `tests/conftest.py`**.
 - Điều kiện nghiệm thu một bản vá: **bẻ hành vi → test phải ĐỎ**. Xanh = test rỗng ruột.
+
+### 🔬 Cần forensic (chưa làm) — dsh qua dispatch.py ra 0 byte
+17/08/2026 19:30. `dsh` chạy **trực tiếp** thì tốt suốt phiên (4 việc, $0,39, có việc 7 phút).
+Nhưng gọi **qua polykit** thì im lặng:
+```
+export DEEPSEEK_API_KEY=$(security find-generic-password -a "$USER" -s DEEPSEEK_API_KEY -w)
+$PY bin/dispatch.py dsh --no-traps < de-bai.md
+→ stdout 0 byte · stderr 0 byte · không tạo file kết quả
+```
+Nghi ở **tầng harness/dispatch**, không ở dsh:
+- Prompt đưa qua **stdin redirect từ file** (`< file`) — dispatch có đọc hết stdin không, hay chỉ đọc dòng đầu?
+- `dsh --profile headless` nhận task qua **tham số dòng lệnh**, không qua stdin. `dispatch.py` có ghép đúng không?
+- Có thể prompt dài (~40 dòng) bị cắt hoặc bị coi là rỗng → dsh không có việc gì làm.
+- Đối chứng đã có: cùng lúc đó `dsh --profile headless "<task>"` gọi trực tiếp vẫn chạy.
+👉 Cách kiểm: log lệnh thật mà `dispatch.py` dựng ra cho `dsh` (in `cmd` ra stderr), so với lệnh gọi tay chạy được.
