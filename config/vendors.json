@@ -63,9 +63,11 @@
         "Cờ sai → exit 2, lỗi ra stderr (báo đàng hoàng, KHÔNG phải exit 0 như bản ghi cũ)",
         "--yolo KHÔNG tồn tại ở agy (đó là cờ gemini) — dùng --dangerously-skip-permissions",
         "--print-timeout mặc định 5 PHÚT → việc dài phải nới, không thì mất trắng",
-        "agy models --output-format json → exit 1. Phải đặt cờ TRƯỚC: agy --output-format json models"
+        "agy models --output-format json → exit 1. Phải đặt cờ TRƯỚC: agy --output-format json models",
+        "--effort XUNG ĐỘT với --model (tên model đã mang mức -high/-low). Cả 3 ca lỗi đều exit 0 -> thành công giả."
       ],
-      "vai": "Maker chính. Có nhiều họ model nhất → làm được cả maker lẫn checker khác họ trong cùng một gói."
+      "vai": "Maker chính. Có nhiều họ model nhất → làm được cả maker lẫn checker khác họ trong cùng một gói.",
+      "effort_flag_note": "KHÔNG dùng chung với --model. Đo thật 17/08: claude-sonnet-4-6 -> '--effort is not supported'; gemini-3.1-pro-high -> 'conflicts with --effort=low'. Cả hai exit 0 dù lỗi. Ghim mức bằng chính tên model."
     },
     "dsh": {
       "binary": "dsh",
