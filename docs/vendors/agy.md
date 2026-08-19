@@ -78,6 +78,28 @@ Xem `../CHIA-VIEC.md` §Gate.
   `stale`. Chạy lại thường là ra.
 - Máy không có Antigravity: `agy.sh` vắng → dispatch gemini tự tụt lane 2 (CLI) rồi lane 3
   (API). Agy là tiện ích máy-riêng, **không phải thành phần bắt buộc** của PolyKit.
+- **Lượt gửi ĐẦU TIÊN bị nuốt** (ghi nhận 2026-08-14): agy xoá prompt đầu và im lặng trong
+  lúc tự kiểm tra eligibility của auth account. Dispatch một-phát-gửi-rồi-chờ (`echo prompt |
+  polykit:dispatch agy --timeout 600`) sẽ treo tới hết timeout, 0 byte stdout, kết quả
+  `ERROR: agy dispatch exceeded 600s`. **Cách né**: gửi 1 prompt mồi (bỏ kết quả đi) để agy
+  check auth xong trước, rồi mới gửi prompt thật ở lượt kế — hoặc dùng `agy` tương tác
+  (không qua dispatch một-phát) cho lượt đầu của phiên.
+
+## `served_model` của agy — ý định, không phải bằng chứng
+Dispatch gắn `result.served_model` = **slug đã GỬI cho agy** (sau khi `auto` được resolve từ
+catalog live), không phải model agy báo lại đã thực sự chạy — agy không trả field đó. Xem
+comment tại `bin/lib/dispatcher.py` (nhánh `elif vendor == "agy"`).
+
+Hệ quả thực chiến: dispatch `agy` với `model=auto`, catalog live resolve ra một slug Gemini cụ
+thể → dòng `[polykit] served: <slug>` xuất hiện ở **stderr** (không phải stdout) vì slug đã
+resolve khác với `auto` đã gõ. Đây là "auto đã được giải quyết thành gì", KHÔNG phải bằng chứng
+agy thật sự chạy đúng slug đó — agy có thể âm thầm phục vụ model khác mà không báo lại. Đọc
+đúng chỗ: dòng `served:` ở stderr, hoặc field `served_model` trong `--result-json`. Ai redirect
+stderr đi chỗ khác (hoặc chỉ đọc stdout) sẽ tưởng agy chạy đúng model yêu cầu.
+
+So sánh: OpenRouter's `served_model` đọc thẳng từ field `model` trong response API — đó MỚI là
+bằng chứng thật (router chọn gì thì response nói đúng cái đó). agy's `served_model` chỉ là ý
+định phía client.
 
 ## PII
 ❌ KHÔNG gửi PII thật. Khử định danh trước hoặc chuyển về Claude host. Xem `../CHIA-VIEC.md` §PII.
