@@ -81,3 +81,18 @@ update của từng CLI. Adapter được SINH từ `commands/*.md`, không sử
 bản chép ở `cache/polykit/polykit/<ver>/` ghim theo `gitCommitSha`. Test vào `marketplaces/…`
 là test nhầm thứ hai — đã dính đúng lỗi này một lần trong phiên.
 Codex/Gemini không có vấn đề đó: adapter chỉ là CHỮ, engine gọi thẳng `bin/dispatch.py` của repo.
+
+### 🔴 BUG-4 — `doctor` báo `ready` cho vendor ĐANG BỊ CAP (19/08, bằng chứng sống)
+19/08 lúc 13:5x, đo trực tiếp trong cùng một phiên:
+- `codex exec …` → `ERROR: You've hit your usage limit … try again at Aug 20th 10:58 AM`
+- `gemini -p …` → `429 TerminalQuotaError: You have exhausted your daily quota`
+
+Ngay sau đó `python3 bin/doctor.py` in **7/7 `ready`**, gồm cả `codex` và `gemini`.
+
+⇒ `doctor` đang đo **"binary có tồn tại và chạy được `--version` không"**, chứ không đo
+**"gọi được không"**. Với người dùng thì hai thứ đó khác hẳn: bảng xanh mà dispatch chết ngay.
+Đây chính là điểm yếu M3 mà BACKLOG đã ghi (cap-detect dựa vào parse stderr) — nay có bằng chứng
+sống thay vì suy đoán.
+**Việc cần làm**: `quota_capped` phải suy ra từ lần dispatch thất bại gần nhất (đã có
+`state_store`), hoặc đọc quota từ local credentials/logs như OpenUsage/CAUT (BACKLOG đã khảo sát).
+Trước mắt: **đừng tin cột `ready` như bằng chứng gọi được.**
