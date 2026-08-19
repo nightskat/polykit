@@ -40,7 +40,7 @@ Chạy `/polykit:doctor` bất cứ lúc nào để xem cái nào chưa sẵn s�
 | **Gemini** | Cài Gemini CLI → chạy `gemini` rồi `/auth`. Hoặc chỉ cần biến môi trường `GEMINI_API_KEY`. | [docs/vendors/gemini.md](docs/vendors/gemini.md) |
 | **Grok** | Cài Grok CLI → `grok` để auth. | [docs/vendors/grok.md](docs/vendors/grok.md) |
 | **Agy** | Cài Antigravity CLI → chạy `agy` để auth. | [docs/vendors/agy.md](docs/vendors/agy.md) |
-| **Dsh** | Cài Dsh CLI → export `DEEPSEEK_API_KEY=...` trong môi trường (bắt buộc, ví dụ qua `~/.zshrc`). | — |
+| **Dsh** (DeepSeek Harness) | Cài Dsh CLI → export `DEEPSEEK_API_KEY=...` trong môi trường (bắt buộc, ví dụ qua `~/.zshrc`). | [docs/vendors/dsh.md](docs/vendors/dsh.md) |
 | **OpenRouter** | Ghi API key vào file `~/.config/openrouter/key` hoặc export `OPENROUTER_API_KEY`. | [docs/vendors/openrouter.md](docs/vendors/openrouter.md) |
 
 ## Tuỳ biến JSON (config/vendors.json)
