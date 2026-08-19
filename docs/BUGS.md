@@ -96,3 +96,54 @@ sống thay vì suy đoán.
 **Việc cần làm**: `quota_capped` phải suy ra từ lần dispatch thất bại gần nhất (đã có
 `state_store`), hoặc đọc quota từ local credentials/logs như OpenUsage/CAUT (BACKLOG đã khảo sát).
 Trước mắt: **đừng tin cột `ready` như bằng chứng gọi được.**
+
+---
+
+## Phiên 19/08/2026 — dispatch review script `pg-timkho`
+
+> Bối cảnh: nhờ vendor review một bản vá Python ~11KB. Cả 2 vendor đều KHÔNG trả được kết quả,
+> nhưng cách hỏng khác nhau và cả hai đều làm mất dấu vết nguyên nhân.
+
+### 🔴 BUG-5 — `--result-json` nuốt mất DÒNG LỖI THẬT của vendor, chỉ còn `exit 1` trơ
+
+**Lệnh nguyên văn**
+```
+python3 bin/dispatch.py codex --cd <repo> --prompt-file <file> --timeout 540 --result-json
+```
+**Đo được**: `status=error`, `exit_code=1`, `reason=vendor_exit_nonzero`, `stdout=""`.
+Mảng `warnings` chỉ chứa **banner khởi động + phần echo lại prompt** (workdir, model, provider,
+approval, sandbox, session id, rồi tới nội dung prompt) — **cắt đúng trước dòng lỗi**.
+
+Nguyên nhân thật chỉ lộ ra khi chạy TAY:
+```
+codex exec --skip-git-repo-check "Nói đúng một chữ: OK" < /dev/null
+→ ERROR: You've hit your usage limit. ... try again at Aug 20th, 2026 10:58 AM.
+```
+**Tác hại**: `vendor_exit_nonzero` không phân biệt được *hết quota* (chờ tới mai) với *lỗi cờ*
+(sửa lệnh là chạy) hay *lỗi mã nguồn*. Agent đọc `--result-json` sẽ đoán mò, hoặc tệ hơn là
+thử lại vô ích cho tới khi hết luôn vendor dự phòng.
+**Việc cần làm**: `warnings` phải giữ **N dòng CUỐI** của stderr (nơi lỗi nằm), không phải N dòng
+đầu; và bắt riêng mẫu `hit your usage limit` → `reason=quota_capped` để failover đi đúng nhánh.
+**Trạng thái**: 🔴 MỞ.
+
+### 🔴 BUG-6 — vendor `grok` timeout 540s không ra một chữ, `stdout` rỗng, không có tiến độ
+
+**Lệnh nguyên văn**
+```
+python3 bin/dispatch.py grok --cd <repo> --prompt-file <file> --timeout 540 --result-json
+```
+**Đo được**: `status=timeout`, `exit_code=124`, `model=None`, `stdout=""` sau đủ 540s.
+
+Đã loại trừ "grok chết": cùng cấu hình, prompt 1 dòng (`Nói đúng một chữ: OK`) trả về
+`status=ok`, `exit_code=0`, `stdout="OK\n"`, `served_model=grok-4.6` trong <120s.
+Khác biệt duy nhất: prompt dài yêu cầu grok **tự đi mở file** (`./pg-timkho.py`, `./patch.diff`).
+Nghi vấn (CHƯA chắc): pha agentic đọc file bị treo hoặc chạy rất chậm dưới sandbox read-only.
+
+**Tác hại**: đốt trọn 540s mà không có gì để nghiệm thu, và `stdout` rỗng nên không biết nó
+đã làm được tới đâu — không phân biệt được "treo ngay từ đầu" với "gần xong thì hết giờ".
+**Cách đi vòng đã dùng, có hiệu lực**: nhúng thẳng nội dung file vào prompt thay vì bắt vendor
+tự mở (prompt 20.7KB). Nên viết thành khuyến nghị trong sổ trap của grok:
+*"đừng giao task đọc file cho grok — đưa nội dung vào prompt"*.
+**Việc cần làm**: (a) stream/giữ output từng phần khi timeout thay vì trả rỗng; (b) thêm trap
+cho grok về task đọc file.
+**Trạng thái**: 🔴 MỞ.
