@@ -161,10 +161,24 @@ Tách biến bằng thí nghiệm đối chứng (cùng vendor, cùng cấu hìn
 | script + yêu cầu review đầy đủ | 20.717 byte | dài | ❌ timeout 420s, rỗng |
 | yêu cầu review, tự mở file | ~3KB | dài | ❌ timeout 540s, rỗng |
 
-**Kết luận theo bằng chứng**: đầu vào 15KB không hề hấn gì. Biến số nằm ở **độ dài/độ nặng ĐẦU RA**,
-không ở kích thước đầu vào và không ở việc đọc file. Trap nên viết là *"chặn độ dài đầu ra khi
-dispatch task phân tích"*, KHÔNG phải *"đừng cho vendor đọc file"* — mình đã suýt ghi sai luật đó
-vào sổ trap sau khi chỉ thấy 2 mẫu cùng chiều.
+**🔴 ĐÍNH CHÍNH LẦN 2 — "tại đầu ra dài" cũng SAI.** Chạy tiếp 2 phép đo nữa, bảng đầy đủ:
+
+| Prompt | Vào | Việc phải làm | Ra | Kết quả |
+|---|---|---|---|---|
+| 1 dòng | 22 B | không | 1 chữ | ✅ <120s |
+| script + "trả lời OK" | 15.186 B | không | 1 chữ | ✅ 9,5s |
+| **script + "liệt kê tên 3 hàm def"** | **15.186 B** | **đọc + trích** | **3 dòng** | **✅ ok** |
+| script + review, **chặn 6 phát hiện × 3 dòng** | ~16 KB | phân tích | ngắn | ❌ timeout 420s, rỗng |
+| script + review đầy đủ | 20.717 B | phân tích | dài | ❌ timeout 420s, rỗng |
+
+Đọc 15KB: được. Trích xuất từ 15KB: được. Đầu ra 3 dòng: được. **Chặn đầu ra vẫn timeout.**
+→ Biến số KHÔNG phải kích thước đầu vào, KHÔNG phải đọc file, KHÔNG phải độ dài đầu ra.
+Thứ còn lại phân biệt được 2 nhóm là **độ sâu suy luận** của task (trích xuất vs phân tích).
+Chưa biết vì sao — **ghi là CHƯA BIẾT**, không đoán tiếp.
+
+Ba lần mình đưa nguyên nhân, hai lần sai, mỗi lần đều "nghe rất hợp lý" và đều dựa trên 2 mẫu
+cùng chiều. Bài học ghi kèm: có 2 mẫu cùng chiều thì đó là **giả thuyết**, muốn thành nguyên nhân
+phải có mẫu ĐỐI CHỨNG bác được nó — ở đây chính là dòng "liệt kê tên 3 hàm".
 
 **Việc cần làm**: (a) stream/giữ output từng phần khi timeout thay vì trả rỗng — hiện 540s đổi
 lấy 0 byte, không nghiệm thu được gì; (b) trap chung: task phân tích phải kèm hạn mức đầu ra
