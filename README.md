@@ -29,6 +29,8 @@ Các cờ mở rộng của `bin/dispatch.py`:
 - `--allow-unknown-model`: Cho phép gọi các model không có mặt trong danh sách JSON.
 - `--no-traps`: Ẩn các cảnh báo trap trên stderr.
 - `--dump-config`: In cấu hình vendor và thoát.
+- `--prompt-file <path>`: Đọc prompt từ file thay vì stdin — **bắt buộc dùng cho prompt dài,
+  nhiều dòng, hoặc có dấu tiếng Việt**; `echo "..."` vỡ ở tầng shell.
 
 ## Vendor — cài & auth
 Chạy `/polykit:doctor` bất cứ lúc nào để xem cái nào chưa sẵn sàng + lệnh auth cụ thể. PolyKit hỗ trợ 7 vendor: `agy, dsh, grok, codex, gemini, claude, openrouter`.
@@ -70,5 +72,9 @@ Người dùng có thể thêm vendor mới bằng cách chỉnh sửa JSON sche
   độ tin cậy của field này khác nhau theo vendor — xem ghi chú riêng ở `docs/vendors/<vendor>.md`
   (vd. OpenRouter đọc thẳng từ response API = bằng chứng; agy chỉ là slug đã gửi = ý định, agy
   không báo lại model thật đã chạy).
+
+- **Thấy bug thì ghi vào [docs/BUGS.md](docs/BUGS.md)**, kèm lệnh nguyên văn và cái đã ĐO được;
+  sửa được trong phiên thì sửa luôn và ghi bằng chứng. Đừng để sổ bug nằm ngoài git.
+- **Sửa code ở repo, không sửa trong thư mục plugin đã cài** — bản cài sẽ bị đồng bộ đè.
 
 MIT. Repo: github.com/nightskat/polykit

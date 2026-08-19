@@ -97,6 +97,8 @@ def main():
     parser.add_argument("vendor", choices=names, help="Vendor to dispatch to")
     parser.add_argument("model", nargs="?", default="auto", help="Model slug to use (default: auto)")
     parser.add_argument("--timeout", type=int, default=120, help="Timeout in seconds (default: 120, max: 600)")
+    parser.add_argument("--prompt-file", dest="prompt_file", default=None,
+                        help="Đọc prompt từ file thay vì stdin (dùng cho prompt dài / nhiều dòng / tiếng Việt)")
     parser.add_argument("--format", choices=["text", "json"], default="text", help="Output format (default: text)")
     parser.add_argument("--cd", dest="workdir", default=None, help="Working directory (codex/grok)")
     parser.add_argument("--sandbox", choices=["read-only", "workspace-write"], default="read-only", help="Sandbox mode (default: read-only)")
@@ -166,8 +168,20 @@ def main():
             for i, trap in enumerate(traps, 1):
                 sys.stderr.write(f"  {i}. {trap}\n")
 
-    # Read prompt from stdin
-    prompt = sys.stdin.read()
+    # Prompt: từ --prompt-file nếu có, không thì stdin.
+    # stdin không dùng được cho prompt dài — quoting, xuống dòng và dấu tiếng Việt
+    # đều vỡ ở tầng shell trước khi tới đây (BUG-2, ghi nhận 18/08/2026).
+    if args.prompt_file:
+        try:
+            prompt = Path(args.prompt_file).read_text(encoding="utf-8")
+        except OSError as e:
+            print(f"ERROR: dispatch blocked: không đọc được --prompt-file: {e}", file=sys.stderr)
+            sys.exit(2)
+        if not prompt.strip():
+            print(f"ERROR: dispatch blocked: --prompt-file rỗng: {args.prompt_file}", file=sys.stderr)
+            sys.exit(2)
+    else:
+        prompt = sys.stdin.read()
 
     # Dispatch task
     result = run_vendor(
