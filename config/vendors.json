@@ -71,15 +71,15 @@
     },
     "dsh": {
       "binary": "dsh",
-      "auth_hint": "export DEEPSEEK_API_KEY (lấy từ Keychain: security find-generic-password -a $USER -s DEEPSEEK_API_KEY -w)",
+      "auth_hint": "export DEEPSEEK_API_KEY (Keychain: security find-generic-password -a $USER -s DEEPSEEK_API_KEY -w). Endpoint đổi được bằng DEEPSEEK_BASE_URL.",
       "headless": "dsh --profile headless '<task>'",
-      "auto_approve": null,
+      "auto_approve": "Không có cờ. Dùng biến môi trường DSH_PERMISSION_MODE=danger-full-access",
       "model_flag": null,
-      "model_override": "KHÔNG có cờ. Phải viết file patch YAML rồi truyền --patch <file>: [{id: agent-default-model, config: {provider: deepseek-official, model: deepseek-v4-pro}}]",
+      "model_override": "KHÔNG có cờ model. Viết patch YAML rồi --patch <file> (LẶP ĐƯỢC, chồng theo thứ tự):\n- id: agent-default-model\n  config:\n    provider: deepseek-official\n    model: deepseek-v4-pro\nThiếu dòng provider -> gãy lúc boot: '$.provider missing required value'.",
       "workdir_flag": null,
       "workdir_note": "Luôn là thư mục gọi lệnh (process.cwd())",
       "output_format": null,
-      "resume": "--resume <session>",
+      "resume": "KHÔNG có ở profile headless — `dsh --profile headless --help` chỉ liệt kê task và -h. --resume là cờ của app profile khác (tui/web). Bản ghi cũ 'dsh --resume <session>' là SAI, chép nhầm từ ví dụ README.",
       "list_models": "curl -H 'Authorization: Bearer $DEEPSEEK_API_KEY' https://api.deepseek.com/models",
       "models": [
         "deepseek-v4-pro",
@@ -93,13 +93,35 @@
         "dsh --profile headless --dump-default-config"
       ],
       "traps": [
-        "deepseek-v4-flash TRẢ VỀ RỖNG trên task nhiều bước — đã tái hiện 2 lần (14/08, 16/08). Việc thật phải ghim v4-pro",
+        "deepseek-v4-flash TRẢ VỀ RỖNG trên task nhiều bước — tái hiện 2 lần (14/08, 16/08). Việc thật phải ghim v4-pro",
         "Không đọc Keychain — key phải bơm qua biến môi trường, thiếu thì MISSING_CREDENTIAL",
-        "Mất mạng giữa chừng → TRANSPORT error, mất trắng cả lượt (đã dính khi cúp điện). Luôn dặn agent GHI FILE SỚM",
-        "Sandbox có thể chặn ghi vào thư mục đích → nó ghi sang /tmp rồi báo lại, phải tự lấy về",
-        "--dump-config kiểm cấu hình mà KHÔNG tốn token — dùng để xác minh đã ghim đúng model"
+        "Mất mạng giữa chừng → TRANSPORT error, mất trắng cả lượt. Luôn dặn agent GHI FILE SỚM",
+        "Sandbox có thể chặn ghi vào thư mục đích → nó ghi sang /tmp rồi báo lại, phải tự lấy về. Gốc là DSH_PERMISSION_MODE=workspace-write + workspaceRoot=cwd",
+        "--dump-config kiểm cấu hình mà KHÔNG tốn token — dùng để xác minh đã ghim đúng model VÀ đúng effort",
+        "Patch thiếu `provider` → gãy ngay lúc boot, không phải lỗi lúc chạy",
+        "Cờ launcher phải đứng TRƯỚC; token đầu tiên nó không hiểu là bắt đầu arg của app → --patch đặt sau task sẽ bị nuốt thành text"
       ],
-      "vai": "Thợ máy rẻ. v4-pro cho việc thật, KHÔNG dùng flash cho task nhiều bước."
+      "vai": "Thợ máy rẻ, SỬA ĐƯỢC FILE. v4-pro cho việc thật. Gửi dữ liệu sang DeepSeek → chỉ code công khai, CẤM lane PII.",
+      "sandbox_flag": "Không có cờ. DSH_PERMISSION_MODE=read-only|workspace-write|danger-full-access (mặc định workspace-write, workspaceRoot = thư mục gọi lệnh). read-only/workspace-write = approval 'ask' -> headless KHÔNG ai bấm, việc ghi ngoài workspace sẽ kẹt.",
+      "effort_flag": "Không có cờ. Patch id llm-deepseek, config.reasoningEffort",
+      "effort_values": [
+        "off",
+        "high",
+        "max"
+      ],
+      "effort_flag_note": "Mặc định high. max KHÔNG cần đổi model — bump effort trước khi bump v4-flash->v4-pro. off serialize thành thinking.type=disabled. Giá trị lạ -> UNSUPPORTED_REASONING_EFFORT, chết TRƯỚC khi gọi mạng (không mất tiền).",
+      "other_knobs": {
+        "_cach_dung": "Mọi knob dưới đây đặt trong patch YAML, target theo id, truyền bằng --patch.",
+        "llm-deepseek": "apiKeyEnv, baseURL, thinking(enabled|disabled), reasoningEffort, maxTokens(mặc định 256000), streamIdleTimeoutMs(300000), defaultContextWindow(1000000), retryPolicy{mode:normal|always, backoff}, models[]",
+        "tool-result-pruner": "thresholdChars 8192 / headChars 4096 / tailChars 1024 — cắt kết quả tool dài",
+        "spill-policy": "maxInlineBytes 50000 — quá thì đẩy ra file ngoài",
+        "tool-ralph": "maxRounds 64 — vòng lặp tự chạy dựng sẵn",
+        "tool-subagent": "provider spawn (nền, continuable) / fork (one-shot); có tool-workflow chạy worker thread",
+        "persona": "đổi system prompt; complete:true = thay TOÀN BỘ prompt"
+      },
+      "capabilities": "Runtime plugin Cordis, không phải CLI vài cờ. Có sẵn: bash + bash bền(PTY), fs, fs-search, web + web-search-deepseek, skill (đọc SKILL.md — CÙNG định dạng Claude Code), todo, goal, jobs nền, plan mode, MCP client, subagent/fork/workflow, ralph loop, compaction + token-meter, phiên JSONL + SQLite.",
+      "models_note": "Không phải whitelist — id lạ vẫn đi thẳng lên wire. Ctx mặc định 1.000.000, output cap 256.000.",
+      "khao_sat": "19/08/2026 — đọc thẳng gói @deepseek-ai/dsh@0.1.0-rc.6 + dump-default-config. Sổ đầy đủ: ~/Claude/CHEATSHEETS/vendor-intelligence/dsh-harness.md"
     },
     "grok": {
       "binary": "grok",
