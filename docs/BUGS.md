@@ -67,3 +67,17 @@ phiên 18/08 (chính là file bug này).
 Đã xử: đóng gói việc chưa commit thành nhánh `port/2026-08-18-docs`, merge về repo (`daf3faf`),
 rồi đồng bộ một chiều repo → bản cài. 153 test xanh.
 ⇒ Bài học: **sửa trong bản cài là sửa vào chỗ sẽ bị ghi đè**. Sửa ở `~/Developer/polykit`, rồi đồng bộ.
+
+### ✅ Adapter mỗi vendor trôi vì populate là HÀNH ĐỘNG, không phải TRẠNG THÁI (sửa 19/08)
+Đo được: Claude ghim cache ở commit 03/08 · Codex ghim bản 14/07 (`0.2.1+codex.local`) ·
+Gemini dùng extension `cross-cli-dispatch` v0.1.0 **ngày 05/05**, không gọi PolyKit dòng nào và
+còn quảng cáo model đã chết (`o3`, `o4-mini`) · Grok chưa cài · agy chưa có.
+
+Cái thiếu không phải "chạy populate lần nữa" mà là **một lệnh kiểm tra được**.
+⇒ `bin/populate.py`: `--check` in bảng 5 vendor + cờ lệch, `--apply` sinh adapter và gọi lệnh
+update của từng CLI. Adapter được SINH từ `commands/*.md`, không sửa tay.
+
+Điểm mấu chốt phát hiện được lúc làm: **Claude Code không chạy thư mục marketplace** mà chạy
+bản chép ở `cache/polykit/polykit/<ver>/` ghim theo `gitCommitSha`. Test vào `marketplaces/…`
+là test nhầm thứ hai — đã dính đúng lỗi này một lần trong phiên.
+Codex/Gemini không có vấn đề đó: adapter chỉ là CHỮ, engine gọi thẳng `bin/dispatch.py` của repo.
