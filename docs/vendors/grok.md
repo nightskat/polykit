@@ -34,6 +34,8 @@ grok        # lần đầu sẽ dẫn qua auth
 Python) qua CLI dispatch — trong khi cùng ngày trả lời brief phân tích ~5KB tốt trong
 thời hạn. → Lane phù hợp: ý kiến/second-opinion/phân tích ngắn. KHÔNG giao codegen dài
 qua dispatch; cần Grok code thì chia task ≤50 dòng hoặc đổi lane.
+`--timeout` có **trần cứng 600s** ở cổng validate (`dispatch.py`) — không thể bơm cao hơn để
+"cố thêm giờ" cho codegen dài, chia nhỏ task là đường duy nhất.
 
 ## Sự cố thường gặp
 - 402 (hết credit) → doctor chuyển state `quota_capped`, dispatch degrade — không crash.

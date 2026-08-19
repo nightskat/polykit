@@ -96,7 +96,7 @@ def main():
     parser = argparse.ArgumentParser(description="Multi-vendor CLI dispatch wrapper")
     parser.add_argument("vendor", choices=names, help="Vendor to dispatch to")
     parser.add_argument("model", nargs="?", default="auto", help="Model slug to use (default: auto)")
-    parser.add_argument("--timeout", type=int, default=120, help="Timeout in seconds (default: 120)")
+    parser.add_argument("--timeout", type=int, default=120, help="Timeout in seconds (default: 120, max: 600)")
     parser.add_argument("--format", choices=["text", "json"], default="text", help="Output format (default: text)")
     parser.add_argument("--cd", dest="workdir", default=None, help="Working directory (codex/grok)")
     parser.add_argument("--sandbox", choices=["read-only", "workspace-write"], default="read-only", help="Sandbox mode (default: read-only)")
