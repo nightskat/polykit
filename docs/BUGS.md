@@ -126,7 +126,7 @@ thử lại vô ích cho tới khi hết luôn vendor dự phòng.
 đầu; và bắt riêng mẫu `hit your usage limit` → `reason=quota_capped` để failover đi đúng nhánh.
 **Trạng thái**: 🔴 MỞ.
 
-### 🔴 BUG-6 — vendor `grok` timeout 540s không ra một chữ, `stdout` rỗng, không có tiến độ
+### 🔴 BUG-6 — task ĐỌC FILE làm vendor timeout, `stdout` rỗng (đo trên CẢ `grok` LẪN `dsh`)
 
 **Lệnh nguyên văn**
 ```
@@ -144,6 +144,12 @@ Nghi vấn (CHƯA chắc): pha agentic đọc file bị treo hoặc chạy rất
 **Cách đi vòng đã dùng, có hiệu lực**: nhúng thẳng nội dung file vào prompt thay vì bắt vendor
 tự mở (prompt 20.7KB). Nên viết thành khuyến nghị trong sổ trap của grok:
 *"đừng giao task đọc file cho grok — đưa nội dung vào prompt"*.
-**Việc cần làm**: (a) stream/giữ output từng phần khi timeout thay vì trả rỗng; (b) thêm trap
-cho grok về task đọc file.
+**Cập nhật cùng phiên — KHÔNG phải lỗi riêng của grok**: `dsh` (deepseek-v4-pro) chạy CÙNG prompt
+đó cũng `status=timeout`, `exit_code=124`, `stdout=""` sau 540s. Hai vendor khác nhau, cùng một
+kiểu hỏng, cùng một đặc điểm prompt (bắt tự mở `./pg-timkho.py`, `./patch.diff`) → nghi vấn nằm ở
+**dạng task**, không ở vendor.
+
+**Việc cần làm**: (a) stream/giữ output từng phần khi timeout thay vì trả rỗng — hiện 540s đổi
+lấy 0 byte, không nghiệm thu được gì; (b) thêm trap CHUNG (không riêng grok): *task đọc file →
+nhúng nội dung vào prompt, đừng đưa đường dẫn*.
 **Trạng thái**: 🔴 MỞ.
