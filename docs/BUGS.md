@@ -145,11 +145,28 @@ Nghi vấn (CHƯA chắc): pha agentic đọc file bị treo hoặc chạy rất
 tự mở (prompt 20.7KB). Nên viết thành khuyến nghị trong sổ trap của grok:
 *"đừng giao task đọc file cho grok — đưa nội dung vào prompt"*.
 **Cập nhật cùng phiên — KHÔNG phải lỗi riêng của grok**: `dsh` (deepseek-v4-pro) chạy CÙNG prompt
-đó cũng `status=timeout`, `exit_code=124`, `stdout=""` sau 540s. Hai vendor khác nhau, cùng một
-kiểu hỏng, cùng một đặc điểm prompt (bắt tự mở `./pg-timkho.py`, `./patch.diff`) → nghi vấn nằm ở
-**dạng task**, không ở vendor.
+đó cũng `status=timeout`, `exit_code=124`, `stdout=""` sau 540s.
+
+**🔴 ĐÍNH CHÍNH (cùng phiên) — giả thuyết "tại task đọc file" là SAI.**
+Đã chạy lại cả hai vendor với prompt **nhúng sẵn toàn bộ mã nguồn** (không phải mở file):
+`grok` 20.7KB → timeout 420s, `stdout=""`. `dsh` 20.7KB → timeout 420s, `stdout=""`.
+Bỏ đường dẫn đi mà vẫn hỏng y hệt → **đọc file không phải biến số**.
+
+Tách biến bằng thí nghiệm đối chứng (cùng vendor, cùng cấu hình, chỉ đổi ĐỘ DÀI ĐẦU RA):
+
+| Prompt | Vào | Ra yêu cầu | Kết quả |
+|---|---|---|---|
+| 1 dòng | 22 byte | 1 chữ | ✅ ok, <120s |
+| **toàn bộ script + "trả lời đúng một chữ OK"** | **15.186 byte** | **1 chữ** | **✅ ok, 9,5s** |
+| script + yêu cầu review đầy đủ | 20.717 byte | dài | ❌ timeout 420s, rỗng |
+| yêu cầu review, tự mở file | ~3KB | dài | ❌ timeout 540s, rỗng |
+
+**Kết luận theo bằng chứng**: đầu vào 15KB không hề hấn gì. Biến số nằm ở **độ dài/độ nặng ĐẦU RA**,
+không ở kích thước đầu vào và không ở việc đọc file. Trap nên viết là *"chặn độ dài đầu ra khi
+dispatch task phân tích"*, KHÔNG phải *"đừng cho vendor đọc file"* — mình đã suýt ghi sai luật đó
+vào sổ trap sau khi chỉ thấy 2 mẫu cùng chiều.
 
 **Việc cần làm**: (a) stream/giữ output từng phần khi timeout thay vì trả rỗng — hiện 540s đổi
-lấy 0 byte, không nghiệm thu được gì; (b) thêm trap CHUNG (không riêng grok): *task đọc file →
-nhúng nội dung vào prompt, đừng đưa đường dẫn*.
+lấy 0 byte, không nghiệm thu được gì; (b) trap chung: task phân tích phải kèm hạn mức đầu ra
+(số phát hiện tối đa, số dòng mỗi phát hiện).
 **Trạng thái**: 🔴 MỞ.
