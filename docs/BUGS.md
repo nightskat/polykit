@@ -221,7 +221,10 @@ plugin kế tiếp — sửa ở repo theo đúng luật, đừng vá vào bản
 
 ## Phiên 20/08/2026 — bench OCR, dispatch maker/tester
 
-### 🟡 BUG-7 — `--result-json` KHÔNG in JSON khi lỗi sớm → caller nhận file 0 byte
+### 🟡 BUG-8 — `--result-json` KHÔNG in JSON khi lỗi sớm → caller nhận file 0 byte
+
+> Đánh số lại từ BUG-7 → BUG-8 lúc 10:33 20/08: hai phiên Claude chạy song song trên cùng repo
+> cùng đặt tên "BUG-7" cách nhau vài phút. Mục này commit sau (`5996a13`) nên nhường số.
 
 **Đo được** (3 ca, đều `exit=2`, đều `stdout = 0 byte`):
 ```
