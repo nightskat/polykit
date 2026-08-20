@@ -79,6 +79,79 @@ def tail_lines(stderr: str, keep: int = STDERR_KEEP, head: int = STDERR_HEAD) ->
     return lines[:head] + [f"[polykit] …bỏ {bo} dòng giữa của stderr, giữ {head} dòng đầu + {keep} dòng CUỐI (nơi lỗi nằm)"] + lines[-keep:]
 
 
+def _decode_partial(data) -> str:
+    """Chuyển e.stdout/e.stderr của TimeoutExpired thành str để tái dùng
+    strip_echoed_prompt/tail_lines (cả hai chỉ nhận str).
+
+    TimeoutExpired mang theo output đúng kiểu subprocess được gọi: text=True →
+    str, text=False → bytes, hoặc None khi chưa bắt được gì. Gom cả ba về str,
+    KHÔNG để AttributeError/TypeError nổ lúc cắt dòng.
+    """
+    if data is None:
+        return ""
+    if isinstance(data, bytes):
+        return data.decode("utf-8", errors="replace")
+    if isinstance(data, str):
+        return data
+    # Runner giả / API khác có thể đưa vào thứ không phải str — helper này hứa
+    # "không nổ" thì phải giữ lời, kể cả với kiểu ngoài dự kiến (Codex review).
+    return str(data)
+
+
+def _tag_vendor_lines(lines: list[str], channel: str) -> list[str]:
+    """Gắn nhãn nguồn cho từng dòng output vendor, nhưng GIỮ nguyên ghi chú
+    `[polykit] …bỏ … dòng` mà tail_lines tự chèn khi phải cắt — dòng đó là của
+    PolyKit, không được gắn nhãn `[vendor:*]`."""
+    tagged = []
+    for line in lines:
+        if line.startswith("[polykit]"):
+            tagged.append(line)
+        else:
+            tagged.append(f"[vendor:{channel}] {line}")
+    return tagged
+
+
+def _timeout_warnings(stdout: str, stderr: str, prompt: str | None) -> list[str]:
+    """BUG-9: dựng warnings cho ca timeout — GIỮ manh mối vendor kịp in ra TRƯỚC
+    khi bị giết, thay vì vứt sạch rồi trả về warnings=[].
+
+    Phân biệt rõ từng dòng:
+      - `[polykit] …`                      → ghi chú của PolyKit (đếm dòng,
+                                             báo 'DANG DỞ' / 'không in gì').
+      - `[vendor:stdout] …`/`[vendor:stderr] …` → output DANG DỞ của vendor.
+    Echo prompt (vendor in lại chữ mình gửi) bị bỏ bằng strip_echoed_prompt —
+    đó không phải manh mối. Số dòng đếm ở đây tính trên stderr ĐÃ strip.
+    """
+    stderr_goc = stderr
+    stderr = strip_echoed_prompt(stderr, prompt)
+    warnings: list[str] = []
+
+    if stdout.strip():
+        warnings.append(
+            f"[polykit] vendor kịp in {len(stdout.splitlines())} dòng ra STDOUT "
+            "trước khi bị giết — output DANG DỞ:"
+        )
+        warnings.extend(_tag_vendor_lines(tail_lines(stdout), "stdout"))
+    else:
+        warnings.append("[polykit] vendor KHÔNG kịp in gì ra stdout trước khi bị giết.")
+
+    if stderr.strip():
+        warnings.append(
+            f"[polykit] vendor kịp in {len(stderr.splitlines())} dòng ra STDERR "
+            "trước khi bị giết — output DANG DỞ:"
+        )
+        warnings.extend(_tag_vendor_lines(tail_lines(stderr), "stderr"))
+    elif stderr_goc.strip():
+        # Phân biệt "im lặng thật" với "chỉ echo lại prompt rồi bị bỏ" — hai ca
+        # này dẫn tới hai hướng chẩn đoán khác hẳn nhau (Codex review).
+        warnings.append("[polykit] stderr chỉ có phần echo lại prompt, không còn "
+                        "manh mối nào sau khi bỏ echo.")
+    else:
+        warnings.append("[polykit] vendor KHÔNG kịp in gì ra stderr trước khi bị giết.")
+
+    return warnings
+
+
 def _classify_completed(vendor: str, model: str, res, served_model: str | None = False,
                         prompt: str | None = None) -> DispatchResult:
     """M2: map kết quả subprocess → DispatchResult. returncode!=0 kèm dấu hiệu
@@ -416,12 +489,21 @@ def run_vendor(
             return finalize(out)
 
     except subprocess.TimeoutExpired as e:
+        # BUG-9: e mang theo e.stdout/e.stderr — phần vendor ĐÃ in ra trước khi
+        # bị giết. Giữ lại vào stdout + warnings, thay vì vứt sạch manh mối.
+        stdout = _decode_partial(e.stdout)
+        stderr = _decode_partial(e.stderr)
         return DispatchResult(
             status="timeout",
             vendor=vendor,
             model=model,
             summary=f"{vendor} dispatch exceeded {validated_timeout}s",
-            warnings=[],
+            warnings=_timeout_warnings(stdout, stderr, prompt),
+            # stdout để RỖNG có chủ ý: trường này là "kết quả vendor". Nhét output
+            # dang dở vào đây thì caller chỉ kiểm `stdout != ""` sẽ đọc nửa vời
+            # thành kết quả thật, và JSON phình không giới hạn (Codex review).
+            # Phần dang dở đã nằm trong warnings, đã qua tail_lines.
+            stdout="",
             reason="timeout",
         )
     except Exception as e:

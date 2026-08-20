@@ -143,12 +143,14 @@ dispatch thật với prompt dài mới lộ. Test xanh vẫn không thay đư�
 **Trạng thái**: ✅ ĐÃ SỬA — 170 test xanh + live test (`status=error`, `reason=vendor_exit_nonzero`,
 lỗi 400 thật hiện trong `warnings`, echo prompt đã sạch).
 
-### 🔴 BUG-9 — còn 4 đường khác vẫn nuốt lỗi thật (dsh chỉ ra 20/08, CHƯA sửa)
+### 🟡 BUG-9 — 4 đường nuốt lỗi thật (nhánh TIMEOUT đã sửa 20/08, còn 3)
 Bản vá BUG-5 chỉ chạm nhánh `returncode != 0` của `_classify_completed`. Còn:
-1. **Timeout** (`dispatcher.py`, nhánh `TimeoutExpired`): trả `warnings=[]`, vứt luôn
-   `e.stdout`/`e.stderr`. Vendor chết vì lỗi cờ rồi treo tới timeout → lại trơ như cũ.
-   👉 Nghi đây liên quan trực tiếp tới **BUG-6** (timeout, stdout rỗng, nguyên nhân chưa biết) —
-   vá cái này có thể chính là cách NHÌN THẤY nguyên nhân BUG-6.
+1. ✅ **Timeout — ĐÃ SỬA 20/08.** `TimeoutExpired` mang theo `e.stdout`/`e.stderr` (phần vendor
+   kịp in trước khi bị giết); trước đây vứt sạch. Nay giữ lại, bỏ echo prompt, cắt bằng
+   `tail_lines`, gắn nhãn `[vendor:stdout|stderr]` vs `[polykit]`.
+   `stdout` khi timeout để **RỖNG có chủ ý** — trường đó là "kết quả vendor", nhét nửa vời vào
+   thì caller chỉ kiểm `stdout != ""` sẽ đọc dở dang thành kết quả thật, và JSON phình không
+   giới hạn (Codex review). Phân biệt thêm 3 ca: im lặng thật · chỉ có echo prompt · có manh mối.
 2. **`returncode == 0`**: trả `ok` ngay, stderr bị vứt hoàn toàn — mất cảnh báo degraded/quota.
 3. **`_dispatch_gemini`**: không đi qua `_classify_completed`, lane fail chỉ ghi
    `"lane N failed (...)"`, stderr thật không bao giờ lộ.
@@ -304,3 +306,21 @@ Dọn kèm: `agy plugin import gemini` kéo về cả `cross-cli-dispatch` cũ (
 
 **Bài học**: bảng trạng thái tự viết mà chưa đo thì cũng là một dạng "thành công giả" — nó cho
 cảm giác đã kiểm soát trong khi 2/5 ô là chữ tự bịa.
+
+
+### 🟡 BUG-6 — bớt bí: `dsh` KHÔNG stream, nên timeout không thể có output dở
+Live test 20/08 sau khi vá BUG-9: ép `dispatch dsh --timeout 25` trên việc dài.
+```
+status=timeout · exit_code=124
+warnings: [polykit] vendor KHÔNG kịp in gì ra stdout trước khi bị giết.
+          [polykit] vendor KHÔNG kịp in gì ra stderr trước khi bị giết.
+```
+Tức **không phải PolyKit vứt mất** — vendor thật sự chưa ghi một byte nào vào pipe.
+Khớp đúng README của dsh: `--profile headless` = *"answer one task, **print the final** assistant
+message, and exit"*. In một lần ở cuối ⇒ bị giết giữa chừng thì vĩnh viễn rỗng, **theo thiết kế**.
+
+⇒ Sửa lại cách hiểu BUG-6: "stdout rỗng khi timeout" **không phải triệu chứng của lỗi**, nó là
+hành vi bình thường của vendor không stream. Câu hỏi thật còn lại là **vì sao task đó timeout**,
+chứ không phải vì sao rỗng. Vá BUG-9 không gỡ được BUG-6 — nhưng nó **loại được một giả thuyết**
+và làm ca im lặng nói ra thành lời thay vì `warnings=[]`.
+**Chưa đo**: grok có stream không (nếu có thì cùng lệnh sẽ ra manh mối, và đó là hướng đào tiếp).
