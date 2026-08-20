@@ -10,6 +10,8 @@
 | Bug | Trạng thái | Mô tả |
 |---|---|---|
 | QUAN SÁT-3 | 🔴 MỞ | `dispatch.py` chưa có cổng chặn PII (`pg-redact check`) trước khi gửi stdin ra vendor |
+| BUG-12 | ✅ ĐÃ SỬA | `--prompt "chữ"` bị argparse rút gọn thành `--prompt-file` → coi câu chữ là đường dẫn |
+| BUG-13 | ✅ ĐÃ SỬA | probe auth hỏng vì lý do không-phải-auth vẫn dán nhãn `auth_unverified` và VỨT stderr |
 | BUG-6 | 🔴 MỞ | **Chỉ còn `grok`** timeout rỗng khi sinh code (4/4). `dsh` đã gỡ oan 20/08: nó LÀM XONG, chỉ lâu hơn trần 600s |
 | BUG-2 | ✅ ĐÃ SỬA | Thêm `--prompt-file` cho prompt dài/nhiều dòng/có dấu |
 | BUG-4 | ✅ ĐÃ SỬA | `doctor` suy `quota_capped` từ `dispatch-log.jsonl` thay vì chỉ đo `--version` |
@@ -188,6 +190,32 @@ không bao giờ về. Lời dặn đó không phải nghi thức.
 ---
 
 ## ✅ ĐÃ SỬA
+
+### ✅ BUG-12 — `--prompt "chữ"` lặng lẽ biến thành `--prompt-file` (sửa 20/08)
+**Do chính mình gây ra**: thêm `--prompt-file` (BUG-2, 19/08) mà quên argparse **mặc định cho
+rút gọn tiền tố**. Từ đó `--prompt` là tiền tố duy nhất khớp `--prompt-file`, nên:
+```
+dispatch.py dsh --prompt "xin chào đây là văn bản"
+→ blocked: không đọc được --prompt-file: [Errno 2] No such file or directory: 'xin chào đây là văn bản'
+```
+Lệnh đang chạy tốt bỗng gãy, và **thông báo nói về file** — người đọc đi tìm sai chỗ.
+Phiên khác đã dính đúng bẫy này lúc 16:14 rồi kết luận nhầm là *"dsh/agy mất auth"*.
+
+**Đã sửa**: `allow_abbrev=False` (chặn cả LỚP đoán-mò tiền tố, không riêng ca này) + thêm
+`--prompt TEXT` thật. `--prompt` và `--prompt-file` loại trừ nhau; `--prompt` rỗng bị chặn.
+**Live test**: `--prompt "Trả lời đúng một chữ: XONG"` → `status=ok`, stdout `XONG`.
+`--time 30` (trước kia bị đoán thành `--timeout`) → nay `blocked: unrecognized arguments`.
+
+### ✅ BUG-13 — nhãn `auth_unverified` nói SAI CHỖ, và vứt luôn bằng chứng (sửa 20/08)
+Probe auth rớt vì lý do **không phải auth** (cờ sai, mạng, CLI đổi cú pháp) vẫn ra
+`auth_unverified`, còn `error` chỉ ghi `auth_probe_unverified (exit N)` — **stderr bị vứt**.
+Nhãn bảo người đọc đi kiểm auth, mà bằng chứng để cãi lại thì không còn.
+Cùng họ với BUG-5/BUG-9: dòng lỗi thật bị nuốt.
+**Đã sửa**: giữ 3 dòng cuối stderr (cắt 300 ký tự) vào `probe.error`.
+⚠️ Ghi nhận: lúc kiểm lại 16:40 thì `agy`/`dsh` đều `ready`, `error=None` — **báo động
+`auth_unverified` hôm đó KHÔNG tái hiện được**. Vá cái này là vá khuyết tật thiết kế, không phải
+vá triệu chứng đã thấy.
+
 
 ### ✅ BUG-2 — prompt dài không có đường truyền file (đã sửa 19/08)
 

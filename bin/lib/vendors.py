@@ -186,7 +186,14 @@ def detect(spec: VendorSpec, which=shutil.which, runner=subprocess.run) -> Vendo
             elif (not authed and not spec.auth_check_authoritative
                   and not _AUTH_FAILURE_RE.search(res.stderr or "")):
                 authed = None
+                # BUG-13 (20/08): trước đây chỉ ghi mã thoát, VỨT stderr. Người
+                # đọc thấy nhãn `auth_unverified` sẽ đi kiểm auth — trong khi
+                # nguyên nhân thật có thể là cờ sai, mạng, hay CLI đổi cú pháp.
+                # Nhãn nói SAI CHỖ, mà bằng chứng để cãi lại thì đã bị vứt.
+                chi_tiet = " | ".join((res.stderr or "").strip().splitlines()[-3:])[:300]
                 error = f"auth_probe_unverified (exit {res.returncode})"
+                if chi_tiet:
+                    error += f" — stderr: {chi_tiet}"
         else:
             # Không có cách kiểm auth: chỉ ready nếu policy assume_authed (host claude).
             authed = spec.assume_authed
