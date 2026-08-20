@@ -184,3 +184,31 @@ phải có mẫu ĐỐI CHỨNG bác được nó — ở đây chính là dòng
 lấy 0 byte, không nghiệm thu được gì; (b) trap chung: task phân tích phải kèm hạn mức đầu ra
 (số phát hiện tối đa, số dòng mỗi phát hiện).
 **Trạng thái**: 🔴 MỞ.
+
+---
+
+## Phiên 20/08/2026 — dispatch sửa `scan-job.sh` (scanbox)
+
+### 🟢 BUG-7 — `--cd` trỏ vào thư mục KHÔNG-git → codex luôn exit 1 (ĐÃ SỬA)
+
+**Lệnh nguyên văn**
+```
+python3 bin/dispatch.py codex --prompt-file <file> --sandbox workspace-write \
+  --cd /Users/nightskat/Claude/Build/infra/server-pii-cuc-bo --result-json --timeout 480
+```
+**Đo được**: `status=error`, `exit_code=1`, `warnings=["Reading prompt from stdin...",
+"Not inside a trusted directory and --skip-git-repo-check was not specified."]`.
+
+**Nguyên nhân** (`bin/lib/dispatch_core.py:63-67`, `build_codex_cmd`): cờ
+`--skip-git-repo-check` nằm trong **nhánh `else` của `if workdir`**. Tức là chỉ thêm khi
+KHÔNG có `--cd`. Nhưng hai điều kiện đó độc lập nhau: `-C` chọn thư mục làm việc, còn
+`--skip-git-repo-check` trả lời câu "thư mục đó có phải git repo không". Thư mục hạ tầng
+(`server-pii-cuc-bo`) không phải git repo → mọi lượt dispatch có `--cd` đều chết.
+
+**Nghịch lý cần nhớ**: bỏ `--cd` đi thì lại CHẠY ĐƯỢC (rơi vào nhánh `else`) — nên triệu chứng
+đọc như "cờ `--cd` hỏng", trong khi thật ra là cờ khác bị treo nhầm chỗ.
+
+**Đã sửa**: `cmd.append("--skip-git-repo-check")` ra ngoài, chạy vô điều kiện.
+Test `tests/test_dispatch_builders.py` cập nhật theo — `156 passed`.
+**Trạng thái**: 🟢 ĐÃ SỬA (unit test xanh). Live test qua codex CHƯA chạy được: tài khoản
+đang hết hạn mức tới 10:58, xem BUG-5.

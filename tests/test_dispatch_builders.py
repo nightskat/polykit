@@ -8,7 +8,7 @@ def test_build_codex_cmd():
 
     # Model specific, workspace-write, workdir present, json format
     cmd2 = build_codex_cmd(model="gpt-4", sandbox="workspace-write", workdir="/my/project", fmt="json")
-    assert cmd2 == ["codex", "exec", "-m", "gpt-4", "-s", "workspace-write", "--json", "-C", "/my/project"]
+    assert cmd2 == ["codex", "exec", "-m", "gpt-4", "-s", "workspace-write", "--json", "-C", "/my/project", "--skip-git-repo-check"]
 
 def test_build_grok_cmd():
     grok_bin = str(Path.home() / ".grok/bin/grok")

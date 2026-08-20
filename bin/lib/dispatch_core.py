@@ -63,8 +63,10 @@ def build_codex_cmd(model: str, sandbox: str, workdir: str | None, fmt: str) -> 
         cmd.append("--json")
     if workdir:
         cmd.extend(["-C", workdir])
-    else:
-        cmd.append("--skip-git-repo-check")
+    # Luon them --skip-git-repo-check, KE CA khi co -C: codex tu choi chay trong
+    # thu muc khong phai git repo ("Not inside a trusted directory"). Truoc day co
+    # trong nhanh else -> moi lan dung --cd tro toi thu muc khong-git deu exit 1.
+    cmd.append("--skip-git-repo-check")
     return cmd
 
 def build_claude_cmd(model: str, prompt: str) -> list[str]:
