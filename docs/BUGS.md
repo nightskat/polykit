@@ -216,3 +216,45 @@ directory" BIẾN MẤT, codex đi hết đường tới API và chỉ còn ch�
 **Trạng thái**: 🟢 ĐÃ SỬA (unit test 156 passed + live test).
 ⚠️ Bản CÀI ở `~/.claude/plugins/cache/.../polykit/0.5.0/` VẪN CÒN LỖI cho tới lần cập nhật
 plugin kế tiếp — sửa ở repo theo đúng luật, đừng vá vào bản cài.
+
+---
+
+## Phiên 20/08/2026 — bench OCR, dispatch maker/tester
+
+### 🟡 BUG-7 — `--result-json` KHÔNG in JSON khi lỗi sớm → caller nhận file 0 byte
+
+**Đo được** (3 ca, đều `exit=2`, đều `stdout = 0 byte`):
+```
+dispatch.py agy gemini-3.1-pro --prompt x --result-json   # model không hợp lệ
+dispatch.py agy --model x --prompt x --result-json        # cờ không tồn tại
+```
+Thông báo lỗi có đầy đủ và rất tốt — nhưng nằm ở **stderr**, còn **stdout rỗng**.
+
+**Vì sao vẫn là bug**: cờ `--result-json` hứa "stdout là JSON". Người gọi vì thế viết
+`dispatch.py ... --result-json > out.json` rồi `json.load(out.json)`. Khi lỗi sớm, out.json
+**0 byte** → `JSONDecodeError`, và triệu chứng **trông y hệt** vendor chết/timeout.
+Mình đã tự dẫm đúng bẫy này 3 lần trong 1 phiên và suýt kết luận "agy hỏng" trong khi lỗi là
+tên model mình gõ sai.
+
+**Không phải lỗi che giấu thông tin** — PolyKit báo đúng, `exit=2` đúng. Lỗi ở chỗ **hợp đồng
+đầu ra không đồng nhất**: lúc thì JSON, lúc thì rỗng.
+**Việc cần làm**: khi có `--result-json`, mọi đường thoát đều in JSON, ví dụ
+`{"status":"error","reason":"invalid_model","stderr":"...","exit_code":2}`.
+**Trạng thái**: 🟡 MỞ (nhẹ — có đường vòng: bỏ `--result-json` là thấy lỗi ngay).
+
+### 🔴 BUG-6 — thêm bằng chứng: `grok` hỏng ở việc SINH CODE, `dsh` thì không
+
+Phiên 20/08, cùng khung dispatch, 3 việc thật:
+
+| Việc | Vendor | Kết quả |
+|---|---|---|
+| Nghiên cứu 6 model OCR, đầu ra có khuôn cứng | `dsh` | ✅ ok, 1.730 byte |
+| Viết `cham.py` (~1,6 KB code) | `dsh` | ✅ ok |
+| Viết bộ test đập `cham.py` | `grok` | ❌ timeout, `stdout` rỗng |
+
+→ Cộng với 3 lần hôm 19/08, `grok` đã **4/4 lần timeout rỗng** trên việc sinh/phân tích code,
+trong khi `dsh` cùng khung, cùng cỡ prompt thì chạy tốt. Giả thuyết "tại prompt dài / tại đọc
+file / tại đầu ra dài" đều đã bị bác ở mục trên.
+**Khuyến nghị dùng ngay**: đừng giao việc sinh code cho `grok`; dùng `dsh`, để `grok` cho việc
+ngắn có khuôn.
+**Trạng thái**: 🔴 MỞ, nguyên nhân CHƯA BIẾT.
