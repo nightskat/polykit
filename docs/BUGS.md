@@ -285,7 +285,7 @@ plugin kế tiếp — sửa ở repo theo đúng luật, đừng vá vào bản
 
 ## Phiên 20/08/2026 — bench OCR, dispatch maker/tester
 
-### 🟡 BUG-8 — `--result-json` KHÔNG in JSON khi lỗi sớm → caller nhận file 0 byte
+### ✅ BUG-8 — `--result-json` KHÔNG in JSON khi lỗi sớm → caller nhận file 0 byte (sửa 20/08)
 
 > Đánh số lại từ BUG-7 → BUG-8 lúc 10:33 20/08: hai phiên Claude chạy song song trên cùng repo
 > cùng đặt tên "BUG-7" cách nhau vài phút. Mục này commit sau (`5996a13`) nên nhường số.
@@ -425,3 +425,21 @@ hành vi; đã chứng minh test không rỗng ruột (bỏ cô lập thì đư�
 
 ⚠️ **CHƯA dọn 279 bản ghi rác cũ** — cố ý. Xoá dữ liệu là việc một chiều, và luật "không mất dữ
 liệu > sạch đẹp" đứng trước. Muốn dọn thì lọc ra file backup rồi mới ghi đè, đừng xoá thẳng.
+
+
+### ✅ BUG-8 — đã vá 20/08, gồm cả hai chỗ rò Codex review chỉ ra thêm
+`_chan_som()` in `DispatchResult(status="blocked", reason="guard_violation")` ra stdout khi có
+`--result-json`, giữ **nguyên văn** thông báo lỗi trong `warnings` (danh sách model hợp lệ, gợi ý
+`--allow-unknown-model`). Không có cờ thì y như cũ. Vẫn `exit 2` để script phân biệt với lỗi vendor.
+
+Codex review chỉ ra **hai chỗ vẫn rò**, đã vá nốt:
+1. **Lỗi CỜ do argparse** (vendor sai, option lạ, thiếu tham số) xảy ra **trước** khi code mình
+   chạy → `exit 2`, stdout rỗng. ⇒ `_ParserRaJson.error()` soi thẳng `sys.argv` (chưa parse xong
+   nên chưa có `args`) và in JSON kèm `usage` để người ta sửa được lệnh.
+2. **`--doctor --result-json`** thoát với **stdout 0 byte, exit 1** — đúng cái BUG-8 đang sửa.
+   ⇒ `_doctor_ra_json()`, `reason="doctor_failed"` khi không đạt.
+
+Đo lại: vendor sai → 926B JSON · option lạ → 732B · `--doctor` → 298B. 238 test xanh.
+
+⚠️ Ghi nhận: lần "live test đỏ" đầu tiên ở mục này là **lỗi vòng lặp shell của người kiểm**, không
+phải lỗi code — chạy tách từng ca thì đúng ngay. Kiểm cái kiểm trước khi kết luận.

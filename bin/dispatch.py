@@ -12,6 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from lib.dispatcher import run_vendor
+from lib.dispatch_core import DispatchResult
 from lib.vendor_config import (
     load_vendor_config,
     vendor_names,
@@ -89,11 +90,72 @@ def _run_doctor(vendor_name: str) -> int:
     return 0
 
 
+class _ParserRaJson(argparse.ArgumentParser):
+    """BUG-8 (phần Codex review chỉ ra): lỗi CỜ (vendor sai, option lạ, thiếu arg)
+    do argparse xử lý TRƯỚC khi code mình chạy — nó in usage ra stderr rồi exit 2
+    với stdout rỗng, kể cả khi người gọi đã xin --result-json.
+
+    Không đọc được `args` ở thời điểm này (chưa parse xong) nên soi thẳng sys.argv.
+    """
+
+    def error(self, message):
+        if "--result-json" in sys.argv:
+            print(json.dumps(DispatchResult(
+                status="blocked", vendor="?", model="?",
+                summary=f"dispatch blocked: sai tham số dòng lệnh: {message}",
+                warnings=[f"[polykit] {message}", self.format_usage().strip()],
+                stdout="", exit_code=2, reason="guard_violation",
+            ).to_dict(), indent=2))
+        sys.stderr.write(f"[polykit] error: {message}\n")
+        sys.stderr.write(self.format_usage())
+        sys.exit(2)
+
+
+def _doctor_ra_json(vendor: str, ma: int) -> None:
+    """--doctor cũng phải tôn trọng --result-json (Codex review): trước đây nhánh
+    này thoát với stdout 0 byte, đúng cái mà BUG-8 đang sửa."""
+    print(json.dumps(DispatchResult(
+        status="ok" if ma == 0 else "error",
+        vendor=vendor, model="-",
+        summary=f"doctor {vendor}: {'đạt' if ma == 0 else 'không đạt'}",
+        warnings=["[polykit] chi tiết doctor đã in ra stderr."],
+        stdout="", exit_code=ma,
+        reason=None if ma == 0 else "doctor_failed",
+    ).to_dict(), indent=2))
+
+
+def _chan_som(args, resolved_model: str, summary: str, warning_lines: list[str]) -> None:
+    """Chặn SỚM trước khi gọi vendor (model sai, --prompt-file lỗi/rỗng).
+
+    BUG-8: --result-json hứa stdout là JSON, nên nhánh chặn cũng phải in
+    DispatchResult(status=blocked) ra stdout — nếu không stdout rỗng 0 byte và
+    caller json.loads(stdout) nổ JSONDecodeError. Nội dung lỗi giữ NGUYÊN trong
+    warnings (không rút gọn). Không có cờ --result-json → y như cũ: lỗi ra stderr,
+    exit 2. Vẫn exit 2 (khác 1 của lỗi vendor) để script phân biệt bằng mã thoát.
+    """
+    for line in warning_lines:
+        sys.stderr.write(line + "\n")
+    if args.result_json:
+        result = DispatchResult(
+            status="blocked",
+            vendor=args.vendor,
+            model=resolved_model,
+            summary=summary,
+            warnings=list(warning_lines),
+            stdout="",
+            exit_code=2,
+            reason="guard_violation",
+            served_model=None,
+        )
+        print(json.dumps(result.to_dict(), indent=2))
+    sys.exit(2)
+
+
 def main():
     cfg = load_vendor_config()
     names = vendor_names(cfg)
 
-    parser = argparse.ArgumentParser(description="Multi-vendor CLI dispatch wrapper")
+    parser = _ParserRaJson(description="Multi-vendor CLI dispatch wrapper")
     parser.add_argument("vendor", choices=names, help="Vendor to dispatch to")
     parser.add_argument("model", nargs="?", default="auto", help="Model slug to use (default: auto)")
     parser.add_argument("--timeout", type=int, default=120, help="Timeout in seconds (default: 120, max: 600)")
@@ -121,7 +183,10 @@ def main():
 
     # --doctor mode
     if args.doctor:
-        sys.exit(_run_doctor(args.vendor))
+        ma = _run_doctor(args.vendor)
+        if args.result_json:
+            _doctor_ra_json(args.vendor, ma)
+        sys.exit(ma)
 
     # Resolve model auto → default_model từ vendors.json
     # 🔴 dsh đặc biệt: JSON ghi default=flash nhưng flash trả rỗng trên task nhiều bước.
@@ -146,10 +211,15 @@ def main():
         elif isinstance(valid_models, list):
             if resolved_model not in valid_models:
                 if not args.allow_unknown_model:
-                    sys.stderr.write(f"[polykit] error: model '{resolved_model}' not in vendor '{args.vendor}' valid models.\n")
-                    sys.stderr.write(f"Valid models: {', '.join(valid_models)}\n")
-                    sys.stderr.write(f"Use --allow-unknown-model to bypass.\n")
-                    sys.exit(2)
+                    _chan_som(
+                        args, resolved_model,
+                        summary=f"dispatch blocked: model '{resolved_model}' not in vendor '{args.vendor}' valid models.",
+                        warning_lines=[
+                            f"[polykit] error: model '{resolved_model}' not in vendor '{args.vendor}' valid models.",
+                            f"Valid models: {', '.join(valid_models)}",
+                            "Use --allow-unknown-model to bypass.",
+                        ],
+                    )
 
     # --dump-config: in cấu hình đã resolve, thoát 0 token
     if args.dump_config:
@@ -178,11 +248,17 @@ def main():
         try:
             prompt = Path(args.prompt_file).read_text(encoding="utf-8")
         except OSError as e:
-            print(f"ERROR: dispatch blocked: không đọc được --prompt-file: {e}", file=sys.stderr)
-            sys.exit(2)
+            _chan_som(
+                args, resolved_model,
+                summary=f"dispatch blocked: không đọc được --prompt-file: {e}",
+                warning_lines=[f"ERROR: dispatch blocked: không đọc được --prompt-file: {e}"],
+            )
         if not prompt.strip():
-            print(f"ERROR: dispatch blocked: --prompt-file rỗng: {args.prompt_file}", file=sys.stderr)
-            sys.exit(2)
+            _chan_som(
+                args, resolved_model,
+                summary=f"dispatch blocked: --prompt-file rỗng: {args.prompt_file}",
+                warning_lines=[f"ERROR: dispatch blocked: --prompt-file rỗng: {args.prompt_file}"],
+            )
     else:
         prompt = sys.stdin.read()
 
