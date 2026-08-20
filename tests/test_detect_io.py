@@ -120,6 +120,9 @@ def test_run_doctor_with_injected_probes_no_worker(tmp_path, monkeypatch):
     from lib.states import VendorProbe
     calls = []
     monkeypatch.setattr(doctor_mod, "write_state", lambda s, path=None: calls.append(s) or path)
+    # BUG-4: run_doctor giờ đọc evidence để suy quota. Chặn đọc file thật → test
+    # chỉ kiểm tra detect/probe, không phụ thuộc log máy.
+    monkeypatch.setattr(doctor_mod, "read_evidence", lambda limit=20, path=None: [])
     probes = [VendorProbe(name="claude", path="/bin/claude", authed=True, quota_capped=False)]
     state = doctor_mod.run_doctor(probes=probes, now="2026-07-13T00:00:00Z")
     assert state["schema_version"] == 1
