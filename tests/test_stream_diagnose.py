@@ -82,12 +82,15 @@ def test_build_agy_cmd_stream_giu_nguyen_khi_khong_co():
 # ── 2. KHÔNG có cờ thì lệnh y hệt như cũ ─────────────────────────────────────
 
 def test_khong_co_co_codex_giong_het_cu():
+    """"Giống hệt cũ" = không có cờ stream. Effort `low` là mặc định MỚI của
+    PolyKit từ bench 20/08, có ở cả hai nhánh nên không phải khác biệt do stream."""
     assert build_codex_cmd("auto", "read-only", None, "text") == [
-        "codex", "exec", "-s", "read-only", "--skip-git-repo-check",
+        "codex", "exec", "-c", "model_reasoning_effort=low",
+        "-s", "read-only", "--skip-git-repo-check",
     ]
     assert build_codex_cmd("gpt-4", "workspace-write", "/p", "json") == [
-        "codex", "exec", "-m", "gpt-4", "-s", "workspace-write", "--json",
-        "-C", "/p", "--skip-git-repo-check",
+        "codex", "exec", "-m", "gpt-4", "-c", "model_reasoning_effort=low",
+        "-s", "workspace-write", "--json", "-C", "/p", "--skip-git-repo-check",
     ]
 
 

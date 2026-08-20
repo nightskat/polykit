@@ -55,11 +55,25 @@ def validate_sandbox(s) -> str:
         raise DispatchError(f"sandbox must be read-only or workspace-write, got: {s!r}")
     return s
 
+# Bench 20/08/2026 (8 lượt, bài có đáp án kiểm được): trên gpt-5.6-terra,
+# low = 366 reasoning tok → 3/5 lỗi · medium = 515 → 2/5 · high = 664 → 2/5.
+# Effort cao ĐỐT NHIỀU HƠN mà tìm ÍT HƠN. codex mặc định chạy `medium` — đúng ô
+# tệ nhất — nên PolyKit ghim `low`. `minimal` trả RỖNG, không bao giờ dùng.
+CODEX_EFFORT_MAC_DINH = "low"
+CODEX_EFFORT_HOP_LE = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
+
+
 def build_codex_cmd(model: str, sandbox: str, workdir: str | None, fmt: str,
-                    stream: bool = False) -> list[str]:
+                    stream: bool = False, effort: str | None = None) -> list[str]:
     cmd = ["codex", "exec"]
     if model != "auto":
         cmd.extend(["-m", model])
+    # codex KHÔNG có cờ --effort; chỉnh qua -c model_reasoning_effort=<mức>.
+    muc = effort or CODEX_EFFORT_MAC_DINH
+    if muc not in CODEX_EFFORT_HOP_LE:
+        raise DispatchError(
+            f"effort phải là một trong {', '.join(CODEX_EFFORT_HOP_LE)}, got: {muc!r}")
+    cmd.extend(["-c", f"model_reasoning_effort={muc}"])
     cmd.extend(["-s", sandbox])
     # --json vừa là JSONL stream vừa là --format json của codex; stream diagnose
     # dùng lại chính cờ này nên `stream or fmt == "json"`.

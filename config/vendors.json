@@ -168,7 +168,7 @@
         "gpt-5.4-mini",
         "codex-auto-review"
       ],
-      "default_model": "gpt-5.6-terra",
+      "default_model": "gpt-5.5",
       "quota": "Gói ChatGPT — giới hạn 5 giờ + tuần.",
       "verify_cmd": "codex doctor",
       "zero_quota_cmds": [
@@ -179,9 +179,24 @@
         "Ngoài git repo → exit 1, cần --skip-git-repo-check",
         "Gọi TUI khi không có TTY → `stdin is not a terminal`, exit 1",
         "Cờ sai → exit 2",
-        "`codex debug models` đổ ~278KB (kèm cả system prompt) — nhớ cắt output"
+        "`codex debug models` đổ ~278KB (kèm cả system prompt) — nhớ cắt output",
+        "Mỗi lượt tốn ~24.000 input token overhead (system prompt + skills) DÙ prompt chỉ 1 dòng — đo 20/08. Việc nhỏ vẫn trả phí lớn, gộp việc lại thay vì bắn nhiều lượt vụn",
+        "Không model nào bắt được lỗi NGHIỆP VỤ (bench 20/08: 0/8 lượt thấy lãi ngày âm và hệ số phạt 1.5 cứng). Dùng cho lỗi kỹ thuật, đừng giao phần domain"
       ],
-      "vai": "Review code, phản biện có cấu trúc."
+      "vai": "Review code, phản biện có cấu trúc.",
+      "default_model_note": "Đổi từ gpt-5.6-terra 20/08 sau bench 8 lượt có đáp án kiểm được (file 5 lỗi cài sẵn): mọi model ở effort low đều tìm 3/5 — model KHÔNG tạo khác biệt chất lượng — nhưng gpt-5.5 tốn 246 reasoning token so với terra 321-366 (~30% rẻ hơn).",
+      "effort_flag": "-c model_reasoning_effort=<mức>  (KHÔNG có cờ --effort)",
+      "effort_values": [
+        "none",
+        "minimal",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "effort_default_polykit": "low",
+      "effort_flag_note": "PolyKit ghim `low`. Bench 20/08 trên terra: low 366 reasoning tok → 3/5 lỗi; medium 515 → 2/5; high 664 → 2/5. Effort cao ĐỐT NHIỀU HƠN mà tìm ÍT HƠN. `minimal` trả về RỖNG (0 token, 0 kết quả) — đừng dùng. ⚠️ 1 mẫu/ô, 1 bài: đủ để nói 'không có bằng chứng effort cao tốt hơn', chưa đủ để nói chắc nó tệ hơn."
     },
     "gemini": {
       "binary": "gemini",

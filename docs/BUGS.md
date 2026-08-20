@@ -547,3 +547,48 @@ dữ liệu. Chỉ có **câu trả lời cuối** là không kịp về trướ
 `dsh` cùng khung thì xong. Chưa có phép đo mới cho `grok` vì nó đang `quota_capped` (402).
 Ghi nhận một manh mối chưa kiểm: 20/08 `grok` **từ chối** một việc và tự trích luật *"≤30 dòng/lượt"*
 — tức nó có đọc `~/CLAUDE.md` của Tuan. Chưa rõ có liên quan không, **không đoán tiếp**.
+
+---
+
+## 📊 Bench codex model × effort (20/08/2026)
+
+Bài có đáp án kiểm được: file tính lãi vay cài sẵn **5 lỗi**, đếm số lỗi nêu đúng tên hàm.
+Đo bằng `codex exec --json` → event `turn.completed` mang `usage` đầy đủ.
+
+**Trục EFFORT** (trên `gpt-5.6-terra`, mặc định cũ):
+
+| Effort | Giây | reasoning tok | Tìm |
+|---|---|---|---|
+| minimal | 7 | 0 | **0/5** — trả RỖNG, đừng dùng |
+| **low** | 21 | **366** | **3/5** |
+| medium | 23 | 515 | 2/5 |
+| high | 33 | 664 | 2/5 |
+
+🔴 **Effort cao ĐỐT NHIỀU HƠN mà tìm ÍT HƠN.** high vs low: +81% reasoning, chậm hơn 57%, kém hơn.
+Mà `codex` mặc định chạy **`medium`** và PolyKit trước đây **không ghim effort** → đang ở ô tệ nhất.
+
+**Trục MODEL** (đều ở `low`):
+
+| Model | reasoning tok | Tìm |
+|---|---|---|
+| gpt-5.4-mini | **215** | 3/5 |
+| **gpt-5.5** | **246** | 3/5 |
+| gpt-5.6-terra (lặp) | 321 | 3/5 |
+| gpt-5.6-sol | 358 | 3/5 |
+| gpt-5.6-terra | 366 | 3/5 |
+
+⇒ **Model không tạo khác biệt chất lượng** ở low — cả 5 đều 3/5. Chênh nhau chỉ ở giá.
+
+**Trần chung 3/5**: **0/8 lượt** bắt được `lai_don` (không kiểm ngày âm) và `qua_han` (hệ số phạt
+1.5 hardcode). Hai lỗi đó là **nghiệp vụ ngân hàng**, không phải lỗi kỹ thuật.
+⇒ Giao codex phần kỹ thuật; phần domain vẫn phải người đọc.
+
+**Phát hiện phụ**: mỗi lượt tốn **~24.000 input token** overhead (system prompt + skills) DÙ prompt
+chỉ 1 dòng. Việc nhỏ vẫn trả phí lớn → gộp việc thay vì bắn nhiều lượt vụn.
+
+**Đã đổi**: `default_model` codex `gpt-5.6-terra` → **`gpt-5.5`**, và PolyKit **ghim
+`-c model_reasoning_effort=low`** (codex không có cờ `--effort`).
+
+⚠️ **Giới hạn của bench này**: 1 mẫu mỗi ô (terra/low 2 mẫu), **1 bài**. Đủ để nói *"không có bằng
+chứng effort cao tốt hơn"* — **chưa đủ** để nói medium/high chắc chắn tệ hơn. Muốn chắc thì chạy
+thêm 2-3 bài khác loại.
