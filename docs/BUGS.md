@@ -360,7 +360,7 @@ và làm ca im lặng nói ra thành lời thay vì `warnings=[]`.
 **Chưa đo**: grok có stream không (nếu có thì cùng lệnh sẽ ra manh mối, và đó là hướng đào tiếp).
 
 
-### 🔬 BUG-6 — đo được nguyên nhân "stdout rỗng": KHÔNG vendor nào stream ở chế độ mặc định
+### ✅ BUG-6 — nguyên nhân "stdout rỗng" + `--stream-diagnose` (sửa 20/08)
 Đo 20/08 sau khi vá BUG-9, ép timeout rồi đọc `warnings`:
 
 | Vendor | Chế độ | Bị giết sau | stdout thu được |
@@ -376,7 +376,31 @@ Trong 4790 byte đó: `available_commands` ×2 và **`thought` ×42**.
 lỗi của PolyKit và cũng không phải vendor chết. PolyKit gọi CLI ở chế độ in-một-lần-ở-cuối, nên
 bị giết giữa chừng thì vĩnh viễn không có gì.
 
-**Hướng đào tiếp (chưa làm)**: cho `dispatch.py` một cờ kiểu `--stream-diagnose` dùng
-`--output-format streaming-json` (grok/agy) hoặc `--json` (codex) để khi timeout còn đọc được
-vendor đã đi tới đâu. Chưa làm vì đổi chế độ output là đổi cả đường phân tích kết quả —
-việc riêng, không gộp vào lượt vá này.
+**Đã làm 20/08** — cờ `--stream-diagnose`:
+| Vendor | Cờ | Ghi chú |
+|---|---|---|
+| codex | `--json` | dùng chung với `--format json` |
+| grok | `--output-format streaming-json` | đã live test, 4790 byte |
+| agy | `--output-format stream-json` | cờ TOÀN CỤC, đặt trước lệnh con |
+| gemini | `-o stream-json` | **chỉ lane 2**; lane 1 (agy.sh) cảnh báo rõ là chạy plain |
+| dsh, claude, openrouter | — | **nói thẳng là không áp dụng**, không giả vờ |
+
+Mặc định KHÔNG đổi. `extract_stream_text()` là hàm thuần, chịu được dòng JSON dở dang ở cuối.
+
+**Live test** (`codex --stream-diagnose`, giết sau 25s): thu được `thread.started`,
+`turn.started`, `item.completed` — thấy vendor đi tới đâu. Cùng lệnh không có cờ: chỉ có banner.
+
+🔴 **Ba lỗi Codex review bắt được, đều là kiểu "giả vờ đã làm":**
+1. `extract_stream_text` **trích nhầm log hạ tầng thành chữ trợ lý** — đo thật:
+   `{"type":"item.completed","item":{"type":"error","message":"clamping SessionEnd hook..."}}`.
+   ⇒ lọc theo `type`/`role`, bỏ nguyên event `error`/`tool`/`user`/`command`.
+2. `--stream-diagnose --format json` **thay stdout bằng chữ đã trích** → phá hợp đồng của chính
+   caller đang xin JSON. ⇒ `fmt == "json"` thì giữ nguyên JSONL thô.
+3. `gemini` lane 1 (agy.sh) **không nhận cờ stream** nhưng vẫn in ghi chú chung "output là JSONL
+   stream" ⇒ đúng ca GIẢ VỜ ĐÃ STREAM mà đề bài cấm. Nay lane 1 cảnh báo rõ.
+   Vá chỗ này còn lòi ra ca cùng họ BUG-9(2): lane 1 khi **thành công** trả `warnings=[]` cứng,
+   nuốt sạch cảnh báo — thành công không có nghĩa là không có gì để nói.
+
+⚠️ Ghi nhận cách làm: lượt dispatch giao việc cho `dsh` **timeout ở 560s**, nhưng vì đề bài dặn
+"GHI FILE SỚM" nên **file đã viết xong trước khi bị giết** — 225 test xanh dù câu trả lời cuối
+không bao giờ về. Lời dặn đó không phải nghi thức.

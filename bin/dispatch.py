@@ -107,6 +107,9 @@ def main():
     parser.add_argument("--no-traps", action="store_true", help="Suppress trap warnings on stderr")
     parser.add_argument("--dump-config", action="store_true", help="Print resolved model+vendor config and exit (0 token)")
     parser.add_argument("--allow-unknown-model", action="store_true", help="Allow models not listed in JSON")
+    parser.add_argument("--stream-diagnose", action="store_true",
+                        help="Chạy vendor ở chế độ stream để khi timeout còn đọc được vendor đã đi tới đâu (BUG-6). "
+                             "codex/grok/agy/gemini có stream; dsh/claude KHÔNG — sẽ cảnh báo rõ rồi chạy bình thường.")
 
     # Fix: Add REGISTRY vendors not in JSON (like openrouter)
     from lib.vendors import REGISTRY
@@ -191,7 +194,8 @@ def main():
         timeout=args.timeout,
         fmt=args.format,
         workdir=args.workdir,
-        sandbox=args.sandbox
+        sandbox=args.sandbox,
+        stream=args.stream_diagnose
     )
 
     # M2 evidence log — best-effort, chỉ ở CLI boundary (không ghi khi test gọi lib).
@@ -210,6 +214,11 @@ def main():
     # KHÔNG in ra stdout: stdout phải sạch để pipe sang lệnh khác.
     if result.served_model and result.served_model != resolved_model:
         sys.stderr.write(f"[polykit] served: {result.served_model}\n")
+
+    if args.stream_diagnose:
+        # Nhắc người dùng ở stderr (stdout phải sạch để pipe) — chi tiết nằm trong
+        # result.warnings (xem qua --result-json).
+        sys.stderr.write("[polykit] chế độ chẩn đoán stream đang bật — xem warnings qua --result-json để biết chi tiết.\n")
 
     if args.result_json:
         print(json.dumps(result.to_dict(), indent=2))

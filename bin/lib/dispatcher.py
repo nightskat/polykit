@@ -22,6 +22,7 @@ from lib.dispatch_core import (
     build_agy_cmd,
     build_dsh_cmd,
     write_dsh_patch,
+    extract_stream_text,
     AGY_DEFAULT_MODEL,
     DSH_DEFAULT_MODEL,
     gemini_agy_tier,
@@ -30,6 +31,23 @@ from lib.dispatch_core import (
 
 STDERR_KEEP = 20
 STDERR_HEAD = 3
+
+# Vendor KHÔNG có chế độ stream (đo thật / theo README — xem BUG-6):
+#   claude    — lane bị ràng buộc ToS, không đụng.
+#   dsh       — `--profile headless` = "print the FINAL assistant message, and exit".
+#   openrouter — HTTP API, không có CLI stream.
+# ⚠️ `gemini` KHÔNG nằm ở đây vì lane 2 (gemini-cli) CÓ nhận `-o stream-json`.
+#    Nhưng lane 1 (agy.sh wrapper) thì KHÔNG — nên khi lane 1 chạy phải nói rõ,
+#    không được để ghi chú chung "output là JSONL stream" nói thay (Codex review).
+# Khi --stream-diagnose gặp vendor này: cảnh báo RÕ rồi chạy bình thường,
+# TUYỆT ĐỐI không im lặng bỏ qua, không giả vờ đã stream.
+STREAM_UNSUPPORTED = frozenset({"claude", "dsh", "openrouter"})
+
+_STREAM_UNSUPPORTED_REASON = {
+    "claude": "lane bị ràng buộc ToS",
+    "dsh": "--profile headless chỉ in kết quả CUỐI",
+    "openrouter": "HTTP API, không có CLI stream",
+}
 
 
 def strip_echoed_prompt(stderr: str, prompt: str | None) -> str:
@@ -152,6 +170,66 @@ def _timeout_warnings(stdout: str, stderr: str, prompt: str | None) -> list[str]
     return warnings
 
 
+def _stream_not_supported_warning(vendor: str) -> str:
+    """Cảnh báo RÕ RÀNG rằng --stream-diagnose không áp dụng cho vendor này."""
+    reason = _STREAM_UNSUPPORTED_REASON.get(vendor, "không có chế độ stream")
+    return (
+        f"[polykit] --stream-diagnose KHÔNG áp dụng cho vendor '{vendor}': "
+        f"{reason}. Chạy bình thường, KHÔNG stream."
+    )
+
+
+def _stream_timeout_warnings(vendor: str, stdout: str, stderr: str,
+                             prompt: str | None, stream: bool) -> list[str]:
+    """Timeout ở chế độ stream: vẫn giữ manh mối như _timeout_warnings, NHƯNG
+    thêm phần CHỮ trợ lý trích từ JSONL stream — chính là thứ BUG-6 đang cần để
+    biết vendor đã nghĩ tới đâu (42 thought trong 4790 byte)."""
+    warnings = _timeout_warnings(stdout, stderr, prompt)
+    if stream and vendor not in STREAM_UNSUPPORTED:
+        text = extract_stream_text(stdout)
+        if text.strip():
+            warnings.append(
+                "[polykit] trích từ JSONL stream — chữ trợ lý/thought vendor đã kịp sinh:"
+            )
+            warnings.extend(_tag_vendor_lines(tail_lines(text), "stream"))
+        else:
+            warnings.append(
+                "[polykit] không trích được chữ từ JSONL stream — output thô đã nằm ở trên."
+            )
+    return warnings
+
+
+def _apply_stream_diagnose(result: DispatchResult, vendor: str, stream: bool,
+                           fmt: str = "text") -> DispatchResult:
+    """Hậu xử lý --stream-diagnose, chạy cho MỌI kết quả (ok/error/timeout/skipped).
+
+    - Vendor KHÔNG stream → chèn cảnh báo rõ vào ĐẦU warnings, giữ nguyên mọi thứ.
+    - Vendor CÓ stream → ghi chú chế độ chẩn đoán; nếu THÀNH CÔNG thì trích chữ
+      trợ lý ra stdout (không trích được thì GIỮ NGUYÊN thô, không mất dữ liệu).
+    """
+    if not stream:
+        return result
+    if vendor in STREAM_UNSUPPORTED:
+        result.warnings.insert(0, _stream_not_supported_warning(vendor))
+        return result
+    result.warnings.append(
+        "[polykit] chế độ chẩn đoán (--stream-diagnose): output là JSONL stream; "
+        "phần chữ trợ lý đã được trích (giữ nguyên thô nếu không trích được)."
+    )
+    if fmt == "json":
+        # --stream-diagnose --format json: caller ĐANG CẦN JSON. Thay stdout bằng
+        # chữ đã trích là phá hợp đồng output của chính họ (Codex review).
+        result.warnings.append(
+            "[polykit] --format json: giữ nguyên JSONL thô ở stdout, KHÔNG trích chữ."
+        )
+        return result
+    if result.status == "ok" and result.stdout:
+        text = extract_stream_text(result.stdout)
+        if text.strip():
+            result.stdout = text
+    return result
+
+
 def _classify_completed(vendor: str, model: str, res, served_model: str | None = False,
                         prompt: str | None = None) -> DispatchResult:
     """M2: map kết quả subprocess → DispatchResult. returncode!=0 kèm dấu hiệu
@@ -212,6 +290,29 @@ def run_vendor(
     sandbox: str = "read-only",
     runner=subprocess.run,
     detector=detect,
+    stream: bool = False,
+) -> DispatchResult:
+    """Cổng dispatch công khai. `stream=True` = --stream-diagnose: chạy vendor ở
+    chế độ stream để khi timeout còn đọc được vendor đã đi tới đâu (BUG-6).
+
+    Hậu xử lý stream áp cho MỌI kết quả nên tách ra lớp mỏng này, không đổi
+    hành vi khi stream=False (mọi thứ y như cũ)."""
+    result = _run_vendor(vendor, prompt, model, timeout, fmt, workdir, sandbox,
+                         runner, detector, stream)
+    return _apply_stream_diagnose(result, vendor, stream, fmt)
+
+
+def _run_vendor(
+    vendor: str,
+    prompt: str,
+    model: str = "auto",
+    timeout: int = 120,
+    fmt: str = "text",
+    workdir: str | None = None,
+    sandbox: str = "read-only",
+    runner=subprocess.run,
+    detector=detect,
+    stream: bool = False,
 ) -> DispatchResult:
     # 1. Chạy guards
     try:
@@ -279,7 +380,7 @@ def run_vendor(
     # 4. Dispatch theo vendor
     try:
         if vendor == "codex":
-            cmd = build_codex_cmd(model, validated_sandbox, workdir, fmt)
+            cmd = build_codex_cmd(model, validated_sandbox, workdir, fmt, stream=stream)
             res = runner(
                 cmd,
                 input=prompt,
@@ -307,7 +408,8 @@ def run_vendor(
                 temp_prompt_path = temp_prompt.name
             
             try:
-                cmd = build_grok_cmd(model, validated_sandbox, workdir, fmt, temp_prompt_path)
+                cmd = build_grok_cmd(model, validated_sandbox, workdir, fmt, temp_prompt_path,
+                                     stream=stream)
                 res = runner(
                     cmd,
                     capture_output=True,
@@ -331,7 +433,7 @@ def run_vendor(
                     resolved = (AGY_DEFAULT_MODEL if AGY_DEFAULT_MODEL in catalog
                                 else next((m for m in catalog if m.startswith("gemini-")),
                                           catalog[0]))
-            cmd = build_agy_cmd(resolved, prompt)
+            cmd = build_agy_cmd(resolved, prompt, stream=stream)
             res = runner([shutil.which("agy") or "agy"] + cmd[1:],
                          capture_output=True, text=True,
                          timeout=validated_timeout, env=env)
@@ -339,7 +441,9 @@ def run_vendor(
             # served_model = slug ĐÃ GỬI. agy không báo lại model thật đã chạy,
             # nên đây là ý định, không phải bằng chứng (Grok P1) — ghi rõ để
             # đừng nhầm với served_model của OpenRouter (đọc từ response).
-            out.served_model = build_agy_cmd(resolved, "")[2]
+            # `resolved` chính là slug build_agy_cmd đã gửi (không phụ thuộc vị
+            # trí cờ stream trong argv).
+            out.served_model = resolved
             return out
 
         elif vendor == "dsh":
@@ -390,7 +494,8 @@ def run_vendor(
                     os.unlink(patch_path)
 
         elif vendor == "gemini":
-            return _dispatch_gemini(prompt, model, validated_timeout, runner, env)
+            return _dispatch_gemini(prompt, model, validated_timeout, runner, env,
+                                    stream=stream)
 
         elif vendor == "openrouter":
             from lib.openrouter import or_dispatch
@@ -511,6 +616,8 @@ def run_vendor(
     except subprocess.TimeoutExpired as e:
         # BUG-9: e mang theo e.stdout/e.stderr — phần vendor ĐÃ in ra trước khi
         # bị giết. Giữ lại vào stdout + warnings, thay vì vứt sạch manh mối.
+        # Stream diagnose (BUG-6): với vendor stream, đọc thêm phần CHỮ trợ lý
+        # trích từ JSONL — bằng chứng vendor đang NGHĨ, không treo.
         stdout = _decode_partial(e.stdout)
         stderr = _decode_partial(e.stderr)
         return DispatchResult(
@@ -518,7 +625,7 @@ def run_vendor(
             vendor=vendor,
             model=model,
             summary=f"{vendor} dispatch exceeded {validated_timeout}s",
-            warnings=_timeout_warnings(stdout, stderr, prompt),
+            warnings=_stream_timeout_warnings(vendor, stdout, stderr, prompt, stream),
             # stdout để RỖNG có chủ ý: trường này là "kết quả vendor". Nhét output
             # dang dở vào đây thì caller chỉ kiểm `stdout != ""` sẽ đọc nửa vời
             # thành kết quả thật, và JSON phình không giới hạn (Codex review).
@@ -542,6 +649,7 @@ def _dispatch_gemini(
     timeout: int,
     runner,
     env: dict,
+    stream: bool = False,
 ) -> DispatchResult:
     # Strip 1 ký tự @ đầu prompt
     if prompt.startswith("@"):
@@ -564,6 +672,14 @@ def _dispatch_gemini(
     )
 
     if is_agy_model and (agy_bin or shutil.which("agy")):
+        if stream:
+            # Lane 1 gọi wrapper agy.sh / `agy --print`, KHÔNG mang cờ stream.
+            # Im lặng ở đây là để ghi chú chung nói hộ "đã stream" — đúng ca
+            # GIẢ VỜ mà đề bài cấm (Codex review 20/08).
+            warnings.append(
+                "[polykit] --stream-diagnose: lane 1 (agy) KHÔNG nhận cờ stream — "
+                "lượt này chạy plain. Chỉ lane 2 (gemini-cli) mới stream được."
+            )
         tier = gemini_agy_tier(model)
         try:
             if agy_bin:
@@ -587,7 +703,10 @@ def _dispatch_gemini(
                     vendor="gemini",
                     model=model,
                     summary="gemini succeeded on lane 1 (agy)",
-                    warnings=[],
+                    # `warnings=[]` cứng là cùng họ lỗi BUG-9(2): thành công KHÔNG
+                    # có nghĩa là không có gì để nói. Cảnh báo "lane 1 không stream"
+                    # bị nuốt sạch ở đây, để ghi chú chung nói hộ là đã stream.
+                    warnings=list(warnings),
                     stdout=res.stdout,
                     exit_code=0,
                     served_model=served,
@@ -618,8 +737,12 @@ def _dispatch_gemini(
     if gemini_bin:
         cli_model = "gemini-3.5-flash" if model == "auto" else model
         try:
+            cmd = [gemini_bin, "-m", cli_model, "-p", prompt]
+            if stream:
+                # -o/--output-format stream-json là cờ stream của gemini CLI.
+                cmd = [gemini_bin, "-m", cli_model, "-o", "stream-json", "-p", prompt]
             res = runner(
-                [gemini_bin, "-m", cli_model, "-p", prompt],
+                cmd,
                 capture_output=True,
                 text=True,
                 timeout=timeout,
@@ -649,8 +772,10 @@ def _dispatch_gemini(
                     warnings.extend(f"[lane 2:gemini-cli] {l}" for l in tail_lines(_e))
         except subprocess.TimeoutExpired as e:
             warnings.append("lane 2 failed: gemini-cli timed out")
-            warnings.extend(_timeout_warnings(_decode_partial(e.stdout),
-                                              _decode_partial(e.stderr), prompt))
+            warnings.extend(_stream_timeout_warnings("gemini",
+                                                     _decode_partial(e.stdout),
+                                                     _decode_partial(e.stderr),
+                                                     prompt, stream))
         except Exception as e:
             warnings.append(f"lane 2 failed: {type(e).__name__}: {str(e)}")
     else:

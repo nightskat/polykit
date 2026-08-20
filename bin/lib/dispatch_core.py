@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 import os
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
@@ -54,12 +55,15 @@ def validate_sandbox(s) -> str:
         raise DispatchError(f"sandbox must be read-only or workspace-write, got: {s!r}")
     return s
 
-def build_codex_cmd(model: str, sandbox: str, workdir: str | None, fmt: str) -> list[str]:
+def build_codex_cmd(model: str, sandbox: str, workdir: str | None, fmt: str,
+                    stream: bool = False) -> list[str]:
     cmd = ["codex", "exec"]
     if model != "auto":
         cmd.extend(["-m", model])
     cmd.extend(["-s", sandbox])
-    if fmt == "json":
+    # --json vừa là JSONL stream vừa là --format json của codex; stream diagnose
+    # dùng lại chính cờ này nên `stream or fmt == "json"`.
+    if stream or fmt == "json":
         cmd.append("--json")
     if workdir:
         cmd.extend(["-C", workdir])
@@ -84,12 +88,17 @@ def build_claude_cmd(model: str, prompt: str) -> list[str]:
     cmd.extend(["-p", prompt])
     return cmd
 
-def build_grok_cmd(model: str, sandbox: str, workdir: str | None, fmt: str, prompt_file: str) -> list[str]:
+def build_grok_cmd(model: str, sandbox: str, workdir: str | None, fmt: str,
+                   prompt_file: str, stream: bool = False) -> list[str]:
     grok_bin = str(Path.home() / ".grok/bin/grok")
     cmd = [grok_bin, "--prompt-file", prompt_file]
     if model != "auto":
         cmd.extend(["-m", model])
-    if fmt == "json":
+    # streaming-json là chế độ stream ĐÃ LIVE TEST (4790 byte khi bị giết 20s).
+    # json là --format json thường. Stream diagnose ưu tiên streaming-json.
+    if stream:
+        cmd.extend(["--output-format", "streaming-json"])
+    elif fmt == "json":
         cmd.extend(["--output-format", "json"])
     if workdir:
         cmd.extend(["--cwd", workdir])
@@ -111,10 +120,15 @@ def build_grok_cmd(model: str, sandbox: str, workdir: str | None, fmt: str, prom
 AGY_DEFAULT_MODEL = "gemini-3.6-flash-medium"
 
 
-def build_agy_cmd(model: str, prompt: str) -> list[str]:
+def build_agy_cmd(model: str, prompt: str, stream: bool = False) -> list[str]:
     """Gọi THẲNG binary agy, không qua agy.sh — wrapper chỉ có 8 tier Gemini,
-    trong khi agy còn phục vụ claude-*/gpt-oss-*."""
+    trong khi agy còn phục vụ claude-*/gpt-oss-*.
+
+    stream → --output-format stream-json (cờ TOÀN CỤC, phải đặt TRƯỚC lệnh con
+    -p/--print — xem trap 'agy models --output-format json → exit 1')."""
     slug = AGY_DEFAULT_MODEL if model == "auto" else model
+    if stream:
+        return ["agy", "--output-format", "stream-json", "--model", slug, "-p", prompt]
     return ["agy", "--model", slug, "-p", prompt]
 
 
@@ -164,4 +178,67 @@ def write_dsh_patch(model_slug: str, path: str) -> None:
     )
     with open(path, "w", encoding="utf-8") as f:
         f.write(content)
+
+
+# Key trong event stream mang NỘI DUNG trợ lý. Cố ý KHÔNG gồm type/role/status —
+# nếu không chuỗi nhãn "thought" sẽ lẫn vào văn bản trích.
+_STREAM_TEXT_KEYS = ("text", "thought", "reasoning", "content", "delta", "message")
+
+
+# Event KHÔNG phải chữ trợ lý — bỏ nguyên cả event, đừng moi chữ trong đó.
+# Đo thật 20/08: codex --json phát `{"type":"item.completed","item":{"type":"error",
+# "message":"clamping SessionEnd hook timeout..."}}`; gom bừa thì log lỗi hạ tầng
+# bị trích ra thành "chữ trợ lý" (Codex review).
+_STREAM_SKIP_TYPES = ("error", "tool", "user", "command", "available_commands")
+
+
+def _bo_qua_event(node) -> bool:
+    if not isinstance(node, dict):
+        return False
+    t = node.get("type")
+    if isinstance(t, str) and any(k in t.lower() for k in _STREAM_SKIP_TYPES):
+        return True
+    r = node.get("role")
+    return isinstance(r, str) and r.lower() in ("user", "tool", "system")
+
+
+def _collect_stream_text(node, out: list[str]) -> None:
+    """Đệ quy gom chuỗi chữ hữu ích từ một object JSON của event stream."""
+    if isinstance(node, str):
+        out.append(node)
+    elif isinstance(node, list):
+        for item in node:
+            _collect_stream_text(item, out)
+    elif isinstance(node, dict):
+        if _bo_qua_event(node):
+            return
+        for key in _STREAM_TEXT_KEYS:
+            if key in node:
+                _collect_stream_text(node[key], out)
+        # Event bọc ngoài (vd codex: {"type":"item.completed","item":{...}}) —
+        # đi tiếp vào trong, nhưng vẫn tôn trọng bộ lọc ở mỗi tầng.
+        for key in ("item", "event", "data", "payload"):
+            if key in node:
+                _collect_stream_text(node[key], out)
+
+
+def extract_stream_text(raw: str) -> str:
+    """Trích phần chữ của trợ lý từ output stream JSONL thô (hàm THUẦN).
+
+    Mỗi dòng là một event JSON. Dòng JSON DỞ DANG ở cuối (bị giết giữa chừng)
+    thì BỎ QUA chứ KHÔNG nổ. Không trích được gì → trả "" để caller giữ nguyên
+    thô, không làm mất dữ liệu.
+    """
+    out: list[str] = []
+    for line in (raw or "").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except (json.JSONDecodeError, ValueError):
+            # Dòng dở dang / không phải JSON → bỏ qua, không làm chết cả hàm.
+            continue
+        _collect_stream_text(obj, out)
+    return "\n".join(p for p in out if p and p.strip())
 
