@@ -28,7 +28,59 @@ from lib.dispatch_core import (
 )
 
 
-def _classify_completed(vendor: str, model: str, res, served_model: str | None = False) -> DispatchResult:
+STDERR_KEEP = 20
+STDERR_HEAD = 3
+
+
+def strip_echoed_prompt(stderr: str, prompt: str | None) -> str:
+    """Bỏ đoạn stderr chính là PROMPT bị vendor echo lại.
+
+    Đo thật 20/08/2026: `codex exec` in prompt ra stderr (dòng 13-14 của bản ghi
+    mẫu). Nếu không bỏ, mọi phép dò trên stderr đều đọc luôn chữ của chính mình:
+    một prompt chứa "hit your usage limit" (ví dụ đang nhờ review sổ bug —
+    docs/BUGS.md có cụm đó 4 lần) sẽ bị xếp nhầm thành `quota_capped`, và
+    failover đi sai nhánh đúng chiều ngược với thứ bản vá này muốn sửa.
+
+    Chỉ bỏ khi các dòng prompt xuất hiện LIỀN KHỐI trong stderr — an toàn hơn
+    xoá theo tập hợp, vốn có thể xoá nhầm một dòng lỗi trùng chữ với prompt.
+    """
+    if not prompt or not prompt.strip():
+        return stderr
+    p_lines = [l for l in prompt.splitlines() if l.strip()]
+    if not p_lines:
+        return stderr
+    s_lines = stderr.splitlines()
+    # So khớp BỎ QUA DÒNG TRỐNG ở cả hai phía: đo thật 20/08 cho thấy codex giữ
+    # lại các dòng trống của prompt, nên so khớp liền-khối nguyên văn TRƯỢT và
+    # phần echo vẫn lọt vào phép dò (live test bắt được, unit test thì không).
+    idx = [i for i, l in enumerate(s_lines) if l.strip()]
+    body = [s_lines[i] for i in idx]
+    n = len(p_lines)
+    for k in range(len(body) - n + 1):
+        if body[k:k + n] == p_lines:
+            lo, hi = idx[k], idx[k + n - 1]
+            return "\n".join(s_lines[:lo] + s_lines[hi + 1:])
+    return stderr
+
+
+def tail_lines(stderr: str, keep: int = STDERR_KEEP, head: int = STDERR_HEAD) -> list[str]:
+    """Giữ `head` dòng ĐẦU (banner: version/model/workdir — cần để tái lập ca) và
+    `keep` dòng CUỐI (nơi lỗi nằm).
+
+    BUG-5 (đo 20/08/2026): trước đây lấy `[:20]`. Codex in banner rồi echo lại
+    prompt ra stderr, nên với prompt dài thì dòng ERROR thật bị đẩy ra ngoài cửa
+    sổ — `--result-json` chỉ còn `exit_code=1` trơ, không phân biệt được hết
+    quota với lỗi cờ.
+    """
+    lines = stderr.splitlines()
+    if len(lines) <= keep + head:
+        return lines
+    bo = len(lines) - keep - head
+    return lines[:head] + [f"[polykit] …bỏ {bo} dòng giữa của stderr, giữ {head} dòng đầu + {keep} dòng CUỐI (nơi lỗi nằm)"] + lines[-keep:]
+
+
+def _classify_completed(vendor: str, model: str, res, served_model: str | None = False,
+                        prompt: str | None = None) -> DispatchResult:
     """M2: map kết quả subprocess → DispatchResult. returncode!=0 kèm dấu hiệu
     quota (402/insufficient credit/exhausted) → skipped/quota_capped, KHÔNG crash,
     KHÔNG coi là lỗi generic. Dùng chung cho codex/claude/grok."""
@@ -42,8 +94,10 @@ def _classify_completed(vendor: str, model: str, res, served_model: str | None =
         return DispatchResult(status="ok", vendor=vendor, model=model,
                               summary=f"{vendor} completed successfully",
                               stdout=stdout, exit_code=0, served_model=served)
-    stderr = res.stderr or ""
-    warnings = stderr.splitlines()[:20]
+    # Bỏ phần vendor echo lại prompt TRƯỚC khi dò lẫn khi hiển thị — nếu không,
+    # PolyKit đọc chính chữ của mình rồi tưởng là lỗi của vendor.
+    stderr = strip_echoed_prompt(res.stderr or "", prompt)
+    warnings = tail_lines(stderr)
     if is_quota_error(stderr, res.returncode):
         return DispatchResult(status="skipped", vendor=vendor, model=model,
                               summary=f"{vendor} quota-capped (402/exhausted)",
@@ -141,7 +195,7 @@ def run_vendor(
                 timeout=validated_timeout,
                 env=env,
             )
-            return _classify_completed(vendor, model, res)
+            return _classify_completed(vendor, model, res, prompt=prompt)
 
         elif vendor == "claude":
             cmd = build_claude_cmd(model, prompt)
@@ -152,7 +206,7 @@ def run_vendor(
                 timeout=validated_timeout,
                 env=env,
             )
-            return _classify_completed(vendor, model, res)
+            return _classify_completed(vendor, model, res, prompt=prompt)
 
         elif vendor == "grok":
             with tempfile.NamedTemporaryFile(mode="w+", delete=False) as temp_prompt:
@@ -169,7 +223,7 @@ def run_vendor(
                     env=env,
                 )
                 # M2: 402/insufficient-credit → quota_capped (không crash).
-                return _classify_completed(vendor, model, res)
+                return _classify_completed(vendor, model, res, prompt=prompt)
             finally:
                 if os.path.exists(temp_prompt_path):
                     os.unlink(temp_prompt_path)
@@ -188,7 +242,7 @@ def run_vendor(
             res = runner([shutil.which("agy") or "agy"] + cmd[1:],
                          capture_output=True, text=True,
                          timeout=validated_timeout, env=env)
-            out = _classify_completed(vendor, model, res)
+            out = _classify_completed(vendor, model, res, prompt=prompt)
             # served_model = slug ĐÃ GỬI. agy không báo lại model thật đã chạy,
             # nên đây là ý định, không phải bằng chứng (Grok P1) — ghi rõ để
             # đừng nhầm với served_model của OpenRouter (đọc từ response).
@@ -235,7 +289,7 @@ def run_vendor(
                     timeout=validated_timeout,
                     env=env,
                 )
-                out = _classify_completed(vendor, model, res)
+                out = _classify_completed(vendor, model, res, prompt=prompt)
                 out.served_model = resolved
                 return out
             finally:
@@ -358,7 +412,7 @@ def run_vendor(
                 env=env,
                 input=input_data
             )
-            out = _classify_completed(vendor, model, res, served_model=served)
+            out = _classify_completed(vendor, model, res, served_model=served, prompt=prompt)
             return finalize(out)
 
     except subprocess.TimeoutExpired as e:

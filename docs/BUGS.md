@@ -104,7 +104,7 @@ Trước mắt: **đừng tin cột `ready` như bằng chứng gọi được.*
 > Bối cảnh: nhờ vendor review một bản vá Python ~11KB. Cả 2 vendor đều KHÔNG trả được kết quả,
 > nhưng cách hỏng khác nhau và cả hai đều làm mất dấu vết nguyên nhân.
 
-### 🔴 BUG-5 — `--result-json` nuốt mất DÒNG LỖI THẬT của vendor, chỉ còn `exit 1` trơ
+### ✅ BUG-5 — `--result-json` nuốt mất DÒNG LỖI THẬT của vendor (đã sửa 20/08)
 
 **Lệnh nguyên văn**
 ```
@@ -124,7 +124,35 @@ codex exec --skip-git-repo-check "Nói đúng một chữ: OK" < /dev/null
 thử lại vô ích cho tới khi hết luôn vendor dự phòng.
 **Việc cần làm**: `warnings` phải giữ **N dòng CUỐI** của stderr (nơi lỗi nằm), không phải N dòng
 đầu; và bắt riêng mẫu `hit your usage limit` → `reason=quota_capped` để failover đi đúng nhánh.
-**Trạng thái**: 🔴 MỞ.
+**Đã sửa 20/08** — hoá ra là **ba** khuyết tật chồng nhau, không phải một:
+1. `warnings = stderr.splitlines()[:20]` lấy dòng ĐẦU → đổi sang giữ 3 dòng đầu (banner
+   version/model, cần để tái lập ca) + 20 dòng CUỐI, có dòng ghi rõ đã bỏ bao nhiêu ở giữa.
+2. Mẫu quota không khớp nguyên văn: codex in `You've hit your usage limit`, gemini in
+   `exhausted your daily quota` — cả hai đều trượt `usage limit reached`. Đã thêm mẫu.
+3. 🔴 **Mới lộ ra khi vá (2) — PolyKit đọc chính chữ của mình.** `codex exec` **echo prompt ra
+   stderr** (đo được: dòng 13-14). `is_quota_error` quét toàn bộ stderr, nên một prompt chứa
+   cụm "hit your usage limit" — ví dụ đang nhờ review chính `docs/BUGS.md`, file này có cụm đó
+   4 lần — bị xếp nhầm `quota_capped`. Tức bản vá (2) tự đẻ ra lỗi ngược chiều với mục tiêu.
+   ⇒ `strip_echoed_prompt()` bỏ khối echo trước khi dò. Chỉ bỏ khi khớp LIỀN KHỐI, thà giữ
+   thừa còn hơn xoá nhầm dòng lỗi thật.
+
+⚠️ **Bài học quy trình**: lỗi (3) do **review khác họ** (dsh/DeepSeek) chỉ ra, sau khi codex
+(OpenAI) đã review bản vá trước và không thấy. Và bản vá cho (3) **unit test xanh nhưng LIVE
+TEST đỏ**: so khớp liền-khối nguyên văn trượt vì codex giữ lại dòng trống của prompt. Chỉ khi
+dispatch thật với prompt dài mới lộ. Test xanh vẫn không thay được live test.
+**Trạng thái**: ✅ ĐÃ SỬA — 170 test xanh + live test (`status=error`, `reason=vendor_exit_nonzero`,
+lỗi 400 thật hiện trong `warnings`, echo prompt đã sạch).
+
+### 🔴 BUG-9 — còn 4 đường khác vẫn nuốt lỗi thật (dsh chỉ ra 20/08, CHƯA sửa)
+Bản vá BUG-5 chỉ chạm nhánh `returncode != 0` của `_classify_completed`. Còn:
+1. **Timeout** (`dispatcher.py`, nhánh `TimeoutExpired`): trả `warnings=[]`, vứt luôn
+   `e.stdout`/`e.stderr`. Vendor chết vì lỗi cờ rồi treo tới timeout → lại trơ như cũ.
+   👉 Nghi đây liên quan trực tiếp tới **BUG-6** (timeout, stdout rỗng, nguyên nhân chưa biết) —
+   vá cái này có thể chính là cách NHÌN THẤY nguyên nhân BUG-6.
+2. **`returncode == 0`**: trả `ok` ngay, stderr bị vứt hoàn toàn — mất cảnh báo degraded/quota.
+3. **`_dispatch_gemini`**: không đi qua `_classify_completed`, lane fail chỉ ghi
+   `"lane N failed (...)"`, stderr thật không bao giờ lộ.
+4. **Vendor ghi lỗi ra stdout** (nhất là `--json`): bản vá chỉ nhìn `stderr`.
 
 ### 🔴 BUG-6 — task ĐỌC FILE làm vendor timeout, `stdout` rỗng (đo trên CẢ `grok` LẪN `dsh`)
 
