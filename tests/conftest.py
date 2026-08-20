@@ -1,6 +1,18 @@
+import os
 import sys
+import tempfile
 from pathlib import Path
 import pytest
+
+# BUG-11 (đo 20/08/2026): mỗi lần chạy pytest bơm 8 bản ghi vào LOG THẬT
+# ~/Library/Application Support/polykit/dispatch-log.jsonl — gồm cả tên vendor
+# thật ("claude", reason=quota_capped). Từ khi BUG-4 cho `doctor` SUY TRẠNG THÁI
+# từ chính log này, rác của test có thể làm doctor báo sai về vendor thật.
+# Gốc: các test chạy bin/dispatch.py bằng subprocess, tức đi qua đúng nhánh CLI
+# vẫn ghi evidence. Chặn tại nguồn: trỏ XDG_STATE_HOME vào thư mục tạm cho CẢ
+# tiến trình test lẫn mọi subprocess con (chúng thừa kế os.environ).
+_STATE_TMP = tempfile.mkdtemp(prefix="polykit-test-state-")
+os.environ["XDG_STATE_HOME"] = _STATE_TMP
 
 # Add bin/ to sys.path
 bin_path = Path(__file__).parent.parent / "bin"

@@ -404,3 +404,24 @@ Mặc định KHÔNG đổi. `extract_stream_text()` là hàm thuần, chịu đ
 ⚠️ Ghi nhận cách làm: lượt dispatch giao việc cho `dsh` **timeout ở 560s**, nhưng vì đề bài dặn
 "GHI FILE SỚM" nên **file đã viết xong trước khi bị giết** — 225 test xanh dù câu trả lời cuối
 không bao giờ về. Lời dặn đó không phải nghi thức.
+
+### ✅ BUG-11 — chạy `pytest` bơm bản ghi vào LOG THẬT của người dùng (sửa 20/08)
+**Đo được**: `wc -l` log trước/sau một lượt `pytest -q` → **+8 dòng mỗi lần**, vào
+`~/Library/Application Support/polykit/dispatch-log.jsonl`. Trong đó có bản ghi mang tên vendor
+THẬT: `{"vendor":"claude","status":"skipped","reason":"not_installed"}`.
+Tích luỹ tới nay: **192 bản ghi `fakevendor*`** và **87 bản ghi `quota_capped` cho `claude`**.
+
+**Vì sao mới thành nguy hiểm**: comment trong `dispatch.py` ghi *"chỉ ở CLI boundary (không ghi
+khi test gọi lib)"* — đúng, nhưng nhiều test chạy `bin/dispatch.py` bằng **subprocess**, tức đi
+qua đúng nhánh CLI đó. Trước BUG-4 thì log chỉ là tư liệu nên rác vô hại. **Từ khi `doctor` SUY
+TRẠNG THÁI từ chính log này, rác của test có thể làm doctor nói sai về vendor thật.**
+Hiện chưa gây hại thật vì `annotate_quota_capped` chỉ hạ vendor đang `ready`, mà `claude` đang
+`installed_not_authed` — **thoát nhờ một luật khác, không phải nhờ thiết kế đúng.**
+
+**Đã sửa**: `tests/conftest.py` trỏ `XDG_STATE_HOME` vào thư mục tạm ngay lúc import, nên cả
+tiến trình test lẫn mọi subprocess con (thừa kế `os.environ`) đều ghi vào đó.
+Kiểm lại: `pytest -q` → log thật **+0 dòng**. `tests/test_bug11_test_khong_ban_log_that.py` khoá
+hành vi; đã chứng minh test không rỗng ruột (bỏ cô lập thì đường dẫn trỏ về thư mục thật).
+
+⚠️ **CHƯA dọn 279 bản ghi rác cũ** — cố ý. Xoá dữ liệu là việc một chiều, và luật "không mất dữ
+liệu > sạch đẹp" đứng trước. Muốn dọn thì lọc ra file backup rồi mới ghi đè, đừng xoá thẳng.
