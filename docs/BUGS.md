@@ -289,3 +289,18 @@ file / tại đầu ra dài" đều đã bị bác ở mục trên.
 **Khuyến nghị dùng ngay**: đừng giao việc sinh code cho `grok`; dùng `dsh`, để `grok` cho việc
 ngắn có khuôn.
 **Trạng thái**: 🔴 MỞ, nguyên nhân CHƯA BIẾT.
+
+### ✅ BUG-10 — chính `populate.py` báo cáo sai 2 vendor (sửa 20/08, ngay trong lượt đầu dùng thật)
+- **grok**: hàm cũ chỉ hỏi "có cài chưa", cài rồi thì `--apply` **bỏ qua**. Nhưng grok **chép code
+  về**, không trỏ vào repo → nó trôi. Đo được: bản grok đứng ở `b655c67`, thiếu bản vá BUG-7.
+  ⇒ so nội dung `dispatch_core.py` với repo, và gọi `grok plugin update`.
+  ⚠️ `grok plugin update` kéo từ GitHub nên **chỉ thấy commit đã PUSH**.
+- **agy**: dòng "kế thừa qua import từ gemini-cli" là **giả định chưa kiểm**, viết ra rồi tin luôn.
+  Thực tế `agy plugin list` chỉ có `superpowers` — polykit chưa từng có mặt.
+  ⇒ gọi `agy plugin import gemini` sau khi ghi xong thư mục gemini.
+
+Dọn kèm: `agy plugin import gemini` kéo về cả `cross-cli-dispatch` cũ (quảng cáo `o3`/`o4-mini`
+đã chết) — đã gỡ khỏi agy; bản gemini đã tắt từ 19/08.
+
+**Bài học**: bảng trạng thái tự viết mà chưa đo thì cũng là một dạng "thành công giả" — nó cho
+cảm giác đã kiểm soát trong khi 2/5 ô là chữ tự bịa.

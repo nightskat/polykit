@@ -142,10 +142,26 @@ def claude_state() -> tuple[str, str]:
         return "chưa cài", ""
 
 
-def grok_installed() -> bool:
+def grok_sha() -> str:
+    """SHA bản grok ĐANG CÀI — grok chép code về, không trỏ vào repo, nên nó TRÔI."""
     if not shutil.which("grok"):
-        return False
+        return ""
     r = subprocess.run(["grok", "plugin", "list"], capture_output=True, text=True)
+    if "polykit" not in r.stdout:
+        return ""
+    for d in (HOME / ".grok" / "installed-plugins").glob("polykit-*"):
+        f = d / "bin" / "lib" / "dispatch_core.py"
+        if f.exists():
+            local = (REPO / "bin" / "lib" / "dispatch_core.py").read_text(encoding="utf-8")
+            return "khớp" if f.read_text(encoding="utf-8") == local else "cũ"
+    return "?"
+
+
+def agy_has_polykit() -> bool:
+    """agy không có marketplace riêng — nó IMPORT extension của gemini-cli."""
+    if not shutil.which("agy"):
+        return False
+    r = subprocess.run(["agy", "plugin", "list"], capture_output=True, text=True)
     return "polykit" in r.stdout
 
 
@@ -187,9 +203,11 @@ def main() -> int:
          "✅ khớp" if not codex_drift else f"🔴 LỆCH {len(codex_drift)} file"),
         ("gemini", str(GEMINI_EXT_DIR),
          "✅ khớp" if not gemini_drift else f"🔴 LỆCH {len(gemini_drift)} file"),
-        ("grok", "git trực tiếp từ GitHub",
-         "✅ đã cài" if grok_installed() else "🔴 CHƯA CÀI"),
-        ("agy", "kế thừa qua import từ gemini-cli", "ℹ️ chạy `agy plugin` sau khi Gemini xong"),
+        ("grok", "bản chép từ GitHub (TRÔI được)",
+         {"khớp": "✅ khớp", "cũ": "🔴 LỆCH — cần `grok plugin update`",
+          "": "🔴 CHƯA CÀI"}.get(grok_sha(), "⚠️ không đọc được")),
+        ("agy", "import từ extension của gemini-cli",
+         "✅ đã import" if agy_has_polykit() else "🔴 CHƯA IMPORT"),
     ]
     w = max(len(r[1]) for r in rows)
     for name, where, status in rows:
@@ -206,10 +224,13 @@ def main() -> int:
     print(f"  gemini  ghi {len(gemini_files)} file → {GEMINI_EXT_DIR}")
     print("  claude  " + run(["claude", "plugin", "marketplace", "update", "polykit"]))
     print("  claude  " + run(["claude", "plugin", "update", "polykit@polykit"]))
-    if not grok_installed():
+    if grok_sha() == "":
         print("  grok    " + run(["grok", "plugin", "install", "nightskat/polykit", "--trust"]))
     else:
-        print("  grok    ✅ đã cài (gỡ rồi cài lại nếu muốn ghim bản mới)")
+        # `grok plugin update` kéo từ GitHub → chỉ thấy commit ĐÃ PUSH.
+        print("  grok    " + run(["grok", "plugin", "update"]))
+    # agy đọc extension của gemini-cli, nên phải chạy SAU khi ghi thư mục gemini.
+    print("  agy     " + run(["agy", "plugin", "import", "gemini"]))
     print("\n⚠️ Claude Code cần RESTART thì bản mới mới có hiệu lực.")
     return 0
 
