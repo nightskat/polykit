@@ -210,5 +210,9 @@ KHÔNG có `--cd`. Nhưng hai điều kiện đó độc lập nhau: `-C` chọn
 
 **Đã sửa**: `cmd.append("--skip-git-repo-check")` ra ngoài, chạy vô điều kiện.
 Test `tests/test_dispatch_builders.py` cập nhật theo — `156 passed`.
-**Trạng thái**: 🟢 ĐÃ SỬA (unit test xanh). Live test qua codex CHƯA chạy được: tài khoản
-đang hết hạn mức tới 10:58, xem BUG-5.
+**Live test 20/08 10:31** — chạy lại đúng lệnh trên với bản đã sửa: dòng "Not inside a trusted
+directory" BIẾN MẤT, codex đi hết đường tới API và chỉ còn chết vì hạn mức
+(`You've hit your usage limit ... 10:58 AM`). Tức cờ đã ăn — lỗi còn lại là BUG-5, khác lớp.
+**Trạng thái**: 🟢 ĐÃ SỬA (unit test 156 passed + live test).
+⚠️ Bản CÀI ở `~/.claude/plugins/cache/.../polykit/0.5.0/` VẪN CÒN LỖI cho tới lần cập nhật
+plugin kế tiếp — sửa ở repo theo đúng luật, đừng vá vào bản cài.
