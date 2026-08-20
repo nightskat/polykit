@@ -10,7 +10,7 @@
 | Bug | Trạng thái | Mô tả |
 |---|---|---|
 | QUAN SÁT-3 | 🔴 MỞ | `dispatch.py` chưa có cổng chặn PII (`pg-redact check`) trước khi gửi stdin ra vendor |
-| BUG-6 | 🔴 MỞ | `grok`/`dsh` timeout khi giao việc sinh/phân tích code — đã rõ vì sao `stdout` rỗng, CHƯA rõ vì sao treo |
+| BUG-6 | 🔴 MỞ | **Chỉ còn `grok`** timeout rỗng khi sinh code (4/4). `dsh` đã gỡ oan 20/08: nó LÀM XONG, chỉ lâu hơn trần 600s |
 | BUG-2 | ✅ ĐÃ SỬA | Thêm `--prompt-file` cho prompt dài/nhiều dòng/có dấu |
 | BUG-4 | ✅ ĐÃ SỬA | `doctor` suy `quota_capped` từ `dispatch-log.jsonl` thay vì chỉ đo `--version` |
 | BUG-5 | ✅ ĐÃ SỬA | `--result-json` nuốt dòng lỗi thật của vendor — giữ N dòng cuối stderr |
@@ -34,12 +34,12 @@ bằng máy, chỉ còn kỷ luật tay.
 ⇒ Nếu sau này vá pg-redact, đáng cân nhắc `dispatch --require-clean` gọi `pg-redact check`
 làm cổng cứng. **Chưa làm bây giờ** — luật 3 lần đau, đây mới là lần 1.
 
-### 🔴 BUG-6 — vendor `grok`/`dsh` timeout khi giao việc sinh/phân tích code
+### 🔴 BUG-6 — `grok` timeout rỗng khi sinh code (dsh đã GỠ OAN 20/08 chiều)
 
 > **Trạng thái gộp**: 🔴 MỞ. Gồm 4 mục ghi dồn 19/08→20/08, nối theo thời gian.
 > **Đã xong**: hiểu vì sao `stdout` rỗng khi timeout (vendor không stream, in một lần ở cuối) —
 > đã thêm cờ `--stream-diagnose` + `extract_stream_text()` (sửa 20/08).
-> **Còn lại**: vì sao task phân tích/sinh code làm cả `grok` lẫn `dsh` timeout — nguyên nhân CHƯA BIẾT.
+> **Còn lại**: chỉ còn `grok`. `dsh` đã được gỡ oan chiều 20/08 — xem mục cuối.
 
 #### 19/08 — task ĐỌC FILE làm vendor timeout, `stdout` rỗng (đo trên CẢ `grok` LẪN `dsh`)
 
@@ -484,3 +484,38 @@ update của từng CLI. Adapter được SINH từ `commands/*.md`, không sử
 bản chép ở `cache/polykit/polykit/<ver>/` ghim theo `gitCommitSha`. Test vào `marketplaces/…`
 là test nhầm thứ hai — đã dính đúng lỗi này một lần trong phiên.
 Codex/Gemini không có vấn đề đó: adapter chỉ là CHỮ, engine gọi thẳng `bin/dispatch.py` của repo.
+
+
+---
+
+#### 20/08 chiều — `dsh` KHÔNG treo: nó LÀM XONG, chỉ là lâu hơn trần 600s
+
+Bốn phép đo mới, cùng ngày, cùng khung dispatch:
+
+| Việc | Vendor | Qua PLK? | Kết quả |
+|---|---|---|---|
+| Tự mở 3 file, đếm `def` | codex | có, 60s | ✅ ok, số **khớp `grep -c '^def '`** |
+| Tự mở 3 file, đếm `def` | dsh | có, 240s | ✅ ok trong **21s** |
+| Đọc 1 file, phân tích 5 điểm yếu, ghi ra file | dsh | **KHÔNG** (chạy thẳng, bỏ trần) | ✅ ok trong **159s** |
+| Dựng `--stream-diagnose` (sửa 3 file + viết test) | dsh | có, 560s | ⏱️ timeout — **nhưng 225 test xanh** |
+| Dọn lại `docs/BUGS.md` (445→486 dòng) | dsh | có, 560s | ⏱️ timeout — **nhưng file đã viết xong, 0 nội dung mất** |
+
+🔑 **Hai lượt timeout cuối đã LÀM XONG VIỆC.** File đã ghi đầy đủ, test xanh, kiểm chéo không mất
+dữ liệu. Chỉ có **câu trả lời cuối** là không kịp về trước khi bị giết.
+
+⇒ Với `dsh`, "timeout + `stdout` rỗng" **KHÔNG phải treo**. Nó là ba thứ cộng lại:
+1. việc lớn nhiều bước cần > 560s;
+2. `dsh --profile headless` **chỉ in một lần ở cuối** (không stream) → bị giết giữa chừng là 0 byte;
+3. trần cứng `--timeout` của PolyKit là **600s**, không nới được.
+
+**Đổi cách dùng ngay** (đã kiểm chứng 2/2 lần hôm nay):
+- Giao việc lớn cho `dsh` thì **luôn dặn "GHI FILE SỚM"** trong đề bài. Lời dặn đó không phải
+  nghi thức — nó là thứ duy nhất còn lại khi hết giờ.
+- Gặp `status=timeout` từ `dsh`: **đi kiểm file trước khi kết luận thất bại** (`git status`,
+  chạy test). Rất có thể việc đã xong.
+- Việc quá lớn thì chạy `dsh` **thẳng, không qua PLK**, để thoát trần 600s.
+
+**Còn lại đúng một câu hỏi**: vì sao `grok` timeout rỗng **4/4 lần** ở việc sinh code, trong khi
+`dsh` cùng khung thì xong. Chưa có phép đo mới cho `grok` vì nó đang `quota_capped` (402).
+Ghi nhận một manh mối chưa kiểm: 20/08 `grok` **từ chối** một việc và tự trích luật *"≤30 dòng/lượt"*
+— tức nó có đọc `~/CLAUDE.md` của Tuan. Chưa rõ có liên quan không, **không đoán tiếp**.
