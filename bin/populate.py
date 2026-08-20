@@ -30,6 +30,11 @@ HOME = Path.home()
 
 CODEX_PLUGIN_DIR = HOME / "plugins" / "polykit"
 GEMINI_EXT_DIR = HOME / ".gemini" / "extensions" / "polykit"
+# `~/.agents/skills` là gốc skill DÙNG CHUNG của hệ sinh thái agents — `dsh` quét
+# nó (xem README của @deepseek-ai/dsh-skill-filesystem: agentsHome mặc định
+# $DSH_AGENTS_HOME hoặc ~/.agents). Đây là chỗ `dsh` trở thành HARNESS gọi PolyKit,
+# khác hẳn vai `dsh` là VENDOR để PolyKit gọi đi.
+AGENTS_SKILL_DIR = HOME / ".agents" / "skills" / "polykit"
 CLAUDE_INSTALLED = HOME / ".claude" / "plugins" / "installed_plugins.json"
 
 BANNER = "<!-- SINH TỰ ĐỘNG bởi bin/populate.py — ĐỪNG SỬA TAY, sửa commands/*.md trong repo PolyKit -->"
@@ -133,6 +138,38 @@ description: {desc}
     return files
 
 
+def plan_agents_skills(cmds) -> dict[Path, str]:
+    """MỘT skill `polykit` ở ~/.agents/skills — `dsh` đọc thẳng từ đây.
+
+    ⚠️ Đúng tầng là `<gốc>/<tên-skill>/SKILL.md`. Lần đầu ghi lồng thêm một tầng
+    (`polykit/dispatch/SKILL.md`) và **dsh không thấy gì cả** — live test bắt được,
+    `--apply` vẫn báo ghi 4 file như thường. Ghi được file KHÔNG có nghĩa là
+    harness đọc được.
+    """
+    than = [f"""# PolyKit — điều phối đa vendor CLI
+
+{BANNER}
+
+Engine: `{DISPATCH}` (luôn là bản mới nhất của repo).
+Vendor và model đọc từ `{REPO / 'config' / 'vendors.json'}` — đừng đoán tên, đừng hardcode model.
+
+⛔ **KHÔNG gửi PII thật** (tên/CIF/MST/số dư khách hàng) qua bất kỳ vendor nào.
+⛔ Từ lane KHÔNG-phải-Claude thì **không dispatch sang `claude`** (ToS).
+"""]
+    for name, (desc, body) in cmds.items():
+        than.append(f"## `{name}` — {desc}\n\n"
+                    + body.replace('${CLAUDE_PLUGIN_ROOT}/bin/dispatch.py', str(DISPATCH)))
+    noi_dung = (
+        "---\n"
+        "name: polykit\n"
+        "description: Giao việc sang vendor CLI khác (codex/gemini/grok/agy/dsh/openrouter), "
+        "xem trạng thái quota, failover, theo dõi đổi model. Dùng khi cần chạy việc ở lane khác, "
+        "khi vendor hiện tại hết quota, hoặc khi muốn ý kiến từ model khác họ.\n"
+        "---\n\n" + "\n\n".join(than) + "\n"
+    )
+    return {AGENTS_SKILL_DIR / "SKILL.md": noi_dung}
+
+
 def claude_state() -> tuple[str, str]:
     """(version đang chạy, sha đang chạy) của plugin Claude Code."""
     try:
@@ -193,7 +230,9 @@ def main() -> int:
     print(f"Repo: v{ver} @ {head[:7]}  ({len(cmds)} lệnh: {', '.join(cmds)})\n")
 
     codex_files, gemini_files = plan_codex(cmds), plan_gemini(cmds)
+    agents_files = plan_agents_skills(cmds)
     codex_drift, gemini_drift = diff_files(codex_files), diff_files(gemini_files)
+    agents_drift = diff_files(agents_files)
     c_ver, c_sha = claude_state()
 
     rows = [
@@ -206,6 +245,8 @@ def main() -> int:
         ("grok", "bản chép từ GitHub (TRÔI được)",
          {"khớp": "✅ khớp", "cũ": "🔴 LỆCH — cần `grok plugin update`",
           "": "🔴 CHƯA CÀI"}.get(grok_sha(), "⚠️ không đọc được")),
+        ("dsh (harness)", str(AGENTS_SKILL_DIR),
+         "✅ khớp" if not agents_drift else f"🔴 LỆCH {len(agents_drift)} file"),
         ("agy", "import từ extension của gemini-cli",
          "✅ đã import" if agy_has_polykit() else "🔴 CHƯA IMPORT"),
     ]
@@ -222,6 +263,8 @@ def main() -> int:
     print(f"  codex   ghi {len(codex_files)} file → {CODEX_PLUGIN_DIR}")
     write_files(gemini_files)
     print(f"  gemini  ghi {len(gemini_files)} file → {GEMINI_EXT_DIR}")
+    write_files(agents_files)
+    print(f"  dsh     ghi {len(agents_files)} file → {AGENTS_SKILL_DIR}")
     print("  claude  " + run(["claude", "plugin", "marketplace", "update", "polykit"]))
     print("  claude  " + run(["claude", "plugin", "update", "polykit@polykit"]))
     if grok_sha() == "":

@@ -592,3 +592,25 @@ chỉ 1 dòng. Việc nhỏ vẫn trả phí lớn → gộp việc thay vì b�
 ⚠️ **Giới hạn của bench này**: 1 mẫu mỗi ô (terra/low 2 mẫu), **1 bài**. Đủ để nói *"không có bằng
 chứng effort cao tốt hơn"* — **chưa đủ** để nói medium/high chắc chắn tệ hơn. Muốn chắc thì chạy
 thêm 2-3 bài khác loại.
+
+### ✅ BUG-14 — `populate.py` quên mất vai HARNESS, chỉ nghĩ vai VENDOR (sửa 20/08)
+Câu hỏi của Tuan *"populate cho tất cả harness dùng chưa"* lộ ra một nhầm lẫn vai:
+- **Vendor** = thứ PolyKit **gọi đi** (dispatch target)
+- **Harness** = thứ Tuan **ngồi làm việc trong đó**, cần gọi PolyKit
+
+`dsh` là **cả hai**, nhưng `populate.py` chỉ phủ vai vendor. Đếm thật trên máy: **5/9** harness
+được phủ. Thiếu `dsh`, `goose`, `zeroclaw`, `opencode` — tất cả đều CÓ cơ chế skill/plugin.
+
+**Đã làm**: thêm đích `~/.agents/skills/polykit/SKILL.md` — gốc skill dùng chung mà `dsh` quét
+(theo README của `@deepseek-ai/dsh-skill-filesystem`: `agentsHome` mặc định `~/.agents`).
+
+🔴 **Bẫy bắt được bằng live test**: lần ghi đầu đặt sai tầng
+(`polykit/dispatch/SKILL.md` thay vì `polykit/SKILL.md`). `--apply` vẫn báo *"ghi 4 file"* rất
+gọn gàng, nhưng hỏi `dsh` thì nó trả lời **"không có skill nào tên polykit"**.
+⇒ **Ghi được file KHÔNG có nghĩa là harness đọc được.** Đích populate mới nào cũng phải hỏi
+chính harness đó một câu, đừng tin dòng "đã ghi N file".
+Live test sau khi sửa: `dsh` trích đúng lệnh dispatch và đúng luật cấm sửa tay.
+
+**Còn treo**: `goose` (`~/.config/goose/skills`), `zeroclaw` (`zeroclaw skills`), `opencode`
+(`agent`/`mcp`) — chưa phủ. Cố ý chờ: memory ghi 3 cái này *"cài để xem UI, chưa test tử tế"*,
+chưa phải lane làm việc thật (luật 3 lần đau).
