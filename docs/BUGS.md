@@ -143,7 +143,7 @@ dispatch thật với prompt dài mới lộ. Test xanh vẫn không thay đư�
 **Trạng thái**: ✅ ĐÃ SỬA — 170 test xanh + live test (`status=error`, `reason=vendor_exit_nonzero`,
 lỗi 400 thật hiện trong `warnings`, echo prompt đã sạch).
 
-### 🟡 BUG-9 — 4 đường nuốt lỗi thật (nhánh TIMEOUT đã sửa 20/08, còn 3)
+### ✅ BUG-9 — 4 đường nuốt lỗi thật (SỬA HẾT 20/08)
 Bản vá BUG-5 chỉ chạm nhánh `returncode != 0` của `_classify_completed`. Còn:
 1. ✅ **Timeout — ĐÃ SỬA 20/08.** `TimeoutExpired` mang theo `e.stdout`/`e.stderr` (phần vendor
    kịp in trước khi bị giết); trước đây vứt sạch. Nay giữ lại, bỏ echo prompt, cắt bằng
@@ -151,10 +151,22 @@ Bản vá BUG-5 chỉ chạm nhánh `returncode != 0` của `_classify_completed
    `stdout` khi timeout để **RỖNG có chủ ý** — trường đó là "kết quả vendor", nhét nửa vời vào
    thì caller chỉ kiểm `stdout != ""` sẽ đọc dở dang thành kết quả thật, và JSON phình không
    giới hạn (Codex review). Phân biệt thêm 3 ca: im lặng thật · chỉ có echo prompt · có manh mối.
-2. **`returncode == 0`**: trả `ok` ngay, stderr bị vứt hoàn toàn — mất cảnh báo degraded/quota.
-3. **`_dispatch_gemini`**: không đi qua `_classify_completed`, lane fail chỉ ghi
-   `"lane N failed (...)"`, stderr thật không bao giờ lộ.
-4. **Vendor ghi lỗi ra stdout** (nhất là `--json`): bản vá chỉ nhìn `stderr`.
+2. ✅ **`returncode == 0`** — nay giữ `tail_lines(stderr)` khi stderr có chữ (cảnh báo degraded /
+   sắp hết quota vẫn đi kèm exit 0). stderr sạch thì `warnings=[]`, không đổ rác.
+3. ✅ **`_dispatch_gemini`** — lane 1 (agy) và lane 2 (gemini-cli) nay kèm stderr thật, gắn nhãn
+   `[lane N:tên]`; nhánh timeout của cả hai lane cũng gọi `_timeout_warnings`.
+   ⚠️ Bẫy lúc vá: `except subprocess.TimeoutExpired:` ở hai lane này **không có `as e`** — chèn
+   code dùng `e` vào là NameError lúc chạy mà test không đụng tới. Đã thêm `as e`.
+4. ✅ **Vendor ghi lỗi ra stdout** — và đây là chỗ **live test bẻ gãy bản vá đầu tiên**:
+   điều kiện "chỉ ngó stdout khi stderr RỖNG" nghe hợp lý nhưng sai. Đo thật với
+   `codex --format json`: stderr có đúng **một dòng vô dụng** (`Reading prompt from stdin...`)
+   nên guard không kích hoạt, còn lỗi 400 thật nằm trọn trong **944B stdout**.
+   ⇒ exit != 0 thì **luôn** kèm stdout làm nguồn phụ (gắn nhãn `[polykit] dấu vết thêm, lấy từ
+   STDOUT:`), và dò quota trên **cả hai** luồng. Live test lại: lỗi thật hiện ra.
+
+**Bài học lặp lại lần thứ hai trong ngày**: unit test xanh không thay được live test. Cả hai lần
+đều là **điều kiện guard nghe hợp lý mà sai với dữ liệu thật** (lần 1: so khớp echo prompt trượt
+vì dòng trống; lần 2: "stderr rỗng" trượt vì stderr có rác).
 
 ### 🔴 BUG-6 — task ĐỌC FILE làm vendor timeout, `stdout` rỗng (đo trên CẢ `grok` LẪN `dsh`)
 
@@ -324,3 +336,25 @@ hành vi bình thường của vendor không stream. Câu hỏi thật còn lạ
 chứ không phải vì sao rỗng. Vá BUG-9 không gỡ được BUG-6 — nhưng nó **loại được một giả thuyết**
 và làm ca im lặng nói ra thành lời thay vì `warnings=[]`.
 **Chưa đo**: grok có stream không (nếu có thì cùng lệnh sẽ ra manh mối, và đó là hướng đào tiếp).
+
+
+### 🔬 BUG-6 — đo được nguyên nhân "stdout rỗng": KHÔNG vendor nào stream ở chế độ mặc định
+Đo 20/08 sau khi vá BUG-9, ép timeout rồi đọc `warnings`:
+
+| Vendor | Chế độ | Bị giết sau | stdout thu được |
+|---|---|---|---|
+| dsh | headless (mặc định) | 25s | **0 byte** |
+| grok | plain (mặc định) | 8s và 20s | **0 byte** |
+| grok | `--output-format streaming-json` | 20s | **4790 byte** |
+
+Trong 4790 byte đó: `available_commands` ×2 và **`thought` ×42**.
+⇒ Vendor **đang nghĩ, không treo**. Trước đây không cách nào biết điều này.
+
+**Kết luận**: "timeout ⇒ stdout rỗng" là hệ quả của **chế độ output không stream**, không phải
+lỗi của PolyKit và cũng không phải vendor chết. PolyKit gọi CLI ở chế độ in-một-lần-ở-cuối, nên
+bị giết giữa chừng thì vĩnh viễn không có gì.
+
+**Hướng đào tiếp (chưa làm)**: cho `dispatch.py` một cờ kiểu `--stream-diagnose` dùng
+`--output-format streaming-json` (grok/agy) hoặc `--json` (codex) để khi timeout còn đọc được
+vendor đã đi tới đâu. Chưa làm vì đổi chế độ output là đổi cả đường phân tích kết quả —
+việc riêng, không gộp vào lượt vá này.

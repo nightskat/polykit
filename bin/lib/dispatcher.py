@@ -163,15 +163,35 @@ def _classify_completed(vendor: str, model: str, res, served_model: str | None =
         served = None if model == "auto" else model
     else:
         served = served_model
-    if res.returncode == 0:
-        return DispatchResult(status="ok", vendor=vendor, model=model,
-                              summary=f"{vendor} completed successfully",
-                              stdout=stdout, exit_code=0, served_model=served)
     # Bỏ phần vendor echo lại prompt TRƯỚC khi dò lẫn khi hiển thị — nếu không,
     # PolyKit đọc chính chữ của mình rồi tưởng là lỗi của vendor.
     stderr = strip_echoed_prompt(res.stderr or "", prompt)
-    warnings = tail_lines(stderr)
-    if is_quota_error(stderr, res.returncode):
+
+    if res.returncode == 0:
+        # BUG-9(2): exit 0 KHÔNG có nghĩa là không có gì để nói. Vendor vẫn in
+        # cảnh báo degraded / sắp hết quota / model thay thế ra stderr rồi thoát
+        # sạch. Trước đây vứt hết, nên chỉ biết khi đã hỏng hẳn.
+        return DispatchResult(status="ok", vendor=vendor, model=model,
+                              summary=f"{vendor} completed successfully",
+                              warnings=tail_lines(stderr) if stderr.strip() else [],
+                              stdout=stdout, exit_code=0, served_model=served)
+
+    # BUG-9(4): một số vendor ghi lỗi ra STDOUT (rõ nhất ở chế độ --json), khi đó
+    # stderr rỗng và mọi phép dò trên stderr đều mù. Chỉ ngó sang stdout khi
+    # stderr không có gì — để không nuốt nhầm kết quả thật thành "lỗi".
+    # BUG-9(4): nhiều vendor ghi lỗi ra STDOUT (rõ nhất ở chế độ --json). Điều
+    # kiện "chỉ ngó stdout khi stderr rỗng" KHÔNG đủ — live test 20/08 với
+    # `codex --format json`: stderr có đúng một dòng vô dụng
+    # ("Reading prompt from stdin...") nên guard không kích hoạt, còn lỗi thật
+    # nằm trọn trong 944B stdout. ⇒ khi exit != 0 thì LUÔN kèm stdout làm nguồn
+    # phụ, gắn nhãn rõ, và dò quota trên CẢ HAI.
+    stdout_sach = strip_echoed_prompt(stdout, prompt)
+    warnings = tail_lines(stderr) if stderr.strip() else []
+    if stdout_sach.strip():
+        warnings = warnings + ["[polykit] dấu vết thêm, lấy từ STDOUT:"] + tail_lines(stdout_sach)
+    if not warnings:
+        warnings = ["[polykit] vendor thoát với mã lỗi nhưng không in gì ra stdout lẫn stderr."]
+    if is_quota_error(stderr + "\n" + stdout_sach, res.returncode):
         return DispatchResult(status="skipped", vendor=vendor, model=model,
                               summary=f"{vendor} quota-capped (402/exhausted)",
                               warnings=warnings, stdout=stdout,
@@ -575,8 +595,16 @@ def _dispatch_gemini(
             else:
                 reason = "exit code nonzero" if res.returncode != 0 else "empty output"
                 warnings.append(f"lane 1 failed: agy execution failed ({reason})")
-        except subprocess.TimeoutExpired:
+                # BUG-9(3): lane gemini không đi qua _classify_completed, nên trước
+                # đây stderr thật của vendor không bao giờ lộ ra — chỉ còn một dòng
+                # "lane 1 failed" trơ, không đủ để biết nên sửa gì.
+                _e = strip_echoed_prompt(res.stderr or "", prompt)
+                if _e.strip():
+                    warnings.extend(f"[lane 1:agy] {l}" for l in tail_lines(_e))
+        except subprocess.TimeoutExpired as e:
             warnings.append("lane 1 failed: agy timed out")
+            warnings.extend(_timeout_warnings(_decode_partial(e.stdout),
+                                              _decode_partial(e.stderr), prompt))
         except Exception as e:
             warnings.append(f"lane 1 failed: {type(e).__name__}: {str(e)}")
     else:
@@ -613,8 +641,16 @@ def _dispatch_gemini(
             else:
                 reason = "exit code nonzero" if res.returncode != 0 else "empty output"
                 warnings.append(f"lane 2 failed: gemini-cli execution failed ({reason})")
-        except subprocess.TimeoutExpired:
+                # BUG-9(3): lane gemini không đi qua _classify_completed, nên trước
+                # đây stderr thật của vendor không bao giờ lộ ra — chỉ còn một dòng
+                # "lane 2 failed" trơ, không đủ để biết nên sửa gì.
+                _e = strip_echoed_prompt(res.stderr or "", prompt)
+                if _e.strip():
+                    warnings.extend(f"[lane 2:gemini-cli] {l}" for l in tail_lines(_e))
+        except subprocess.TimeoutExpired as e:
             warnings.append("lane 2 failed: gemini-cli timed out")
+            warnings.extend(_timeout_warnings(_decode_partial(e.stdout),
+                                              _decode_partial(e.stderr), prompt))
         except Exception as e:
             warnings.append(f"lane 2 failed: {type(e).__name__}: {str(e)}")
     else:
