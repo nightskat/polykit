@@ -22,10 +22,60 @@
 | BUG-10 | ✅ ĐÃ SỬA | `populate.py` báo cáo sai 2 vendor (grok, agy) |
 | BUG-11 | ✅ ĐÃ SỬA | `pytest` bơm bản ghi rác vào `dispatch-log.jsonl` thật |
 | BUG-1 | ⚪️ ĐÓNG | Dòng `[polykit] served:` chỉ in khi model thật KHÁC model yêu cầu — không phải bug |
+| QUAN SÁT-4 | 🔴 MỞ | `agy` nuốt prompt đầu sau khi nghỉ lâu: dispatch hoàn tất nhưng không in JSON/finding |
+| BUG-14 | 🔴 MỞ | `doctor` báo Agy/DSH `ready` nhưng lần dispatch kế tiếp lại `auth_unverified` |
 
 ---
 
 ## 🔴 CÒN MỞ
+
+### 🔴 BUG-14 — `doctor` và `dispatch` mâu thuẫn trạng thái auth
+
+Ngày 21/08/2026, sau khi `doctor.py` chạy thành công (Agy 1.1.16 và DSH 0.1.0-rc.7 đều là
+`ready`), hai dispatch ban đầu chạy đủ 120 giây rồi timeout rỗng. Retry ngay Agy cùng prompt,
+chỉ đổi `--timeout 600`, bị chặn trước khi gọi vendor với `status=skipped`,
+`reason=auth_unverified`. Không có PII trong prompt; đây là task MLX OCR trên fixture tổng hợp.
+
+**Lệnh có liên quan**
+```bash
+python3 /Users/nightskat/Developer/polykit/bin/doctor.py
+python3 /Users/nightskat/Developer/polykit/bin/dispatch.py agy --prompt-file /private/tmp/vnocr-agy-mlx-live.txt --timeout 600 --result-json
+```
+
+**Đo được**: doctor in `agy | ready` và `dsh | ready`; retry Agy trả
+`vendor agy skipped: auth_unverified` sau 10,9s, không có stderr probe cụ thể. Người dùng xác
+nhận gọi Agy trực tiếp bằng Terminal vẫn hoạt động. Do đó đây là lỗi lớp Polykit/probe/cache,
+không phải bằng chứng quota hoặc đăng nhập hết hạn.
+
+**Cần sửa**: dispatch phải đính kèm lỗi probe auth thực tế và phân biệt cache stale/session hết hạn
+với lỗi transport; doctor nên ghi rõ timestamp/cơ sở cho `ready`.
+
+### 🔴 QUAN SÁT-4 — `agy` nuốt prompt đầu sau khi nghỉ lâu, kết quả không nghiệm thu được
+
+Ngày 20/08/2026, dispatch đầu tiên sau lần `doctor` bị sandbox chặn, từ lane PGBank. Prompt đã
+được `pg-redact check` pass trước khi gọi; không ghi PII vào bug này.
+
+**Lệnh nguyên văn**
+```bash
+python3 /Users/nightskat/Developer/polykit/bin/dispatch.py agy --prompt-file /Users/nightskat/Work/pgbank/soan-ho-so/cases/dinh-trong-hai-r32/_plk_09_kunn.prompt.md --result-json
+```
+
+**Đo được**: chạy khoảng 31 giây; stdout chỉ có banner `traps for agy`, không có JSON
+`status`/`served_model`/`exit_code`, không có nội dung reviewer, cũng không có lỗi vendor. Do đó
+không có kết quả để nghiệm thu. State ghi ngay trước đó đánh dấu `agy=ready` (agy 1.1.16).
+
+**Đo lặp lại**: retry ngay cùng prompt, ghim `gemini-3.7-flash-high`, lại chạy khoảng 31 giây và
+chỉ in đúng cùng banner trap; vẫn không JSON/finding/lỗi. Vì vậy giả thuyết "chỉ prompt đầu"
+đã bị bác cho wrapper hiện tại. Chưa kết luận được nguyên nhân sâu hơn.
+
+**Tách wrapper/vendor**: gọi trực tiếp `agy --model gemini-3.7-flash-high --disable-slash-commands
+--print 'Trả lời đúng một chữ: OK'` trả `OK`, nên CLI/session sống. Nhưng truyền lại đúng brief
+redacted dài bằng một đối số (qua `xargs -0`, vì `--print` cần đối số) chạy khoảng 33 giây và kết
+thúc rỗng. Do đó có thêm biến số prompt dài/đa dòng hoặc đường truyền đối số; chưa đủ bằng chứng
+để kết luận nguyên nhân. Không có PII trong nội dung bug.
+
+**Cần sửa**: `dispatch.py` phải trả `--result-json` trên mọi đường kết thúc; nếu agy chỉ in trap
+mà không có vendor result thì báo `status=protocol_error`, `exit_code!=0`, và giữ bằng chứng stdout/stderr.
 
 ### 🔴 QUAN SÁT-3 — không có cổng chặn PII
 
@@ -614,3 +664,26 @@ Live test sau khi sửa: `dsh` trích đúng lệnh dispatch và đúng luật c
 **Còn treo**: `goose` (`~/.config/goose/skills`), `zeroclaw` (`zeroclaw skills`), `opencode`
 (`agent`/`mcp`) — chưa phủ. Cố ý chờ: memory ghi 3 cái này *"cài để xem UI, chưa test tử tế"*,
 chưa phải lane làm việc thật (luật 3 lần đau).
+
+**ĐÃ SỬA** (23/08/2026) — bản vá theo đúng 4 điểm đề xuất trên:
+
+1. `VendorSpec.auth_check_timeout: int = 10` (`bin/lib/vendors.py:26`). Chỉ `agy` đặt **30**
+   (`vendors.py:80`); codex/grok/gemini giữ 10 — probe cục bộ nhanh thì hỏng thật phải báo nhanh,
+   không nâng đại trà.
+2. `_run_auth_check()` (`vendors.py:164`) tách probe auth ra khỏi khối `try` chung, chạy với timeout
+   riêng của spec và **thử lại đúng 1 lần** khi hết giờ *nếu* `auth_check_authoritative=False`.
+   Probe authoritative thì hết giờ là kết luận được luôn, không tốn thêm lượt chờ.
+   Tách riêng còn để timeout của `--version`/`models_cmd` không bị dán nhãn nhầm là lỗi auth.
+3. `dispatcher.py:373` — `auth_unverified` **KHÔNG còn skip**: cứ dispatch, kèm cảnh báo ra stderr
+   *và* vào `result.warnings[]`. `not_installed` / `installed_not_authed` / `quota_capped` vẫn skip
+   như cũ (đó là kết luận authoritative).
+4. Thông điệp mang bằng chứng: lỗi probe ghi `timeout sau {x}s (ngưỡng {n}s/lượt, {k} lượt, không có
+   mã thoát)`, và `summary` của skip nay nối thêm `probe.error` thay vì chỉ in nhãn trạng thái trần.
+
+**Test**: `tests/test_bug15_auth_probe_timeout_khong_mat_luot.py` (11 test). Tiêm lại lỗi cũ
+(`git stash` 2 file đã sửa) → **8/11 ĐỎ**; 3 test còn xanh là guard chống nới quá tay
+(probe authoritative không retry · mất auth thật vẫn skip · timeout `--version` không bị gán nhầm).
+Toàn bộ: **256 pass**.
+
+**Live test** (3 lượt, `--prompt` trực tiếp, load avg 16–17 — đúng vùng tải từng làm hỏng):
+lượt 1 `OK` exit 0 (29,6s) · lượt 2 `OK` exit 0 (42,0s) · lượt 3 `OK` exit 0 (34,3s).

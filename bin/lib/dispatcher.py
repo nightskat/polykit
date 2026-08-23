@@ -297,8 +297,13 @@ def run_vendor(
 
     Hậu xử lý stream áp cho MỌI kết quả nên tách ra lớp mỏng này, không đổi
     hành vi khi stream=False (mọi thứ y như cũ)."""
+    # BUG-15: cảnh báo sinh ra ở bước probe (vd auth chưa xác minh được nhưng
+    # vẫn dispatch) phải sống sót tới result JSON — P4 cấm nuốt warning.
+    probe_warnings: list[str] = []
     result = _run_vendor(vendor, prompt, model, timeout, fmt, workdir, sandbox,
-                         runner, detector, stream)
+                         runner, detector, stream, probe_warnings)
+    if probe_warnings:
+        result.warnings = probe_warnings + list(result.warnings)
     return _apply_stream_diagnose(result, vendor, stream, fmt)
 
 
@@ -313,7 +318,10 @@ def _run_vendor(
     runner=subprocess.run,
     detector=detect,
     stream: bool = False,
+    probe_warnings: list[str] | None = None,
 ) -> DispatchResult:
+    if probe_warnings is None:
+        probe_warnings = []
     # 1. Chạy guards
     try:
         validated_timeout = validate_timeout(timeout)
@@ -362,12 +370,28 @@ def _run_vendor(
         if vendor in REGISTRY:
             probe = detector(REGISTRY[vendor])
             state = classify(probe)
-            if state != VendorState.READY:
+            if state == VendorState.AUTH_UNVERIFIED:
+                # BUG-15 (23/08): auth_unverified nghĩa là polykit TỰ NHẬN không
+                # biết — probe không authoritative và không có dấu hiệu mất auth.
+                # Trước đây vẫn skip, mà người dùng chỉ đích danh vendor thì
+                # không còn lane nào để degrade sang → mất trắng cả lượt dispatch
+                # (prompt bay, stdout 0 byte) dù credential còn sống nguyên.
+                # Thà nổ ở vendor với thông điệp thật, còn hơn skip với nhãn chỉ
+                # SAI CHỖ (đúng tinh thần BUG-13).
+                canh_bao = (f"auth chưa xác minh được cho {vendor} "
+                            f"({probe.error or 'không rõ lý do'}) — vẫn dispatch, "
+                            f"lỗi thật (nếu có) sẽ do vendor tự báo")
+                probe_warnings.append(canh_bao)
+                print(f"WARNING: {canh_bao}", file=sys.stderr)
+            elif state != VendorState.READY:
+                # BUG-15 req 4: kèm bằng chứng probe (thời gian/mã thoát) vào
+                # thông điệp skip — nhãn trần không đủ để cãi lại.
+                chi_tiet = f" — {probe.error}" if probe.error else ""
                 return DispatchResult(
                     status="skipped",
                     vendor=vendor,
                     model=model,
-                    summary=f"vendor {vendor} skipped: {state.value}",
+                    summary=f"vendor {vendor} skipped: {state.value}{chi_tiet}",
                     warnings=[],
                     reason=state.value,
                     served_model=None if model == "auto" else model

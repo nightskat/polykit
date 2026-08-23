@@ -3,6 +3,7 @@ import os
 import re
 import shutil
 import subprocess
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from lib.states import VendorProbe
@@ -18,6 +19,11 @@ class VendorSpec:
     # Một số lệnh "probe" là catalog/session phụ, không phải auth status. Khi
     # chúng lỗi, phải báo unverified thay vì kết luận người dùng đã logout.
     auth_check_authoritative: bool = True
+    # BUG-15 (23/08): timeout riêng cho probe auth. Probe CỤC BỘ giữ 10s để hỏng
+    # thật còn báo nhanh; probe GỌI MẠNG (agy models) phải nới ra — nó là phép đo
+    # chịu ảnh hưởng của tải máy, không phải hằng số. Đo thật trên M1 8GB:
+    # load ~4 → 2,2-3,1s · load ~84 → tới 8,2s · load ~93 → vượt 10s.
+    auth_check_timeout: int = 10
     # Khi không có auth_check_cmd: True = coi như đã auth (policy tường minh,
     # chỉ dùng cho host `claude` chạy bên trong Claude Code); False = chưa rõ auth
     # → installed_not_authed (không mark ready chỉ vì binary tồn tại).
@@ -71,6 +77,7 @@ REGISTRY: dict[str, VendorSpec] = {
         # skip nhầm một lane (degrade) còn hơn báo ready rồi nổ lúc dispatch.
         auth_check_cmd=["agy", "models"],
         auth_check_authoritative=False,
+        auth_check_timeout=30,
         models_cmd=["agy", "models"],
     ),
     "openrouter": VendorSpec(
@@ -143,6 +150,39 @@ def parse_models(stdout: str) -> list[str]:
     return out
 
 
+class _ProbeTimeout(Exception):
+    """Probe auth hết giờ SAU KHI đã thử lại — mang theo bằng chứng để báo cáo.
+
+    Tách riêng khỏi subprocess.TimeoutExpired vì handler chung của detect() còn
+    bắt timeout của version_cmd/models_cmd; gộp chung thì thông điệp nói sai chỗ.
+    """
+    def __init__(self, elapsed: float, attempts: int, limit: int):
+        self.elapsed, self.attempts, self.limit = elapsed, attempts, limit
+        super().__init__(f"auth probe timeout sau {elapsed:.1f}s")
+
+
+def _run_auth_check(spec: VendorSpec, abs_path: str, runner):
+    """Chạy auth_check_cmd với timeout RIÊNG theo spec, thử lại 1 lần nếu hết giờ.
+
+    BUG-15: timeout cứng 10s cho lệnh gọi mạng biến tải máy thành lỗi ngẫu nhiên.
+    Thử lại chỉ áp cho probe KHÔNG authoritative — vendor nào tự nhận "probe của
+    tôi phân biệt được chưa-auth với lỗi khác" thì hết giờ là kết luận được luôn,
+    không cần tốn thêm một lượt chờ.
+    """
+    cmd = [abs_path] + spec.auth_check_cmd[1:]
+    limit = spec.auth_check_timeout
+    max_attempts = 2 if not spec.auth_check_authoritative else 1
+    tong = 0.0
+    for lan in range(1, max_attempts + 1):
+        t0 = time.monotonic()
+        try:
+            return runner(cmd, capture_output=True, text=True, timeout=limit)
+        except subprocess.TimeoutExpired:
+            tong += time.monotonic() - t0
+            if lan == max_attempts:
+                raise _ProbeTimeout(tong, lan, limit) from None
+
+
 def detect(spec: VendorSpec, which=shutil.which, runner=subprocess.run) -> VendorProbe:
     if spec.binary is None:
         return _detect_api_key_vendor(spec)
@@ -174,8 +214,7 @@ def detect(spec: VendorSpec, which=shutil.which, runner=subprocess.run) -> Vendo
                 version = res.stdout.strip() or None
 
         if spec.auth_check_cmd:
-            cmd = [abs_path] + spec.auth_check_cmd[1:]
-            res = runner(cmd, capture_output=True, text=True, timeout=10)
+            res = _run_auth_check(spec, abs_path, runner)
             authed = (res.returncode == 0)
             # Codex review: auth-check rớt vì HẾT QUOTA không phải là "chưa auth".
             # Credential vẫn sống → authed=True + quota_capped để máy trạng thái
@@ -213,7 +252,18 @@ def detect(spec: VendorSpec, which=shutil.which, runner=subprocess.run) -> Vendo
                           ) if mres.returncode == 0 else []
             if not models:
                 error = error or "catalog_empty"
+    except _ProbeTimeout as e:
+        # BUG-15: nói RÕ hết giờ bao lâu, ngưỡng bao nhiêu, thử mấy lần — đọc là
+        # biết ngay do timeout chứ không phải credential chết. Timeout không có
+        # mã thoát nào cả, phải ghi thẳng ra thay vì để người đọc tự đoán.
+        chi_tiet = (f"timeout sau {e.elapsed:.1f}s (ngưỡng {e.limit}s/lượt, "
+                    f"{e.attempts} lượt, không có mã thoát)")
+        if spec.auth_check_authoritative:
+            error, authed = f"auth_probe_timeout — {chi_tiet}", False
+        else:
+            error, authed = f"auth_probe_unverified — {chi_tiet}", None
     except subprocess.TimeoutExpired:
+        # Timeout của version_cmd hoặc models_cmd — KHÔNG phải probe auth.
         if spec.auth_check_authoritative:
             error, authed = "timeout", False
         else:
