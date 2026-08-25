@@ -24,6 +24,7 @@
 | BUG-1 | ⚪️ ĐÓNG | Dòng `[polykit] served:` chỉ in khi model thật KHÁC model yêu cầu — không phải bug |
 | QUAN SÁT-4 | 🔴 MỞ | `agy` nuốt prompt đầu sau khi nghỉ lâu: dispatch hoàn tất nhưng không in JSON/finding |
 | BUG-14 | 🔴 MỞ | `doctor` báo Agy/DSH `ready` nhưng lần dispatch kế tiếp lại `auth_unverified` |
+| BUG-17 | ✅ ĐÃ SỬA | `--timeout` KHÔNG xuống tới `--print-timeout` của `agy` → agy tự cắt ở mặc định 5m0s, mất trắng lượt |
 
 ---
 
@@ -718,3 +719,44 @@ Người giao việc không có cách nào biết trừ khi đọc kỹ lời k�
 (Đã dùng cách này, dsh làm xong việc trong ~5 phút cho cùng đề bài mà agy hết 600s.)
 
 **Chưa có test.** Test nên là: dispatch vendor không có `workdir_flag` kèm `--cd` → phải thấy warning.
+
+---
+
+### ✅ BUG-17 — `--timeout` không xuống tới `--print-timeout` của `agy` (25/08/2026)
+
+**Triệu chứng**: dispatch `agy` với `--timeout 600` chết ở khoảng 300s, `status=error`,
+`exit_code=1`, `stdout` RỖNG, stderr chỉ có `Error: timeout waiting for response`.
+PolyKit không hề timeout — nó vẫn tưởng còn 5 phút nữa, nên không phân loại thành
+`status=timeout` mà báo `vendor_exit_nonzero`. Chẩn đoán sai hướng: trông như lỗi vendor.
+
+**Lệnh nguyên văn**:
+```
+python3 bin/dispatch.py agy claude-opus-4-6-thinking --prompt-file <10KB> --timeout 600 --result-json
+```
+
+**Đo được**: `agy --help` khai `--print-timeout  Timeout for print mode wait (default 5m0s)`.
+`build_agy_cmd()` dựng argv `["agy", "--model", slug, "-p", prompt]` — **không có cờ đó**.
+Nên mọi `--timeout` > 300 đều là ảo với lane agy.
+
+Điều đáng nói: trap #5 trong sổ vendor của chính PolyKit đã ghi *"--print-timeout mặc định
+5 PHÚT → việc dài phải nới, không thì mất trắng"*. **Sổ biết, code không làm.** Trap chỉ
+cảnh báo cho người đọc, không ai nối nó vào đường dispatch.
+
+**Đã sửa**: `build_agy_cmd(model, prompt, stream=False, timeout=None)` chèn
+`--print-timeout <N>s` vào nhóm cờ TOÀN CỤC (trước lệnh con `-p`, theo trap #7);
+call site trong `dispatcher.py` truyền `validated_timeout` xuống.
+Không truyền timeout → argv giữ nguyên như cũ, không đẻ cờ thừa.
+
+**Test**: `tests/test_agy_vendor.py::test_build_agy_cmd_truyen_print_timeout` (kiểm cả thứ tự
+cờ so với `-p`) và `::test_build_agy_cmd_khong_timeout_thi_giu_nguyen`. 39 test xanh.
+
+**Live test 25/08 — ĐÃ ĐÓNG.** Cùng prompt (10 KB), cùng model `claude-opus-4-6-thinking`,
+cùng `--timeout 600`:
+
+| | Trước vá | Sau vá |
+|---|---|---|
+| Thời gian | **~300s** | **487s** |
+| Kết quả | `status=error`, exit 1, stdout **rỗng** | `status=ok`, exit 0, **3.532 bytes** |
+
+487s > 300s là bằng chứng trực tiếp: cờ đã tới nơi và agy chịu nó. Test đơn vị chỉ chứng
+minh argv đúng — con số 487 mới chứng minh tính năng chạy.

@@ -457,7 +457,8 @@ def _run_vendor(
                     resolved = (AGY_DEFAULT_MODEL if AGY_DEFAULT_MODEL in catalog
                                 else next((m for m in catalog if m.startswith("gemini-")),
                                           catalog[0]))
-            cmd = build_agy_cmd(resolved, prompt, stream=stream)
+            cmd = build_agy_cmd(resolved, prompt, stream=stream,
+                                timeout=validated_timeout)
             res = runner([shutil.which("agy") or "agy"] + cmd[1:],
                          capture_output=True, text=True,
                          timeout=validated_timeout, env=env)

@@ -134,16 +134,27 @@ def build_grok_cmd(model: str, sandbox: str, workdir: str | None, fmt: str,
 AGY_DEFAULT_MODEL = "gemini-3.6-flash-medium"
 
 
-def build_agy_cmd(model: str, prompt: str, stream: bool = False) -> list[str]:
+def build_agy_cmd(model: str, prompt: str, stream: bool = False,
+                  timeout: int | None = None) -> list[str]:
     """Gọi THẲNG binary agy, không qua agy.sh — wrapper chỉ có 8 tier Gemini,
     trong khi agy còn phục vụ claude-*/gpt-oss-*.
 
     stream → --output-format stream-json (cờ TOÀN CỤC, phải đặt TRƯỚC lệnh con
-    -p/--print — xem trap 'agy models --output-format json → exit 1')."""
+    -p/--print — xem trap 'agy models --output-format json → exit 1').
+
+    timeout → --print-timeout <N>s. BUG-17: agy mặc định cắt print mode ở 5m0s,
+    KHÔNG theo --timeout của PolyKit. Đặt --timeout 600 mà không truyền cờ này
+    thì agy tự chết ở 300s với "Error: timeout waiting for response", exit 1,
+    stdout rỗng — mất trắng lượt trong khi PolyKit vẫn tưởng còn 5 phút nữa.
+    Giá trị nhận Go duration; dùng giây cho khớp đơn vị --timeout."""
     slug = AGY_DEFAULT_MODEL if model == "auto" else model
+    cmd = ["agy"]
     if stream:
-        return ["agy", "--output-format", "stream-json", "--model", slug, "-p", prompt]
-    return ["agy", "--model", slug, "-p", prompt]
+        cmd += ["--output-format", "stream-json"]
+    if timeout:
+        cmd += ["--print-timeout", f"{int(timeout)}s"]
+    cmd += ["--model", slug, "-p", prompt]
+    return cmd
 
 
 def gemini_agy_tier(model: str) -> str:

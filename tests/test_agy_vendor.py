@@ -191,3 +191,21 @@ def test_snapshot_tu_choi_ghi_de_file_khong_phai_may_sinh(tmp_path):
                 "--snapshot", str(victim)], capture_output=True, text=True, timeout=300)
     assert "print('đừng ghi đè tôi')" in victim.read_text(encoding="utf-8")
     assert "snapshot_error" in r.stdout
+
+
+def test_build_agy_cmd_truyen_print_timeout():
+    """BUG-17: --timeout của PolyKit phải xuống tới --print-timeout của agy.
+
+    Không truyền thì agy cắt print mode ở mặc định 5m0s bất kể PolyKit đặt bao
+    nhiêu → "Error: timeout waiting for response", exit 1, stdout rỗng ở 300s.
+    """
+    cmd = build_agy_cmd("claude-opus-4-6-thinking", "x", timeout=600)
+    assert "--print-timeout" in cmd
+    assert cmd[cmd.index("--print-timeout") + 1] == "600s"
+    # cờ toàn cục phải đứng TRƯỚC lệnh con -p (trap agy #7)
+    assert cmd.index("--print-timeout") < cmd.index("-p")
+
+
+def test_build_agy_cmd_khong_timeout_thi_giu_nguyen():
+    """Không truyền timeout → argv y như cũ, không đẻ cờ thừa."""
+    assert "--print-timeout" not in build_agy_cmd("auto", "x")
