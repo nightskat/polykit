@@ -687,3 +687,34 @@ Toàn bộ: **256 pass**.
 
 **Live test** (3 lượt, `--prompt` trực tiếp, load avg 16–17 — đúng vùng tải từng làm hỏng):
 lượt 1 `OK` exit 0 (29,6s) · lượt 2 `OK` exit 0 (42,0s) · lượt 3 `OK` exit 0 (34,3s).
+
+---
+
+## BUG-16 — `--cd` bị NUỐT IM LẶNG với vendor không có `workdir_flag` (agy, dsh, claude)
+📅 phát hiện 25/08/2026 · trạng thái: **ĐÃ GHI, CHƯA SỬA**
+
+**Đau thật**: dispatch agy kèm `--cd <thư mục>` + prompt bảo "đọc `CONTEXT.md` trong thư mục làm việc".
+agy chạy ở cwd của tiến trình cha, báo *"Không tìm thấy CONTEXT.md ở đâu cả — mình tạm bỏ qua và tiếp tục"*,
+rồi tự đi đọc `MEMORY.md` + cả 3647 dòng `.swiftinterface` để đoán bù → **hết 600s timeout, mất trắng lượt**.
+
+**Gốc**: `bin/dispatch.py:171` khai `--cd` là cờ CHUNG (help chỉ ghi ngoặc "(codex/grok)"), nhưng
+`workdir` chỉ được nối vào lệnh ở 3 chỗ:
+- `dispatch_core.py:83` → codex `-C`
+- `dispatch_core.py:118` → grok `--cwd`
+- `dispatcher.py:622` → nhánh chung, **chỉ khi** `v_cfg.get("workdir_flag")` có giá trị
+
+agy/dsh/claude không khai `workdir_flag` ⇒ giá trị `--cd` **rơi vào hư không, không một dòng cảnh báo**.
+
+**Vì sao nguy**: đây đúng dạng "thành công giả" — exit code sạch, vendor vẫn chạy, chỉ là chạy **sai chỗ**.
+Người giao việc không có cách nào biết trừ khi đọc kỹ lời kể của vendor.
+
+**Đề xuất sửa** (rẻ → đắt):
+1. `dispatch.py`: nếu `args.workdir` mà vendor không hỗ trợ → in cảnh báo stderr + nhét vào
+   `result.warnings[]`, đúng khuôn BUG-15 đã làm với `auth_unverified`. **Đây là mức tối thiểu.**
+2. Với vendor không có cờ, chạy `subprocess` với `cwd=workdir` — hầu hết CLI tôn trọng cwd của tiến trình.
+3. Sửa help: `--cd` ghi rõ vendor nào ăn cờ này.
+
+**Cách vòng tránh trong lúc chưa sửa**: đưa ĐƯỜNG DẪN TUYỆT ĐỐI vào trong prompt, đừng dựa vào `--cd`.
+(Đã dùng cách này, dsh làm xong việc trong ~5 phút cho cùng đề bài mà agy hết 600s.)
+
+**Chưa có test.** Test nên là: dispatch vendor không có `workdir_flag` kèm `--cd` → phải thấy warning.
