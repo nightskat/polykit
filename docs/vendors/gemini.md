@@ -34,8 +34,8 @@ Rơi dần, lane sau thắng thì result gắn warning `degraded`:
 | 2. `gemini` CLI | Gemini CLI, auth Google | 8 model, **chưa có 3.6** |
 | 3. API | REST `generativelanguage.googleapis.com`, cần `GEMINI_API_KEY` | Catalog rộng nhất (33 model) |
 
-PolyKit map tier agy tự động trong `gemini_agy_tier()`: `auto` hoặc `gemini-3.6-*` → tier 3.6,
-`gemini-3.5-flash*` → `f35*`, `gemini-3.1-pro*` → `pro-*`. Slug **không phải Gemini** (Claude,
+PolyKit map tier agy tự động trong `gemini_agy_tier()`: `auto` hoặc `gemini-3.8-*` → tier 3.8 (high/med/low),
+`gemini-3.7-*` → `f37*`, `gemini-3.6-*` → `f36*`, `gemini-3.5-flash*` → `f35*`, `gemini-3.1-pro*` → `pro-*`. Slug **không phải Gemini** (Claude,
 GPT-OSS trong agy) đi đường này sẽ trượt lane 1 — gọi thẳng `/polykit:dispatch agy <slug>`.
 
 Máy không có Antigravity: lane 1 tự degrade xuống CLI. `agy` là tiện ích máy-riêng, không phải

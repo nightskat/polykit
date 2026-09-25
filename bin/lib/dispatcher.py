@@ -291,6 +291,7 @@ def run_vendor(
     runner=subprocess.run,
     detector=detect,
     stream: bool = False,
+    effort: str | None = None,
 ) -> DispatchResult:
     """Cổng dispatch công khai. `stream=True` = --stream-diagnose: chạy vendor ở
     chế độ stream để khi timeout còn đọc được vendor đã đi tới đâu (BUG-6).
@@ -301,7 +302,7 @@ def run_vendor(
     # vẫn dispatch) phải sống sót tới result JSON — P4 cấm nuốt warning.
     probe_warnings: list[str] = []
     result = _run_vendor(vendor, prompt, model, timeout, fmt, workdir, sandbox,
-                         runner, detector, stream, probe_warnings)
+                         runner, detector, stream, probe_warnings, effort=effort)
     if probe_warnings:
         result.warnings = probe_warnings + list(result.warnings)
     return _apply_stream_diagnose(result, vendor, stream, fmt)
@@ -319,6 +320,7 @@ def _run_vendor(
     detector=detect,
     stream: bool = False,
     probe_warnings: list[str] | None = None,
+    effort: str | None = None,
 ) -> DispatchResult:
     if probe_warnings is None:
         probe_warnings = []
@@ -404,7 +406,7 @@ def _run_vendor(
     # 4. Dispatch theo vendor
     try:
         if vendor == "codex":
-            cmd = build_codex_cmd(model, validated_sandbox, workdir, fmt, stream=stream)
+            cmd = build_codex_cmd(model, validated_sandbox, workdir, fmt, stream=stream, effort=effort)
             res = runner(
                 cmd,
                 input=prompt,
@@ -524,7 +526,10 @@ def _run_vendor(
 
         elif vendor == "openrouter":
             from lib.openrouter import or_dispatch
-            r = or_dispatch(prompt, model=model, timeout=validated_timeout)
+            if effort is not None:
+                r = or_dispatch(prompt, model=model, timeout=validated_timeout, effort=effort)
+            else:
+                r = or_dispatch(prompt, model=model, timeout=validated_timeout)
             if r.ok:
                 # Router OR (auto/fusion/free) chọn model khác hẳn cái đã gọi —
                 # ghi lại để biết tiền đi đâu (bench 03/08: fusion→opus-5 ~$1/lượt).
@@ -691,6 +696,8 @@ def _dispatch_gemini(
 
     is_agy_model = (
         model == "auto"
+        or model.startswith("gemini-3.8-flash")
+        or model.startswith("gemini-3.7-flash")
         or model.startswith("gemini-3.6-flash")
         or model.startswith("gemini-3.5-flash")
         or model.startswith("gemini-3.1-pro")

@@ -22,6 +22,7 @@ from lib.dispatch_core import (
     build_dsh_cmd,
     write_dsh_patch,
     DSH_DEFAULT_MODEL,
+    AGY_DEFAULT_MODEL,
 )
 from lib.dispatcher import run_vendor
 from lib.vendors import REGISTRY
@@ -58,7 +59,8 @@ class TestVendorConfig:
         assert dm is None
 
     def test_default_model_agy(self):
-        assert default_model("agy") == "gemini-3.7-flash-high"
+        assert default_model("agy") == "gemini-3.8-flash-high"
+        assert default_model("agy") == AGY_DEFAULT_MODEL
 
     def test_traps_dsh(self):
         traps = vendor_traps("dsh")
@@ -215,6 +217,19 @@ class TestDispatchCLI:
         info = json.loads(res.stdout)
         assert info["vendor"] == "dsh"
         assert info["resolved_model"] == "deepseek-v4-pro"
+
+    def test_dump_config_agy_auto_38_flash_high(self):
+        """agy auto phải resolve thành gemini-3.8-flash-high."""
+        res = subprocess.run(
+            [sys.executable, "bin/dispatch.py", "agy", "--dump-config"],
+            capture_output=True, text=True, timeout=10,
+            cwd=str(Path(__file__).parent.parent),
+        )
+        assert res.returncode == 0
+        info = json.loads(res.stdout)
+        assert info["vendor"] == "agy"
+        assert info["resolved_model"] == "gemini-3.8-flash-high"
+        assert info["default_model"] == "gemini-3.8-flash-high"
 
     def test_no_traps_suppresses_stderr(self):
         """--no-traps phải không in traps ra stderr."""

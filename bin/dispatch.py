@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 import sys
+import time
 import argparse
 import json
 import os
@@ -21,6 +22,7 @@ from lib.vendor_config import (
     vendor_verify_cmd,
     vendor_zero_quota_cmds,
     vendor_auth_hint,
+    default_timeout,
 )
 
 
@@ -162,7 +164,8 @@ def main():
     parser = _ParserRaJson(description="Multi-vendor CLI dispatch wrapper", allow_abbrev=False)
     parser.add_argument("vendor", choices=names, help="Vendor to dispatch to")
     parser.add_argument("model", nargs="?", default="auto", help="Model slug to use (default: auto)")
-    parser.add_argument("--timeout", type=int, default=120, help="Timeout in seconds (default: 120, max: 600)")
+    parser.add_argument("--timeout", type=int, default=None,
+                        help="Timeout in seconds (max: 600). Bỏ trống = default_timeout của vendor trong vendors.json, không có thì 120 (BUG-18)")
     parser.add_argument("--prompt", dest="prompt_text", default=None,
                         help="Prompt truyền thẳng bằng chữ. Prompt dài/nhiều dòng/có dấu thì dùng --prompt-file.")
     parser.add_argument("--prompt-file", dest="prompt_file", default=None,
@@ -178,6 +181,9 @@ def main():
     parser.add_argument("--stream-diagnose", action="store_true",
                         help="Chạy vendor ở chế độ stream để khi timeout còn đọc được vendor đã đi tới đâu (BUG-6). "
                              "codex/grok/agy/gemini có stream; dsh/claude KHÔNG — sẽ cảnh báo rõ rồi chạy bình thường.")
+    from lib.dispatch_core import EFFORT_HOP_LE
+    parser.add_argument("--effort", choices=EFFORT_HOP_LE,
+                        default=None, help="Reasoning effort (codex/openrouter)")
 
     # Fix: Add REGISTRY vendors not in JSON (like openrouter)
     from lib.vendors import REGISTRY
@@ -197,6 +203,10 @@ def main():
     # Resolve model auto → default_model từ vendors.json
     # 🔴 dsh đặc biệt: JSON ghi default=flash nhưng flash trả rỗng trên task nhiều bước.
     # Override cứng auto → pro ở CLI, khớp với DSH_DEFAULT_MODEL trong dispatcher.
+    # BUG-18: không truyền --timeout → dùng trần RIÊNG của vendor (grok nghĩ lâu hơn 120s).
+    if args.timeout is None:
+        args.timeout = default_timeout(args.vendor, cfg)
+
     resolved_model = args.model
     if args.model == "auto":
         if args.vendor == "dsh":
@@ -206,6 +216,11 @@ def main():
             dm = default_model(args.vendor, cfg)
             if dm:
                 resolved_model = dm
+    elif args.vendor == "agy":
+        if resolved_model == "opus":
+            resolved_model = "claude-opus-4-6-thinking"
+        elif resolved_model == "sonnet":
+            resolved_model = "claude-sonnet-4-6"
 
     # Validate model
     if resolved_model != "auto":
@@ -247,6 +262,9 @@ def main():
             for i, trap in enumerate(traps, 1):
                 sys.stderr.write(f"  {i}. {trap}\n")
 
+    if args.effort and args.vendor not in ("codex", "openrouter"):
+        sys.stderr.write(f"[polykit] warning: vendor '{args.vendor}' không nhận cờ --effort, cờ này sẽ bị bỏ qua.\n")
+
     # Prompt: từ --prompt-file nếu có, không thì stdin.
     # stdin không dùng được cho prompt dài — quoting, xuống dòng và dấu tiếng Việt
     # đều vỡ ở tầng shell trước khi tới đây (BUG-2, ghi nhận 18/08/2026).
@@ -278,29 +296,40 @@ def main():
     else:
         prompt = sys.stdin.read()
 
-    # Dispatch task
-    result = run_vendor(
-        vendor=args.vendor,
-        prompt=prompt,
-        model=resolved_model,
-        timeout=args.timeout,
-        fmt=args.format,
-        workdir=args.workdir,
-        sandbox=args.sandbox,
-        stream=args.stream_diagnose
-    )
-
     # M2 evidence log — best-effort, chỉ ở CLI boundary (không ghi khi test gọi lib).
+    def _ghi_evidence(vendor, model, status, reason, served_model, t0):
+        try:
+            from lib.evidence import append_evidence, make_record
+            from datetime import datetime, timezone
+            append_evidence(make_record(
+                vendor, model, status,
+                datetime.now(timezone.utc).isoformat(), reason=reason,
+                served_model=served_model,
+                latency_ms=int((time.monotonic() - t0) * 1000),
+            ))
+        except Exception:
+            pass
+
+    # Dispatch task
+    _t0 = time.monotonic()
     try:
-        from lib.evidence import append_evidence, make_record
-        from datetime import datetime, timezone
-        append_evidence(make_record(
-            result.vendor, result.model, result.status,
-            datetime.now(timezone.utc).isoformat(), reason=result.reason,
-            served_model=result.served_model,
-        ))
-    except Exception:
-        pass
+        result = run_vendor(
+            vendor=args.vendor,
+            prompt=prompt,
+            model=resolved_model,
+            timeout=args.timeout,
+            fmt=args.format,
+            workdir=args.workdir,
+            sandbox=args.sandbox,
+            stream=args.stream_diagnose,
+            effort=args.effort,
+        )
+    except Exception as e:
+        # BUG-18 (Codex review): lỗi bất ngờ vẫn phải để lại dấu vết + thời gian đã chạy.
+        _ghi_evidence(args.vendor, resolved_model, "error", f"exception: {type(e).__name__}: {e}", None, _t0)
+        raise
+
+    _ghi_evidence(result.vendor, result.model, result.status, result.reason, result.served_model, _t0)
 
     # Model thật khác model đã gọi (router OR, lane agy, gemini auto) → báo ở stderr.
     # KHÔNG in ra stdout: stdout phải sạch để pipe sang lệnh khác.

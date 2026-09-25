@@ -55,6 +55,18 @@ def default_model(name: str, cfg: dict | None = None) -> str | None:
     return None
 
 
+def default_timeout(name: str, cfg: dict | None = None, fallback: int = 120) -> int:
+    """Timeout mặc định RIÊNG của vendor (BUG-18). grok nghĩ lâu (157s cho prompt 2KB)
+    nên trần chung 120s giết oan nó. Không có trường này → fallback."""
+    if cfg is None:
+        cfg = load_vendor_config()
+    vendors = cfg.get("vendors") if isinstance(cfg, dict) else None
+    vendor = vendors.get(name) if isinstance(vendors, dict) else None
+    val = vendor.get("default_timeout") if isinstance(vendor, dict) else None
+    # type() is int: chặn bool (True là subclass của int → sẽ thành 1 giây)
+    return val if type(val) is int and 1 <= val <= 600 else fallback
+
+
 def vendor_traps(name: str, cfg: dict | None = None) -> list[str]:
     """Danh sách traps của vendor. [] nếu không có."""
     if cfg is None:

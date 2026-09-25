@@ -88,7 +88,7 @@ def test_parse_models_loai_banner_va_ansi():
 
 def test_auto_giu_dung_default_cua_agy_sh():
     # Grok P1: đổi default ngầm = phá kỳ vọng lệnh đang chạy.
-    assert AGY_DEFAULT_MODEL == "gemini-3.6-flash-medium"
+    assert AGY_DEFAULT_MODEL == "gemini-3.8-flash-high"
     assert build_agy_cmd("auto", "x")[:3] == ["agy", "--model", AGY_DEFAULT_MODEL]
     assert build_agy_cmd("claude-sonnet-4-6", "x")[2] == "claude-sonnet-4-6"
 
@@ -178,7 +178,7 @@ def test_auto_chon_tu_catalog_live_khi_default_bien_mat():
                          runner=lambda c, **k: _Res(0, "1.1.10") if "--version" in c
                          else _Res(0, future)))
     assert res.served_model == "gemini-4.0-flash-medium"
-    assert "gemini-3.6-flash-medium" not in seen["cmd"]
+    assert AGY_DEFAULT_MODEL not in seen["cmd"]
 
 
 def test_snapshot_tu_choi_ghi_de_file_khong_phai_may_sinh(tmp_path):

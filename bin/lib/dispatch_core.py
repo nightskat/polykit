@@ -60,7 +60,8 @@ def validate_sandbox(s) -> str:
 # Effort cao ĐỐT NHIỀU HƠN mà tìm ÍT HƠN. codex mặc định chạy `medium` — đúng ô
 # tệ nhất — nên PolyKit ghim `low`. `minimal` trả RỖNG, không bao giờ dùng.
 CODEX_EFFORT_MAC_DINH = "low"
-CODEX_EFFORT_HOP_LE = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
+EFFORT_HOP_LE = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
+CODEX_EFFORT_HOP_LE = EFFORT_HOP_LE
 
 
 def build_codex_cmd(model: str, sandbox: str, workdir: str | None, fmt: str,
@@ -129,9 +130,9 @@ def build_grok_cmd(model: str, sandbox: str, workdir: str | None, fmt: str,
     return cmd
 
 # Model mặc định của lane agy khi gọi `auto`. GIỮ ĐÚNG default sẵn có của
-# ~/scripts/agy.sh (3.6 Flash Medium) — Grok P1: đổi default ngầm là phá kỳ vọng
-# của mọi lệnh đang chạy, và tier `-high` đốt quota im lặng.
-AGY_DEFAULT_MODEL = "gemini-3.6-flash-medium"
+# ~/scripts/agy.sh (3.8 Flash High) — Grok P1: đổi default ngầm là phá kỳ vọng
+# của mọi lệnh đang chạy.
+AGY_DEFAULT_MODEL = "gemini-3.8-flash-high"
 
 
 def build_agy_cmd(model: str, prompt: str, stream: bool = False,
@@ -168,12 +169,26 @@ def gemini_agy_tier(model: str) -> str:
         if model.endswith("low"):
             return "f35-low"
         return "f35"
-    # 3.6 Flash (newest) + auto default + bare effort suffixes
-    if model.endswith("high"):
-        return "high"
+    # 3.6 Flash — pinned via f36 tiers
+    if model.startswith("gemini-3.6-flash"):
+        if model.endswith("high"):
+            return "f36-high"
+        if model.endswith("low"):
+            return "f36-low"
+        return "f36"
+    # 3.7 Flash — pinned via f37 tiers
+    if model.startswith("gemini-3.7-flash"):
+        if model.endswith("high"):
+            return "f37-high"
+        if model.endswith("low"):
+            return "f37-low"
+        return "f37"
+    # 3.8 Flash (newest) + auto default + bare effort suffixes
     if model.endswith("low"):
         return "low"
-    return "med"
+    if model.endswith("med") or model.endswith("medium"):
+        return "med"
+    return "high"
 
 
 # 🔴 deepseek-v4-flash TRẢ VỀ RỖNG trên task nhiều bước — vendors.json ghi

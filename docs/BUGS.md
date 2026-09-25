@@ -25,6 +25,7 @@
 | QUAN SÁT-4 | 🔴 MỞ | `agy` nuốt prompt đầu sau khi nghỉ lâu: dispatch hoàn tất nhưng không in JSON/finding |
 | BUG-14 | 🔴 MỞ | `doctor` báo Agy/DSH `ready` nhưng lần dispatch kế tiếp lại `auth_unverified` |
 | BUG-17 | ✅ ĐÃ SỬA | `--timeout` KHÔNG xuống tới `--print-timeout` của `agy` → agy tự cắt ở mặc định 5m0s, mất trắng lượt |
+| BUG-18 | ✅ ĐÃ SỬA | `grok` bị trần chung `--timeout 120` giết oan (39% lượt timeout) + log không ghi `latency_ms` |
 
 ---
 
@@ -760,3 +761,105 @@ cùng `--timeout 600`:
 
 487s > 300s là bằng chứng trực tiếp: cờ đã tới nơi và agy chịu nó. Test đơn vị chỉ chứng
 minh argv đúng — con số 487 mới chứng minh tính năng chạy.
+
+---
+
+## 🐞 BUG — agy: PolyKit chèn `--effort ""` rỗng, giết mọi model KHÔNG có hậu tố effort (28/08/2026)
+
+**Trạng thái: MỞ.**
+
+Trap #7 trong chính PolyKit đã ghi *"`--effort` XUNG ĐỘT với `--model` (tên model đã mang mức
+-high/-low)"* — nhưng dispatcher **vẫn luôn chèn `--effort`**, và khi không có effort thì chèn
+**chuỗi rỗng**. Model nào tên KHÔNG mang sẵn mức (`claude-sonnet-4-6`,
+`claude-opus-4-6-thinking`, `gpt-oss-120b-medium`… ) là chết.
+
+**Lệnh đã chạy nguyên văn:**
+```bash
+python3 .../polykit/0.11.1/bin/dispatch.py agy claude-sonnet-4-6 \
+  --prompt-file <file> --timeout 300 --result-json
+```
+
+**Đo được** (không phải đoán) — `status: "error"`, `exit_code: 1`, `stdout` rỗng, warning:
+```
+Error: invalid model selection (--model "claude-sonnet-4-6" --effort ""):
+model claude-sonnet-4-6 is not recognized as a known model or custom model in settings
+```
+
+🔴 **Thông báo lỗi ĐÁNH LẠC HƯỚNG.** Nó nói *"model không được nhận diện"*, làm người dùng đi
+kiểm tên model — trong khi tên model **ĐÚNG**. Đối chứng cùng phiên:
+```bash
+agy --output-format json models   # → claude-sonnet-4-6  Claude Sonnet 4.6 (Thinking)  ✅ CÓ
+```
+Thủ phạm là `--effort ""`, không phải tên model.
+
+**Đối chứng dương** — cùng dispatch, chỉ đổi sang model có hậu tố effort:
+```bash
+python3 .../dispatch.py agy gemini-3.7-flash-medium --prompt-file <file> --timeout 240 --result-json
+# → status=ok, exit_code=0, stdout 1.4 KB
+```
+⇒ Đường dispatch lành; chỉ mỗi cờ `--effort` rỗng làm hỏng.
+
+**Hệ quả**: lane agy đang **mất truy cập 3 model mạnh nhất của gói $20**
+(`claude-opus-4-6-thinking`, `claude-sonnet-4-6`, `gpt-oss-120b-medium`) — đúng những model
+được ghi trong memory là lý do chính để trả tiền gói này.
+
+**Việc cần làm**: trong `build_agy_cmd`, **bỏ hẳn `--effort` khi giá trị rỗng/None**
+(đừng chèn cờ với chuỗi rỗng). Kèm test: model không hậu tố ⇒ argv **không** chứa `--effort`.
+
+**Chưa sửa trong phiên này** — đang giữa việc soát hồ sơ, không đổi code vendor giữa chừng.
+Cách đi vòng tạm thời: dùng model có hậu tố effort (`gemini-3.7-flash-medium`, `-high`, `-low`).
+
+---
+
+## 🐞 BUG — PolyKit gemini fallback lane nuốt version khi map sang agy.sh (03/09/2026)
+
+**Trạng thái: ✅ ĐÃ SỬA.**
+
+**Bối cảnh**: Khi nâng cấp default model của `agy` lên Gemini 3.8 Flash, Grok review adversarial phát hiện: hàm `gemini_agy_tier()` trong `bin/lib/dispatch_core.py` coi mọi model không phải 3.1 hay 3.5 là bare tiers (`high`/`med`/`low`). Khi `agy.sh` cập nhật bare tiers trỏ vào 3.8, bất kỳ lệnh nào gọi qua lane `gemini` yêu cầu `gemini-3.6-*` hoặc `gemini-3.7-*` đều bị map thành `high|med|low` $\rightarrow$ `agy.sh` âm thầm chạy Gemini 3.8 thay vì model cũ được chỉ định (silent version upgrade).
+
+Nguy hiểm hơn, unit test cũ trong `test_dispatch_builders.py` trước đây assert cứng `gemini-3.6-flash-high == "high"`, vô tình "khóa chặt bug" và làm test suite 259 test vẫn xanh hoàn toàn dù logic bị lệch.
+
+**Đo được**:
+- Trước khi sửa: `gemini_agy_tier("gemini-3.7-flash-medium")` trả về `"med"` $\rightarrow$ gọi `agy.sh -t med` $\rightarrow$ chạy `gemini-3.8-flash-medium`.
+- Sau khi sửa: map tường minh `gemini-3.7-*` $\rightarrow$ `f37-*`, `gemini-3.6-*` $\rightarrow$ `f36-*`.
+- Live test đối chứng:
+  ```bash
+  echo "trả về đúng LIVE_OK_GEMINI_F37" | python3 bin/dispatch.py gemini gemini-3.7-flash-medium --result-json
+  ```
+  Trả về `[polykit] served: agy:f37` $\rightarrow$ `status: ok`, `served_model: agy:f37`.
+- Khôi phục `gemini-3.5-flash-high` trong `config/vendors.json`.
+- Ràng buộc test: `assert default_model("agy") == AGY_DEFAULT_MODEL`.
+
+
+---
+
+### ✅ BUG-18 — `grok` bị trần chung 120s giết oan; log không ghi thời gian chạy (19/09/2026)
+
+**Triệu chứng**: phiên audit mạng nhà 19/09 gọi grok 3 lần: 1 lần mất output, 1 lần ok, 1 lần `status=timeout`
+(chạy song song với codex, `--timeout 300`). Tuan: *"nhiều lần gọi nó không được"*.
+
+**Đo được** (không đoán):
+| Lệnh | Kết quả |
+|---|---|
+| `dispatch.py grok --prompt-file wifi2.txt --timeout 300 --stream-diagnose` (chạy MỘT MÌNH) | `ok`, **157s**, 2391 byte |
+| cùng prompt, song song với `codex` | `timeout` ở 300s |
+| `dispatch-log.jsonl` toàn bộ lịch sử grok | ok 86 · **timeout 55** · error 11 → 39% lượt ok+timeout là timeout |
+| `latency_ms` trong log | **luôn `null`** — không ai từng thấy grok chậm cỡ nào |
+
+Prompt là văn xuôi 2KB, không đọc file, không sinh code ⇒ khác ca BUG-6. Nguyên nhân: grok-4.6 nghĩ
+**140–160s** cho câu hỏi bình thường, trần mặc định `--timeout 120` ngắn hơn ⇒ gọi không truyền `--timeout`
+là **gần như chắc chắn chết**. Lượt "mất output" đầu tiên là lỗi của người gọi (subshell `( … &)` không được
+`wait`), không phải grok.
+
+**Sửa**:
+- `vendors.json` thêm trường `default_timeout` (grok = 300) + trap "CHẬM".
+- `vendor_config.default_timeout()`; `dispatch.py --timeout` mặc định `None` → lấy trần của vendor, không có thì 120.
+- `dispatch.py` đo `time.monotonic()` quanh `run_vendor` → ghi `latency_ms` thật vào evidence log.
+
+**Bằng chứng**: `tests/test_bug18_timeout_rieng_vendor.py` (9 test), toàn bộ 275 passed.
+
+**Codex review 19/09 (gpt-5.5)** — 1 ĐỎ + 4 VÀNG, đã vá hết: (ĐỎ) `run_vendor` ném exception thì mất evidence → bọc try/except, ghi `status=error` + `latency_ms` rồi raise lại; `True` lọt qua `isinstance(int)` thành 1 giây → `type(val) is int`; config hỏng (`vendors: None`) crash → fallback 120; thêm test tầng CLI (không truyền → 300, `--timeout 45` giữ nguyên, `--timeout 0` bị chặn, exception vẫn ghi log).
+Live test 19/09 23:02: gọi grok **không** truyền `--timeout` → `ok`, 1391 byte, log ghi `latency_ms: 140655`
+(với trần cũ 120s lượt này đã chết).
+
+**Còn lại**: bản CÀI (`~/.claude/plugins/cache/polykit/polykit/0.11.1`) chưa có bản vá cho tới khi release/cài lại.

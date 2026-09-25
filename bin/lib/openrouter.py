@@ -11,9 +11,10 @@ OR_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 OR_KEY_ENVS = ["OPENROUTER_API_KEY", "OR_API_KEY"]
 OR_KEY_FILES = [Path.home() / ".config/openrouter/key", Path.home() / ".openrouter/key"]
 # Free model OpenRouter XOAY VÒNG thường xuyên (model cũ bị gỡ → 404, provider busy → 429).
-# Giá trị này verify sống 2026-07-13; hết hạn thì đổi, hoặc truyền model tường minh khi dispatch.
+# Cập nhật 2026-09-07: minimax/minimax-m3:free với reasoning effort high.
 # TODO(backlog): "auto" nên tự chọn 1 model :free còn sống qua /models thay vì hardcode.
-DEFAULT_FREE_MODEL = "nvidia/nemotron-3-nano-30b-a3b:free"
+DEFAULT_FREE_MODEL = "minimax/minimax-m3:free"
+DEFAULT_FREE_EFFORT = "high"
 
 @dataclass
 class ORResult:
@@ -53,6 +54,7 @@ def or_dispatch(
     timeout: int = 120,
     key: str | None = None,
     opener: any = None,
+    effort: str | None = None,
 ) -> ORResult:
     if key is None:
         key = get_or_key()
@@ -63,7 +65,22 @@ def or_dispatch(
         opener = urllib.request.urlopen
 
     m = DEFAULT_FREE_MODEL if model == "auto" else model
-    body = json.dumps({"model": m, "messages": [{"role": "user", "content": prompt}]}).encode("utf-8")
+    raw_eff = effort
+    if not raw_eff:
+        raw_eff = os.environ.get("OPENROUTER_REASONING_EFFORT") or os.environ.get("OR_EFFORT")
+    if not raw_eff and (model == "auto" or m == DEFAULT_FREE_MODEL):
+        raw_eff = DEFAULT_FREE_EFFORT
+    eff = raw_eff.strip() if isinstance(raw_eff, str) and raw_eff.strip() else None
+
+    if eff:
+        from lib.dispatch_core import EFFORT_HOP_LE
+        if eff not in EFFORT_HOP_LE:
+            return ORResult(ok=False, error=f"effort phải là một trong {', '.join(EFFORT_HOP_LE)}, got: {eff!r}")
+
+    payload = {"model": m, "messages": [{"role": "user", "content": prompt}]}
+    if eff and eff != "none":
+        payload["reasoning"] = {"effort": eff}
+    body = json.dumps(payload).encode("utf-8")
     headers = {
         "Authorization": f"Bearer {key}",
         "Content-Type": "application/json",

@@ -37,8 +37,10 @@ Wrapper tiện tay `~/scripts/agy.sh` — sinh ra vì agy **không lưu được
 
 | Gọi | Slug thật |
 |---|---|
-| `agy.sh "<prompt>"` | `gemini-3.6-flash-medium` (default wrapper) |
-| `agy.sh -t low\|high` | `gemini-3.6-flash-low` / `-high` |
+| `agy.sh "<prompt>"` | `gemini-3.8-flash-medium` (default wrapper) |
+| `agy.sh -t low\|med\|high` | `gemini-3.8-flash-low` / `-medium` / `-high` |
+| `agy.sh -t f37[-low\|-high]` | `gemini-3.7-flash-medium` / `-low` / `-high` |
+| `agy.sh -t f36[-low\|-high]` | `gemini-3.6-flash-medium` / `-low` / `-high` |
 | `agy.sh -t f35[-low\|-high]` | `gemini-3.5-flash-medium` / `-low` / `-high` |
 | `agy.sh -t pro-low\|pro-high` | `gemini-3.1-pro-low` / `-high` |
 | `agy.sh -- <raw args>` | Bypass wrapper — **cách duy nhất** chạm `claude-*` / `gpt-oss-*` |

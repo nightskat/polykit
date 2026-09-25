@@ -33,10 +33,15 @@
       "resume": "--continue | -c | --conversation <ID>",
       "list_models": "agy models",
       "models": [
+        "gemini-3.8-flash-high",
+        "gemini-3.8-flash-medium",
+        "gemini-3.8-flash-low",
         "gemini-3.7-flash-high",
         "gemini-3.7-flash-medium",
         "gemini-3.7-flash-low",
         "gemini-3.6-flash-high",
+        "gemini-3.6-flash-medium",
+        "gemini-3.6-flash-low",
         "gemini-3.5-flash-high",
         "gemini-3.1-pro-high",
         "gemini-3.1-pro-low",
@@ -44,8 +49,8 @@
         "claude-opus-4-6-thinking",
         "gpt-oss-120b-medium"
       ],
-      "default_model": "gemini-3.7-flash-high",
-      "default_model_note": "Tuan chỉnh tay 17/08 (trước đó 3.6). Mặc định ăn ngay ở phiên --print.",
+      "default_model": "gemini-3.8-flash-high",
+      "default_model_note": "Cập nhật 07/09/2026: Gemini 3.8 Flash (High). Mặc định ăn ngay ở phiên --print.",
       "quota": "Gói $20/tháng. Quota RIÊNG theo HỌ model, hạ tầng Google — KHÔNG đụng thuê bao Anthropic. Đo 17/08: Gemini tuần còn 87%, Claude/GPT tuần còn 95%. Họ Google rộng nhất.",
       "verify_cmd": "agy -p '/model'",
       "zero_quota_cmds": [
@@ -144,9 +149,11 @@
       "verify_cmd": "grok models",
       "traps": [
         "GIỚI HẠN SỐ LƯỢT (~9 turn) — việc dài bị cắt ngang. BẮT BUỘC ép 'ghi file ngay từ phát hiện đầu tiên', không thì mất sạch (đã mất 1 lượt)",
-        "Cờ sai → exit 2 (báo đàng hoàng)"
+        "Cờ sai → exit 2 (báo đàng hoàng)",
+        "CHẬM: 157s cho prompt văn xuôi 2KB (đo 19/09) → trần chung 120s giết oan, 39% lượt từng timeout (55/141). default_timeout=300; việc to truyền --timeout 600. Chạy SONG SONG với codex còn chậm hơn nữa (vượt 300s)"
       ],
-      "vai": "QA / đập. Mạnh nhất phiên 16-17/08: tìm 22 lỗi thật, kiểm lại đúng hết."
+      "vai": "QA / đập. Mạnh nhất phiên 16-17/08: tìm 22 lỗi thật, kiểm lại đúng hết.",
+      "default_timeout": 300
     },
     "codex": {
       "binary": "codex",

@@ -89,6 +89,142 @@ class TestOpenRouter(unittest.TestCase):
         req = captured_req[0]
         data = json.loads(req.data.decode("utf-8"))
         self.assertEqual(data["model"], DEFAULT_FREE_MODEL)
+        self.assertEqual(data["model"], "minimax/minimax-m3:free")
+        self.assertEqual(data["reasoning"], {"effort": "high"})
+
+    def test_or_dispatch_effort_param(self) -> None:
+        captured_req = []
+
+        class FakeResponse:
+            def read(self) -> bytes:
+                return b'{"choices":[{"message":{"content":"hi"}}]}'
+
+        def fake_opener(req: any, timeout: int) -> FakeResponse:
+            captured_req.append(req)
+            return FakeResponse()
+
+        res = or_dispatch("hello", model="meta/muse-spark-1.3-contributor", effort="xhigh", key="fake-key", opener=fake_opener)
+        self.assertTrue(res.ok)
+        self.assertEqual(len(captured_req), 1)
+        req = captured_req[0]
+        data = json.loads(req.data.decode("utf-8"))
+        self.assertEqual(data["reasoning"], {"effort": "xhigh"})
+
+    def test_or_dispatch_effort_env(self) -> None:
+        captured_req = []
+
+        class FakeResponse:
+            def read(self) -> bytes:
+                return b'{"choices":[{"message":{"content":"hi"}}]}'
+
+        def fake_opener(req: any, timeout: int) -> FakeResponse:
+            captured_req.append(req)
+            return FakeResponse()
+
+        import os
+        orig = os.environ.get("OPENROUTER_REASONING_EFFORT")
+        os.environ["OPENROUTER_REASONING_EFFORT"] = "high"
+        try:
+            res = or_dispatch("hello", model="meta/muse-spark-1.3-contributor", key="fake-key", opener=fake_opener)
+            self.assertTrue(res.ok)
+            self.assertEqual(len(captured_req), 1)
+            req = captured_req[0]
+            data = json.loads(req.data.decode("utf-8"))
+            self.assertEqual(data["reasoning"], {"effort": "high"})
+        finally:
+            if orig is not None:
+                os.environ["OPENROUTER_REASONING_EFFORT"] = orig
+            else:
+                os.environ.pop("OPENROUTER_REASONING_EFFORT", None)
+
+    def test_or_dispatch_effort_precedence(self) -> None:
+        captured_req = []
+
+        class FakeResponse:
+            def read(self) -> bytes:
+                return b'{"choices":[{"message":{"content":"hi"}}]}'
+
+        def fake_opener(req: any, timeout: int) -> FakeResponse:
+            captured_req.append(req)
+            return FakeResponse()
+
+        import os
+        orig = os.environ.get("OPENROUTER_REASONING_EFFORT")
+        os.environ["OPENROUTER_REASONING_EFFORT"] = "low"
+        try:
+            res = or_dispatch("hello", model="meta/muse-spark-1.3-contributor", effort="medium", key="fake-key", opener=fake_opener)
+            self.assertTrue(res.ok)
+            data = json.loads(captured_req[0].data.decode("utf-8"))
+            self.assertEqual(data["reasoning"], {"effort": "medium"})
+        finally:
+            if orig is not None:
+                os.environ["OPENROUTER_REASONING_EFFORT"] = orig
+            else:
+                os.environ.pop("OPENROUTER_REASONING_EFFORT", None)
+
+    def test_or_dispatch_or_effort_env_whitespace(self) -> None:
+        captured_req = []
+
+        class FakeResponse:
+            def read(self) -> bytes:
+                return b'{"choices":[{"message":{"content":"hi"}}]}'
+
+        def fake_opener(req: any, timeout: int) -> FakeResponse:
+            captured_req.append(req)
+            return FakeResponse()
+
+        import os
+        orig = os.environ.get("OR_EFFORT")
+        os.environ["OR_EFFORT"] = "  xhigh \n"
+        try:
+            res = or_dispatch("hello", model="meta/muse-spark-1.3-contributor", key="fake-key", opener=fake_opener)
+            self.assertTrue(res.ok)
+            data = json.loads(captured_req[0].data.decode("utf-8"))
+            self.assertEqual(data["reasoning"], {"effort": "xhigh"})
+        finally:
+            if orig is not None:
+                os.environ["OR_EFFORT"] = orig
+            else:
+                os.environ.pop("OR_EFFORT", None)
+
+    def test_or_dispatch_effort_invalid(self) -> None:
+        res = or_dispatch("hello", model="meta/muse-spark-1.3-contributor", effort="banana", key="fake-key")
+        self.assertFalse(res.ok)
+        self.assertIn("effort phải là một trong", res.error)
+
+    def test_or_dispatch_effort_none_omits(self) -> None:
+        captured_req = []
+
+        class FakeResponse:
+            def read(self) -> bytes:
+                return b'{"choices":[{"message":{"content":"hi"}}]}'
+
+        def fake_opener(req: any, timeout: int) -> FakeResponse:
+            captured_req.append(req)
+            return FakeResponse()
+
+        res = or_dispatch("hello", model="meta/muse-spark-1.3-contributor", effort="none", key="fake-key", opener=fake_opener)
+        self.assertTrue(res.ok)
+        data = json.loads(captured_req[0].data.decode("utf-8"))
+        self.assertNotIn("reasoning", data)
+
+    def test_run_vendor_openrouter_effort_wiring(self) -> None:
+        import lib.openrouter as oro
+        from lib.dispatcher import run_vendor
+        saved = oro.or_dispatch
+        captured = []
+
+        def fake_or_dispatch(prompt, model="auto", timeout=120, effort=None):
+            captured.append(effort)
+            return oro.ORResult(ok=True, text="mock-resp", served_model=model)
+
+        oro.or_dispatch = fake_or_dispatch
+        try:
+            res = run_vendor(vendor="openrouter", prompt="hi", model="meta/muse-spark-1.3-contributor", effort="xhigh")
+            self.assertEqual(res.status, "ok")
+            self.assertEqual(captured, ["xhigh"])
+        finally:
+            oro.or_dispatch = saved
 
 if __name__ == "__main__":
     unittest.main()
