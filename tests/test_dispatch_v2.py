@@ -201,8 +201,9 @@ class TestDispatchCLI:
         assert info["vendor"] == "codex"
         assert info["requested_model"] == "auto"
         # Đổi terra → 5.5 ngày 20/08 sau bench: cùng chất lượng (3/5 lỗi) mà
-        # tốn 246 reasoning tok thay vì 321-366.
-        assert info["resolved_model"] == "gpt-5.5"
+        # tốn 246 reasoning tok thay vì 321-366. 15/10/2026: gpt-5.5 bị 400 trên
+        # tài khoản ChatGPT → default gpt-6-luna.
+        assert info["resolved_model"] == "gpt-6-luna"
 
     def test_dump_config_dsh_auto_pro(self):
         """dsh auto phải resolve thành deepseek-v4-pro (KHÔNG phải flash)."""
