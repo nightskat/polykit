@@ -863,3 +863,9 @@ Live test 19/09 23:02: gọi grok **không** truyền `--timeout` → `ok`, 1391
 (với trần cũ 120s lượt này đã chết).
 
 **Còn lại**: bản CÀI (`~/.claude/plugins/cache/polykit/polykit/0.11.1`) chưa có bản vá cho tới khi release/cài lại.
+
+## 🐞 BUG — codex: danh sách model trong vendors.json lệch thực tế, chặn model đang chạy (19/10/2026)
+- Gặp: `dispatch.py codex gpt-6-sol` → `model 'gpt-6-sol' not in vendor 'codex' valid models` (list ghi gpt-5.6-*/gpt-5.5…, `default_model` = gpt-5.5).
+- Thực tế: thêm `--allow-unknown-model` thì `gpt-6-sol` chạy OK (review Setup.gs/pyc_shell.py, 10 finding). `~/.cache/cross-cli/state.json` lại ghi default `gpt-6.1-sol` → 3 nguồn (vendors.json, state.json, routing-summary) nói 3 kiểu.
+- Hậu quả: dispatch fail cứng ngay cổng validate dù vendor sống → người dùng tưởng codex chết.
+- Hướng sửa: lấy danh sách từ `state.json` (do watcher cập nhật) thay vì hard-code; model lạ → cảnh báo + chạy, không chặn. Chưa sửa.
