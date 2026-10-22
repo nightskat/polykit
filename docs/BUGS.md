@@ -9,7 +9,8 @@
 
 | Bug | Trạng thái | Mô tả |
 |---|---|---|
-| QUAN SÁT-3 | 🔴 MỞ | `dispatch.py` chưa có cổng chặn PII (`pg-redact check`) trước khi gửi stdin ra vendor |
+| QUAN SÁT-3 | 🔴 MỞ | Cổng PII: vision gate đã triển khai pending integration; text PII cũ (stdin) vẫn mở, chưa có cổng máy (CHƯA LIVE TEST) |
+| BUG (19/10) | ✅ ĐÃ SỬA | codex: danh sách model trong vendors.json lệch thực tế chặn gpt-6-sol (sửa theo code/test, CHƯA LIVE TEST) |
 | BUG-12 | ✅ ĐÃ SỬA | `--prompt "chữ"` bị argparse rút gọn thành `--prompt-file` → coi câu chữ là đường dẫn |
 | BUG-13 | ✅ ĐÃ SỬA | probe auth hỏng vì lý do không-phải-auth vẫn dán nhãn `auth_unverified` và VỨT stderr |
 | BUG-6 | 🔴 MỞ | **Chỉ còn `grok`** timeout rỗng khi sinh code (4/4). `dsh` đã gỡ oan 20/08: nó LÀM XONG, chỉ lâu hơn trần 600s |
@@ -81,12 +82,24 @@ mà không có vendor result thì báo `status=protocol_error`, `exit_code!=0`, 
 
 ### 🔴 QUAN SÁT-3 — không có cổng chặn PII
 
+> **Trạng thái**: 🔴 MỞ (không đóng toàn bộ bug). Chỉ cổng kiểm soát vision đã triển khai (pending integration); text PII cũ qua stdin vẫn mở.
+
 `dispatch.py` gửi thẳng stdin ra vendor, **không kiểm tra gì**. Luật lane PGBank bắt phải qua
 `pg-redact check` exit 0 trước khi gửi — nhưng chính `pg-redact` đang hỏng với văn xuôi
 (xem `~/Claude/Build/tools/pg-redact/BUGS_2026-08-18.md`), nên luật đó **không thi hành được**
 bằng máy, chỉ còn kỷ luật tay.
 ⇒ Nếu sau này vá pg-redact, đáng cân nhắc `dispatch --require-clean` gọi `pg-redact check`
 làm cổng cứng. **Chưa làm bây giờ** — luật 3 lần đau, đây mới là lần 1.
+
+**Cập nhật 22/10/2026 (Lane VISION)**:
+- Đã triển khai cổng bảo vệ Vision trong `bin/lib/vision.py` và `tests/test_vision.py`:
+  1. Kiểm tra MIME magic bytes thực tế (PNG, JPEG, PDF), không tin cậy đuôi mở rộng file đơn thuần.
+  2. Chặn tuyệt đối symlink và path traversal ra ngoài workspace root.
+  3. Áp dụng trần kích thước file (20MB) và chuyển đổi PDF nhiều trang qua `pdftoppm`.
+  4. Cổng an toàn sensitive: Dữ liệu nhạy cảm / sensitive vision mặc định bị chặn fail-closed (`status=blocked`, reason `vision_blocked`). Khi chưa có cơ chế UX consent đáng tin cậy từ Tuan mỗi lượt thì tuyệt đối không mở; không chấp nhận bất kỳ chuỗi string nào làm consent thay thế. Cam kết lưu trữ ZDR (Zero Data Retention) không thay thế các cổng an toàn.
+- **Tiến độ**: Cổng vision đã triển khai ở tầng module/chính sách, đang **PENDING INTEGRATION** vào live runner / UX.
+- **Phần văn bản (text PII cũ)**: Vẫn **MỞ** hoàn toàn — stdin và `--prompt-file` chưa có cổng kiểm tra hay redact tự động. Vì vậy **không đóng toàn bộ bug**.
+- **Đánh dấu**: **CHƯA LIVE TEST** — không bịa bằng chứng live test; điều phối sẽ chạy nghiệm thu và ghi báo cáo riêng.
 
 ### 🔴 BUG-6 — `grok` timeout rỗng khi sinh code (dsh đã GỠ OAN 20/08 chiều)
 
@@ -864,8 +877,12 @@ Live test 19/09 23:02: gọi grok **không** truyền `--timeout` → `ok`, 1391
 
 **Còn lại**: bản CÀI (`~/.claude/plugins/cache/polykit/polykit/0.11.1`) chưa có bản vá cho tới khi release/cài lại.
 
-## 🐞 BUG — codex: danh sách model trong vendors.json lệch thực tế, chặn model đang chạy (19/10/2026)
-- Gặp: `dispatch.py codex gpt-6-sol` → `model 'gpt-6-sol' not in vendor 'codex' valid models` (list ghi gpt-5.6-*/gpt-5.5…, `default_model` = gpt-5.5).
-- Thực tế: thêm `--allow-unknown-model` thì `gpt-6-sol` chạy OK (review Setup.gs/pyc_shell.py, 10 finding). `~/.cache/cross-cli/state.json` lại ghi default `gpt-6.1-sol` → 3 nguồn (vendors.json, state.json, routing-summary) nói 3 kiểu.
-- Hậu quả: dispatch fail cứng ngay cổng validate dù vendor sống → người dùng tưởng codex chết.
-- Hướng sửa: lấy danh sách từ `state.json` (do watcher cập nhật) thay vì hard-code; model lạ → cảnh báo + chạy, không chặn. Chưa sửa.
+### ✅ BUG — codex: danh sách model trong vendors.json lệch thực tế, chặn model đang chạy (sửa 22/10/2026)
+
+- **Triệu chứng (19/10/2026)**: `dispatch.py codex gpt-6-sol` → `model 'gpt-6-sol' not in vendor 'codex' valid models` (list hardcode ghi `gpt-5.6-*`/`gpt-5.5`, `default_model` = `gpt-5.5`).
+- **Thực tế**: thêm `--allow-unknown-model` thì `gpt-6-sol` chạy OK (review Setup.gs/pyc_shell.py, 10 finding). `~/.cache/cross-cli/state.json` lại ghi default `gpt-6.1-sol` → 3 nguồn (vendors.json, state.json, routing-summary) nói 3 kiểu. Hậu quả: dispatch fail cứng ngay cổng validate dù vendor sống → người dùng tưởng codex chết.
+- **Đã sửa theo code/test (22/10/2026 — commit 02cca19)**:
+  1. `config/vendors.json`: Đặt `models: null` cho codex, cập nhật `default_model` thành `gpt-6.1-sol`, `default_effort` thành `low`.
+  2. `bin/lib/model_policy.py` & `bin/lib/vendor_config.py`: Cơ chế kiểm tra model catalog chuyển thành **khuyến cáo (advisory)** thay vì whitelist cứng. Model chưa có trong catalog chỉ phát cảnh báo `warning: model '...' not found in known catalog for vendor '...'`, không chặn thực thi (trừ model vi phạm chính sách cấm như `*-contributor`).
+  3. Bằng chứng code/test: Kiểm chứng qua test suite (504 test trong `tests/test_vendor_resolver.py` và 816 test trong `tests/test_model_policy.py` xác minh phân giải selector, default `gpt-6.1-sol` low, và catalog advisory).
+- **Trạng thái**: **CHƯA LIVE TEST** — không bịa bằng chứng live test; điều phối sẽ chạy nghiệm thu live và ghi báo cáo riêng.

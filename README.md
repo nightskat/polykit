@@ -26,24 +26,34 @@ Chạy trực tiếp không qua Claude cũng được: `python3 bin/doctor.py`, 
 
 Các cờ mở rộng của `bin/dispatch.py`:
 - `--doctor`: Chạy lệnh `verify_cmd` cho vendor và in trạng thái.
-- `--allow-unknown-model`: Cho phép gọi các model không có mặt trong danh sách JSON.
+- `--allow-unknown-model`: Cho phép gọi các model không có mặt trong danh sách JSON (catalog advisory).
 - `--no-traps`: Ẩn các cảnh báo trap trên stderr.
 - `--dump-config`: In cấu hình vendor và thoát.
 - `--prompt-file <path>`: Đọc prompt từ file thay vì stdin — **bắt buộc dùng cho prompt dài,
   nhiều dòng, hoặc có dấu tiếng Việt**; `echo "..."` vỡ ở tầng shell.
+- `--profile <name>`: Chọn profile cấu hình vendor (vd: `glm-5.3-flash`, `kho`, `claude`).
+- `--provider <name>`: Chỉ định provider tường minh (vd: `opencode-go`).
+- `--effort <level>`: Chọn mức suy luận reasoning (`low`, `medium`, `high`, `max`...).
+- `-f, --file <path>`: Đính kèm file ảnh/PDF cho vision (lặp lại được: `-f a.png -f b.png`).
+- `--synthetic-vision`: Khai báo tường minh file đính kèm là dữ liệu tổng hợp / synthetic.
+- `--allow-sensitive-vision`: Cờ cho dữ liệu nhạy cảm (mặc định bị chặn fail-closed do chưa có UX consent mỗi lượt).
+- `--stream-diagnose`: Chạy vendor ở chế độ stream để bắt output khi timeout (BUG-6).
+- `--result-json`: Trả kết quả chuẩn hoá qua JSON (`status`, `served_model`, `exit_code`, `warnings`).
 
 ## Vendor — cài & auth
-Chạy `/polykit:doctor` bất cứ lúc nào để xem cái nào chưa sẵn sàng + lệnh auth cụ thể. PolyKit hỗ trợ 7 vendor: `agy, dsh, grok, codex, gemini, claude, openrouter`.
+Chạy `/polykit:doctor` bất cứ lúc nào để xem cái nào chưa sẵn sàng + lệnh auth cụ thể. PolyKit hỗ trợ các vendor và adapter: `agy, dsh, grok, codex, gemini, claude, openrouter, opencode, hermes`.
 
 | Vendor | Cách sẵn sàng | Guide |
 |---|---|---|
 | **Claude** | Đã auth sẵn qua Claude Code (host). | [docs/vendors/claude.md](docs/vendors/claude.md) |
-| **Codex** | Cài Codex CLI → `codex login`. | [docs/vendors/codex.md](docs/vendors/codex.md) |
+| **Codex** | Cài Codex CLI → `codex login`. Mặc định: `gpt-6.1-sol`, reasoning effort `low`. | [docs/vendors/codex.md](docs/vendors/codex.md) |
 | **Gemini** | Cài Gemini CLI → chạy `gemini` rồi `/auth`. Hoặc chỉ cần biến môi trường `GEMINI_API_KEY`. | [docs/vendors/gemini.md](docs/vendors/gemini.md) |
 | **Grok** | Cài Grok CLI → `grok` để auth. | [docs/vendors/grok.md](docs/vendors/grok.md) |
-| **Agy** | Cài Antigravity CLI → chạy `agy` để auth. | [docs/vendors/agy.md](docs/vendors/agy.md) |
-| **Dsh** (DeepSeek Harness) | Cài Dsh CLI → export `DEEPSEEK_API_KEY=...` trong môi trường (bắt buộc, ví dụ qua `~/.zshrc`). | [docs/vendors/dsh.md](docs/vendors/dsh.md) |
+| **Agy** | Cài Antigravity CLI → chạy `agy` để auth. Mặc định giữ nguyên: `gemini-3.8-flash-high`. | [docs/vendors/agy.md](docs/vendors/agy.md) |
+| **Dsh** (DeepSeek Harness) | Cài Dsh CLI → export `DEEPSEEK_API_KEY=...`. Mặc định: `deepseek-v4-pro`, reasoning effort `high`. | [docs/vendors/dsh.md](docs/vendors/dsh.md) |
 | **OpenRouter** | Ghi API key vào file `~/.config/openrouter/key` hoặc export `OPENROUTER_API_KEY`. | [docs/vendors/openrouter.md](docs/vendors/openrouter.md) |
+| **OpenCode** (Go adapter) | Adapter Go dùng provider `opencode-go`, chung quota group `opencode-go`. Mặc định `deepseek-v4.1-flash` (high), profile `glm-5.3-flash` (max). *(Hiện sandbox chưa verified → dispatch bị chặn `sandbox_unsupported`)* | [config/vendors.json](config/vendors.json) |
+| **Hermes** (Go adapter) | Adapter Go dùng provider `opencode-go`, chung quota group `opencode-go`. Mặc định `deepseek-v4.1-flash` (high), profile `glm-5.3-flash` (max). *(Hiện sandbox chưa verified → dispatch bị chặn `sandbox_unsupported`)* | [config/vendors.json](config/vendors.json) |
 
 ## Tuỳ biến JSON (config/vendors.json)
 Người dùng có thể thêm vendor mới bằng cách chỉnh sửa JSON schema với các trường:
@@ -63,6 +73,15 @@ Người dùng có thể thêm vendor mới bằng cách chỉnh sửa JSON sche
 - State (cache) tự sinh; xoá được, tự tạo lại.
 - **PII thật (tên/CIF/MST/số dư khách hàng) không rời Claude host** — muốn dispatch phải khử
   định danh trước. Chi tiết: `docs/CHIA-VIEC.md` §PII.
+- **Chính sách Model & Routing**:
+  - Model `*-contributor`: **Cấm tuyệt đối** trên mọi vendor/provider (nguy cơ train trên data), không cho bypass kể cả với `--allow-unknown-model`.
+  - Model `*-free`: **Chỉ cho phép chọn tường minh** (`explicit-only`); cấm tuyệt đối dùng làm default, auto router, hoặc failover.
+  - OpenRouter: Chặn các router generic chưa rõ đích (`auto`, `free`, `free-router`, `:free`) và model `:free` (`unresolved destination`).
+  - Catalog models: Mang tính chất **khuyến cáo (advisory)** cảnh báo khi model lạ, **không phải whitelist cứng** gây chặn oan model mới.
+- **Trạng thái Go Adapters & Vision (CHƯA LIVE TEST)**:
+  - Go adapters (`opencode`, `hermes`): Cùng provider `opencode-go`, quota group chung `opencode-go`. Hiện tại **sandbox chưa được kiểm chứng cách ly an toàn** (`no proven confinement`) → dispatch bị chặn fail-closed (`status=blocked`, reason `sandbox_unsupported`). Không nói Go dispatch/vision đang hoạt động.
+  - Cổng Vision: Dữ liệu nhạy cảm / sensitive vision mặc định **bị chặn** (`vision_blocked`). Chưa có cơ chế UX consent từ Tuan mỗi lượt thì không mở. Thỏa thuận ZDR (Zero Data Retention) **không thay thế** các cổng kiểm soát an toàn.
+  - Mọi đánh dấu hiện tại là **CHƯA LIVE TEST** — điều phối sẽ tự chạy nghiệm thu và ghi báo cáo riêng.
 - Docs không phải nguồn sự thật về model/version — `/polykit:doctor` mới là. Số trong docs chỉ
   là snapshot có ghi ngày.
 - **"Vendor được gọi" ≠ "vendor phục vụ".** Khi model thật khác model đã yêu cầu (router OR,
