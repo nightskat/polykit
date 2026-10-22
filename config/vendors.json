@@ -183,7 +183,7 @@
         "Không model nào bắt được lỗi NGHIỆP VỤ (bench 20/08: 0/8 lượt thấy lãi ngày âm và hệ số phạt 1.5 cứng). Dùng cho lỗi kỹ thuật, đừng giao phần domain"
       ],
       "vai": "Review code, phản biện có cấu trúc.",
-      "default_model_note": "Cập nhật 22/10/2026: gpt-6.1-sol low theo catalog kiểm chứng.",
+      "default_model_note": "22/10/2026: gpt-6.1-sol low theo catalog kiểm chứng (codex debug models). Lịch sử: 15/10 gpt-5.5/5.4/5.4-mini/gpt-6-terra bị 400 \"not supported when using ChatGPT account\" → tạm default gpt-6-luna (release 0.11.2); 20/08 bench 8 lượt: mọi model effort low đều tìm 3/5 lỗi — model không tạo khác biệt chất lượng.",
       "effort_flag": "-c model_reasoning_effort=<mức>  (KHÔNG có cờ --effort)",
       "effort_values": [
         "none",
