@@ -24,8 +24,10 @@ import io
 import json
 import os
 import random
+import struct
 import sys
 import time
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -63,22 +65,116 @@ MONO_FONT_CANDIDATES = [
     "C:/Windows/Fonts/cour.ttf",
 ]
 
+VIETNAMESE_TEST_CHARS = (
+    "Hóa đơn GTGT số 01234 (12.345) Đồng Việt Nam Cộng hòa Xã hội Chủ nghĩa Độc lập Tự do Hạnh phúc"
+)
+
+
+def _parse_cmap_subtable(data: bytes, cmap_offset: int) -> set[int]:
+    """Parse format 4 (standard BMP) and format 12 (UCS-4) subtables from TrueType cmap."""
+    codepoints: set[int] = set()
+    if cmap_offset + 4 > len(data):
+        return codepoints
+    subtables_count = struct.unpack(">H", data[cmap_offset + 2 : cmap_offset + 4])[0]
+    for s in range(subtables_count):
+        s_idx = cmap_offset + 4 + s * 8
+        if s_idx + 8 > len(data):
+            break
+        plat_id, enc_id, sub_off = struct.unpack(">HHI", data[s_idx : s_idx + 8])
+        sub_table = cmap_offset + sub_off
+        if sub_table + 2 > len(data):
+            continue
+        fmt = struct.unpack(">H", data[sub_table : sub_table + 2])[0]
+        if fmt == 4 and sub_table + 14 <= len(data):
+            seg_count = struct.unpack(">H", data[sub_table + 6 : sub_table + 8])[0] // 2
+            end_codes_start = sub_table + 14
+            end_codes_end = end_codes_start + seg_count * 2
+            start_codes_start = end_codes_end + 2
+            start_codes_end = start_codes_start + seg_count * 2
+            if start_codes_end <= len(data):
+                end_codes = struct.unpack(f">{seg_count}H", data[end_codes_start:end_codes_end])
+                start_codes = struct.unpack(f">{seg_count}H", data[start_codes_start:start_codes_end])
+                for start, end in zip(start_codes, end_codes):
+                    if start != 0xFFFF:
+                        for cp in range(start, end + 1):
+                            codepoints.add(cp)
+        elif fmt == 12 and sub_table + 16 <= len(data):
+            n_groups = struct.unpack(">I", data[sub_table + 12 : sub_table + 16])[0]
+            g_offset = sub_table + 16
+            for _ in range(n_groups):
+                if g_offset + 12 > len(data):
+                    break
+                start_cp, end_cp, _ = struct.unpack(">III", data[g_offset : g_offset + 12])
+                for cp in range(start_cp, end_cp + 1):
+                    codepoints.add(cp)
+                g_offset += 12
+    return codepoints
+
+
+def get_font_unicode_coverage(font_path: str) -> set[int]:
+    """Extract set of supported Unicode codepoints from TTF, OTF, or TTC font cmap table."""
+    try:
+        with open(font_path, "rb") as f:
+            data = f.read()
+    except Exception:
+        return set()
+
+    if len(data) < 12:
+        return set()
+
+    all_cps: set[int] = set()
+    if data[:4] == b"ttcf":
+        num_fonts = struct.unpack(">I", data[8:12])[0]
+        for f_idx in range(num_fonts):
+            font_offset = struct.unpack(">I", data[12 + f_idx * 4 : 16 + f_idx * 4])[0]
+            if font_offset + 12 <= len(data):
+                num_tables = struct.unpack(">H", data[font_offset + 4 : font_offset + 6])[0]
+                for i in range(num_tables):
+                    idx = font_offset + 12 + i * 16
+                    if idx + 16 <= len(data) and data[idx : idx + 4] == b"cmap":
+                        cmap_off = struct.unpack(">I", data[idx + 8 : idx + 12])[0]
+                        all_cps.update(_parse_cmap_subtable(data, cmap_off))
+                        break
+    else:
+        num_tables = struct.unpack(">H", data[4:6])[0]
+        for i in range(num_tables):
+            idx = 12 + i * 16
+            if idx + 16 <= len(data) and data[idx : idx + 4] == b"cmap":
+                cmap_off = struct.unpack(">I", data[idx + 8 : idx + 12])[0]
+                all_cps.update(_parse_cmap_subtable(data, cmap_off))
+                break
+    return all_cps
+
+
+def check_font_unicode_support(font_path: str, required_text: str = VIETNAMESE_TEST_CHARS) -> bool:
+    """Verify font file actually covers all required characters via cmap inspection.
+
+    Does NOT rely on getmask() since FreeType/PIL getmask does not verify glyph
+    existence (it maps unmapped glyphs to .notdef boxes without raising).
+    """
+    cps = get_font_unicode_coverage(font_path)
+    if not cps:
+        return False
+    return all(ord(c) in cps for c in set(required_text))
+
 
 def resolve_font(
     size: int = 16,
     prefer_mono: bool = False,
+    fail_if_no_unicode: bool = False,
 ) -> tuple[ImageFont.FreeTypeFont | ImageFont.ImageFont, str]:
-    """Resolve an available system font with fallback.
+    """Resolve an available system font with verified Unicode glyph support.
 
-    Returns the font object and the resolved font path/identifier.
+    Validates cmap tables directly to ensure Vietnamese characters are not replaced
+    with missing-glyph boxes. Emits a clear warning on fallback or fails when requested.
     """
     candidates = MONO_FONT_CANDIDATES if prefer_mono else FONT_CANDIDATES
     for path_str in candidates:
         if os.path.isfile(path_str):
             try:
+                if not check_font_unicode_support(path_str):
+                    continue
                 font = ImageFont.truetype(path_str, size)
-                # Quick test of Vietnamese diacritics
-                _ = font.getmask("Hóa đơn GTGT số 01234 (12.345)")
                 return font, path_str
             except Exception:
                 continue
@@ -88,17 +184,47 @@ def resolve_font(
         for path_str in FONT_CANDIDATES:
             if os.path.isfile(path_str):
                 try:
+                    if not check_font_unicode_support(path_str):
+                        continue
                     font = ImageFont.truetype(path_str, size)
-                    _ = font.getmask("Hóa đơn GTGT số 01234 (12.345)")
                     return font, path_str
                 except Exception:
                     continue
+
+    warn_msg = (
+        f"No font with verified Vietnamese Unicode glyph support found for "
+        f"{'mono' if prefer_mono else 'proportional'} font (size {size}). "
+        f"Falling back to PIL.default. Rendered text with Vietnamese diacritics "
+        f"may show distorted characters, boxes, or missing glyphs."
+    )
+    if fail_if_no_unicode:
+        raise RuntimeError(warn_msg)
+
+    warnings.warn(warn_msg, UserWarning, stacklevel=2)
+    sys.stderr.write(f"[WARN] {warn_msg}\n")
 
     # Final fallback: default PIL font
     try:
         return ImageFont.load_default(size=size), "PIL.default"
     except TypeError:
         return ImageFont.load_default(), "PIL.default"
+
+
+def parse_numeric_amount(val_str: str) -> int:
+    """Parse numeric integer value from Vietnamese formatted currency string.
+
+    Examples:
+      '1.234.567.890' -> 1234567890
+      '(12.345)'      -> -12345
+      '500.000.000'   -> 500000000
+    """
+    clean = val_str.strip()
+    is_neg = clean.startswith("(") and clean.endswith(")")
+    if is_neg:
+        clean = clean[1:-1]
+    digits = clean.replace(".", "").replace(" ", "").replace(",", "")
+    val = int(digits)
+    return -val if is_neg else val
 
 
 def compute_sha256(file_path: Path) -> str:
@@ -152,7 +278,7 @@ def render_page_1(font_path: str) -> tuple[Image.Image, list[dict[str, Any]]]:
     draw.text((80, y + 25), "Đơn vị tính: Đồng Việt Nam (VNĐ)", fill=(90, 90, 90), font=font_cell)
     y += 65
 
-    # Columns: STT (50), Mã (80), Chỉ tiêu (340), TM (50), Quý 1 (170), Quý 2 (170), Lũy kế (220)
+    # Columns: STT (60), Mã số (90), Chỉ tiêu (350), TM (50), Quý 1 (170), Quý 2 (170), Lũy kế (190)
     cols = [
         ("STT", 60),
         ("Mã số", 90),
@@ -164,9 +290,15 @@ def render_page_1(font_path: str) -> tuple[Image.Image, list[dict[str, Any]]]:
     ]
     table_x = 80
     row_height = 36
+    table_w = sum(w for _, w in cols)
+
+    # Validate table bounding box is strictly within page boundaries without cropping
+    assert table_x >= 0, "Table left margin must be non-negative"
+    assert table_x + table_w <= PAGE_WIDTH, (
+        f"Table bounding box overflows page width: {table_x + table_w} > {PAGE_WIDTH}"
+    )
 
     # Draw table header background
-    table_w = sum(w for _, w in cols)
     draw.rectangle([table_x, y, table_x + table_w, y + row_height], fill=(235, 240, 248), outline=(120, 140, 170))
 
     cur_x = table_x
@@ -191,50 +323,94 @@ def render_page_1(font_path: str) -> tuple[Image.Image, list[dict[str, Any]]]:
         ("12", "CT-12", "Tiền chi trả người cung cấp", "12", "810.400.000", "895.000.000", "1.705.400.000"),
     ]
 
+    cell_fields: list[dict[str, Any]] = []
+
     for idx, row in enumerate(rows):
+        r_num = idx + 1
         bg = (255, 255, 255) if idx % 2 == 0 else (248, 250, 253)
         draw.rectangle([table_x, y, table_x + table_w, y + row_height], fill=bg, outline=(200, 210, 225))
         cur_x = table_x
-        for col_idx, (val, (_, w)) in enumerate(zip(row, cols)):
+
+        for col_idx, (val, (col_name, w)) in enumerate(zip(row, cols)):
             is_num = col_idx >= 4
             cell_font = font_mono if (is_num or col_idx in (0, 1, 3)) else font_cell
+            c_num = col_idx + 1
+
+            # Bounding box check for cell text: ensure no cropping
+            t_box = cell_font.getbbox(val)
+            tw = t_box[2] - t_box[0]
+            assert 8 + tw <= w, (
+                f"Page 1 row {r_num} col {c_num} ({col_name}) text {val!r} width ({tw}px) exceeds column width ({w}px)"
+            )
+
             draw.text((cur_x + 8, y + 8), val, fill=(20, 20, 20), font=cell_font)
             draw.line([(cur_x + w, y), (cur_x + w, y + row_height)], fill=(200, 210, 225), width=1)
+
+            # Determine field type, stable ID, and name without answer leak
+            if col_idx == 0:
+                f_type = "code"
+                f_id = f"p1_r{r_num:02d}_c1"
+                f_name = f"STT hàng {r_num}"
+            elif col_idx == 1:
+                f_type = "code"
+                f_id = f"p1_r{r_num:02d}_c2"
+                f_name = f"Mã số hàng {r_num}"
+            elif col_idx == 2:
+                f_type = "text"
+                f_id = f"p1_r{r_num:02d}_c3"
+                f_name = f"Chỉ tiêu hàng {r_num}"
+            elif col_idx == 3:
+                f_type = "code"
+                f_id = f"p1_r{r_num:02d}_c4"
+                f_name = f"Thuyết minh hàng {r_num}"
+            elif col_idx == 4:
+                f_type = "amount"
+                # Preserve existing stable IDs for scorer
+                if r_num == 1:
+                    f_id = "p1_rev_q1"
+                    f_name = "Doanh thu bán hàng Quý 1"
+                elif r_num == 2:
+                    f_id = "p1_cogs_q1"
+                    f_name = "Giá vốn hàng bán Quý 1"
+                elif r_num == 3:
+                    f_id = "p1_gross_profit_q1"
+                    f_name = "Lợi nhuận gộp Quý 1"
+                else:
+                    f_id = f"p1_r{r_num:02d}_c5"
+                    f_name = f"{row[2]} Quý 1/2026"
+            elif col_idx == 5:
+                f_type = "amount"
+                f_id = f"p1_r{r_num:02d}_c6"
+                f_name = f"{row[2]} Quý 2/2026"
+            else:  # col_idx == 6
+                f_type = "amount"
+                f_id = f"p1_r{r_num:02d}_c7"
+                f_name = f"{row[2]} Lũy kế 2026"
+
+            field_dict: dict[str, Any] = {
+                "id": f_id,
+                "page": 1,
+                "document": "page_01_narrow_table.png",
+                "name": f_name,
+                "type": f_type,
+                "value": val,
+                "row": r_num,
+                "column": col_name,
+                "locator": f"Hàng {r_num}, Cột {c_num} ({col_name})",
+            }
+            if f_type == "amount":
+                field_dict["numeric_value"] = parse_numeric_amount(val)
+
+            cell_fields.append(field_dict)
             cur_x += w
+
         y += row_height
 
     # Footer note
     y += 30
     draw.text((80, y), "Ghi chú: Toàn bộ dữ liệu được lập trên cơ sở dồn tích giả định phục vụ kiểm chuẩn thị giác máy tính.", fill=(120, 120, 120), font=font_cell)
 
-    fields = [
-        {
-            "id": "p1_rev_q1",
-            "page": 1,
-            "document": "page_01_narrow_table.png",
-            "name": "Doanh thu bán hàng Quý 1",
-            "type": "amount",
-            "value": "1.234.567.890",
-            "numeric_value": 1234567890,
-        },
-        {
-            "id": "p1_cogs_q1",
-            "page": 1,
-            "document": "page_01_narrow_table.png",
-            "name": "Giá vốn hàng bán Quý 1",
-            "type": "amount",
-            "value": "890.123.456",
-            "numeric_value": 890123456,
-        },
-        {
-            "id": "p1_gross_profit_q1",
-            "page": 1,
-            "document": "page_01_narrow_table.png",
-            "name": "Lợi nhuận gộp Quý 1",
-            "type": "amount",
-            "value": "344.444.434",
-            "numeric_value": 344444434,
-        },
+    header_fields = [
         {
             "id": "p1_period_date",
             "page": 1,
@@ -252,7 +428,9 @@ def render_page_1(font_path: str) -> tuple[Image.Image, list[dict[str, Any]]]:
             "value": "BCTC-2026-NARROW",
         },
     ]
-    return im, fields
+
+    all_page_1_fields = header_fields + cell_fields
+    return im, all_page_1_fields
 
 
 # ==============================================================================
@@ -292,6 +470,12 @@ def render_page_2(font_path: str) -> tuple[Image.Image, list[dict[str, Any]]]:
     row_height = 38
     table_w = sum(w for _, w in cols)
 
+    # Validate table bounding box is strictly within page boundaries without cropping
+    assert table_x >= 0, "Table left margin must be non-negative"
+    assert table_x + table_w <= PAGE_WIDTH, (
+        f"Table bounding box overflows page width: {table_x + table_w} > {PAGE_WIDTH}"
+    )
+
     draw.rectangle([table_x, y, table_x + table_w, y + row_height], fill=(244, 238, 238), outline=(180, 140, 140))
     cur_x = table_x
     for name, w in cols:
@@ -312,47 +496,79 @@ def render_page_2(font_path: str) -> tuple[Image.Image, list[dict[str, Any]]]:
         ("1121", "Tiền gửi ngân hàng không kỳ hạn", "45.000.000", "(1.250.000)"),
     ]
 
+    cell_fields: list[dict[str, Any]] = []
+
     for idx, row in enumerate(rows):
+        r_num = idx + 1
         bg = (255, 255, 255) if idx % 2 == 0 else (253, 249, 249)
         draw.rectangle([table_x, y, table_x + table_w, y + row_height], fill=bg, outline=(225, 205, 205))
         cur_x = table_x
-        for col_idx, (val, (_, w)) in enumerate(zip(row, cols)):
+
+        for col_idx, (val, (col_name, w)) in enumerate(zip(row, cols)):
             is_neg = "(" in val and ")" in val
             color = (180, 20, 20) if is_neg else (20, 20, 20)
             cell_font = font_mono if col_idx in (0, 2, 3) else font_cell
+            c_num = col_idx + 1
+
+            # Bounding box check for cell text: ensure no cropping
+            t_box = cell_font.getbbox(val)
+            tw = t_box[2] - t_box[0]
+            assert 10 + tw <= w, (
+                f"Page 2 row {r_num} col {c_num} ({col_name}) text {val!r} width ({tw}px) exceeds column width ({w}px)"
+            )
+
             draw.text((cur_x + 10, y + 10), val, fill=color, font=cell_font)
             draw.line([(cur_x + w, y), (cur_x + w, y + row_height)], fill=(225, 205, 205), width=1)
+
+            # Determine field type, stable ID, and name without answer leak
+            if col_idx == 0:
+                f_type = "code"
+                f_id = f"p2_r{r_num:02d}_c1"
+                f_name = f"Mã tài khoản hàng {r_num}"
+            elif col_idx == 1:
+                f_type = "text"
+                f_id = f"p2_r{r_num:02d}_c2"
+                f_name = f"Khoản mục kế toán hàng {r_num}"
+            elif col_idx == 2:
+                f_type = "amount"
+                f_id = f"p2_r{r_num:02d}_c3"
+                f_name = f"{row[1]} - Số đầu năm"
+            else:  # col_idx == 3
+                f_type = "amount"
+                # Preserve existing stable IDs for scorer
+                if r_num == 1:
+                    f_id = "p2_loss_carried"
+                    f_name = "Lợi nhuận sau thuế chưa phân phối (âm)"
+                elif r_num == 2:
+                    f_id = "p2_cashflow_neg"
+                    f_name = "Lưu chuyển tiền thuần kinh doanh (âm)"
+                elif r_num == 3:
+                    f_id = "p2_reserve_neg"
+                    f_name = "Dự phòng tổn thất tài chính (âm)"
+                else:
+                    f_id = f"p2_r{r_num:02d}_c4"
+                    f_name = f"{row[1]} - Số cuối Quý 3/2026"
+
+            field_dict: dict[str, Any] = {
+                "id": f_id,
+                "page": 2,
+                "document": "page_02_negative_numbers.png",
+                "name": f_name,
+                "type": f_type,
+                "value": val,
+                "row": r_num,
+                "column": col_name,
+                "locator": f"Hàng {r_num}, Cột {c_num} ({col_name})",
+            }
+            if f_type == "amount":
+                field_dict["numeric_value"] = parse_numeric_amount(val)
+
+            cell_fields.append(field_dict)
             cur_x += w
+
         y += row_height
 
-    fields = [
-        {
-            "id": "p2_loss_carried",
-            "page": 2,
-            "document": "page_02_negative_numbers.png",
-            "name": "Lợi nhuận sau thuế chưa phân phối (âm)",
-            "type": "amount",
-            "value": "(12.345)",
-            "numeric_value": -12345,
-        },
-        {
-            "id": "p2_cashflow_neg",
-            "page": 2,
-            "document": "page_02_negative_numbers.png",
-            "name": "Lưu chuyển tiền thuần kinh doanh (âm)",
-            "type": "amount",
-            "value": "(98.765.432)",
-            "numeric_value": -98765432,
-        },
-        {
-            "id": "p2_reserve_neg",
-            "page": 2,
-            "document": "page_02_negative_numbers.png",
-            "name": "Dự phòng tổn thất tài chính (âm)",
-            "type": "amount",
-            "value": "(15.500.000)",
-            "numeric_value": -15500000,
-        },
+    header_fields = [
         {
             "id": "p2_balance_date",
             "page": 2,
@@ -370,7 +586,9 @@ def render_page_2(font_path: str) -> tuple[Image.Image, list[dict[str, Any]]]:
             "value": "BC-AM-4212",
         },
     ]
-    return im, fields
+
+    all_page_2_fields = header_fields + cell_fields
+    return im, all_page_2_fields
 
 
 # ==============================================================================
@@ -399,39 +617,39 @@ def render_page_3(font_path: str) -> tuple[Image.Image, list[dict[str, Any]]]:
     draw.text((PAGE_WIDTH - 420, y), "Mục tiêu: Đánh giá phân biệt 0/O 1/l 5/6/8 2026/2006", fill=(100, 100, 100), font=font_cell)
     y += 50
 
-    # Draw informative section boxes
+    # Draw code boxes: NO deciphering notes, codes appear exactly ONCE each on page
     items = [
-        ("Mã hợp đồng điện tử mới (năm 2026):", "HD-2026-O0l1586B", "Chứa O hoa, 0 số, l thường, 1 số, 5, 8, 6, B hoa"),
-        ("Mã tham chiếu hồ sơ cũ (năm 2006):", "REF-2006-0Ol1", "So sánh đối lập trực tiếp năm 2006 với 2026"),
-        ("Số xê-ri thiết bị kiểm định:", "SERIES-8568-2006", "Tổ hợp số 8, 5, 6, 8 và mốc 2006"),
-        ("Mã chứng từ phụ thuộc:", "VOUCHER-1l0O-2026", "Tổ hợp 1 số, l thường, 0 số, O hoa"),
-        ("Số tiền phí đối soát dịch vụ:", "8.568.015 VNĐ", "Bộ số 8, 5, 6, 8, 0, 1, 5"),
+        ("Mã hợp đồng điện tử mới (năm 2026):", "HD-2026-O0l1586B"),
+        ("Mã tham chiếu hồ sơ cũ (năm 2006):", "REF-2006-0Ol1"),
+        ("Số xê-ri thiết bị kiểm định:", "SERIES-8568-2006"),
+        ("Mã chứng từ phụ thuộc:", "VOUCHER-1l0O-2026"),
+        ("Số tiền phí đối soát dịch vụ:", "8.568.015 VNĐ"),
     ]
 
-    for label, code_val, note in items:
-        draw.rectangle([80, y, PAGE_WIDTH - 80, y + 90], fill=(250, 250, 252), outline=(210, 215, 230))
+    for label, code_val in items:
+        draw.rectangle([80, y, PAGE_WIDTH - 80, y + 80], fill=(250, 250, 252), outline=(210, 215, 230))
         draw.text((100, y + 15), label, fill=(50, 50, 70), font=font_cell)
         draw.text((100, y + 45), code_val, fill=(10, 20, 60), font=font_mono)
-        draw.text((PAGE_WIDTH - 500, y + 45), f"({note})", fill=(120, 120, 140), font=font_cell)
-        y += 110
+        y += 100
 
-    # Add explanatory table
-    draw.text((80, y), "Bảng chi tiết phân tích lỗi quang học thường gặp:", fill=(30, 30, 30), font=font_header)
+    # Operational audit notes: generic verification guidelines without repeating codes or ASCII decoding notes
+    draw.text((80, y), "Quy chuẩn đối soát kỹ thuật số:", fill=(30, 30, 30), font=font_header)
     y += 35
 
     draw.rectangle([80, y, PAGE_WIDTH - 80, y + 160], fill=(255, 255, 255), outline=(180, 180, 180))
-    draw.text((100, y + 15), "1. Phân biệt chữ O hoa (ASCII 79) và số 0 (ASCII 48): Cặp O0 trong 'HD-2026-O0l1586B'", fill=(40, 40, 40), font=font_cell)
-    draw.text((100, y + 45), "2. Phân biệt chữ l thường (ASCII 108) và số 1 (ASCII 49): Cặp l1 trong 'HD-2026-O0l1586B'", fill=(40, 40, 40), font=font_cell)
-    draw.text((100, y + 75), "3. Phân biệt các số cong khép kín 5, 6, 8: Chuỗi 586 và 8568", fill=(40, 40, 40), font=font_cell)
-    draw.text((100, y + 105), "4. Phân biệt năm tài chính 2026 và 2006 trong cùng ngữ cảnh hồ sơ lưu chuyển", fill=(40, 40, 40), font=font_cell)
-    draw.text((100, y + 135), "5. Dữ liệu đối soát hoàn toàn được sinh ngẫu nhiên có kiểm soát (deterministic)", fill=(100, 100, 100), font=font_cell)
+    draw.text((100, y + 15), "1. Yêu cầu hệ thống OCR/Vision trích xuất chính xác từng ký tự quang học.", fill=(40, 40, 40), font=font_cell)
+    draw.text((100, y + 45), "2. Không áp dụng thuật toán tự sửa lỗi (autocorrect) đối với các chuỗi định danh.", fill=(40, 40, 40), font=font_cell)
+    draw.text((100, y + 75), "3. Kiểm tra tính toàn vẹn của mã số trên cơ sở so khớp từng ký tự độc lập.", fill=(40, 40, 40), font=font_cell)
+    draw.text((100, y + 105), "4. Phân biệt rõ năm tài chính 2026 và 2006 theo ngữ cảnh từng chứng từ lưu trữ.", fill=(40, 40, 40), font=font_cell)
+    draw.text((100, y + 135), "5. Dữ liệu đối soát hoàn toàn được sinh ngẫu nhiên có kiểm soát (deterministic).", fill=(100, 100, 100), font=font_cell)
 
+    # Fields: remove answer leak from names (e.g. O0l1586B, 8568)
     fields = [
         {
             "id": "p3_contract_code",
             "page": 3,
             "document": "page_03_confusing_chars.png",
-            "name": "Mã hợp đồng chứa O0l1586B",
+            "name": "Mã hợp đồng điện tử mới (năm 2026)",
             "type": "code",
             "value": "HD-2026-O0l1586B",
         },
@@ -439,7 +657,7 @@ def render_page_3(font_path: str) -> tuple[Image.Image, list[dict[str, Any]]]:
             "id": "p3_ref_code_2006",
             "page": 3,
             "document": "page_03_confusing_chars.png",
-            "name": "Mã tham chiếu hồ sơ năm 2006",
+            "name": "Mã tham chiếu hồ sơ cũ (năm 2006)",
             "type": "code",
             "value": "REF-2006-0Ol1",
         },
@@ -447,7 +665,7 @@ def render_page_3(font_path: str) -> tuple[Image.Image, list[dict[str, Any]]]:
             "id": "p3_serial_code",
             "page": 3,
             "document": "page_03_confusing_chars.png",
-            "name": "Số xê-ri thiết bị chứa 8568",
+            "name": "Số xê-ri thiết bị kiểm định",
             "type": "code",
             "value": "SERIES-8568-2006",
         },
@@ -469,6 +687,7 @@ def render_page_3(font_path: str) -> tuple[Image.Image, list[dict[str, Any]]]:
             "numeric_value": 8568015,
         },
     ]
+    return im, fields
     return im, fields
 
 
@@ -798,7 +1017,7 @@ def render_page_6(font_path: str) -> tuple[Image.Image, list[dict[str, Any]]]:
             "document": "page_06_multipage_p2.png",
             "name": "Tiêu đề điều khoản thanh toán",
             "type": "text",
-            "value": "Giá trị và phương thức thanh toán",
+            "value": "GIÁ TRỊ VÀ PHƯƠNG THỨC THANH TOÁN",
         },
     ]
     return im, fields
