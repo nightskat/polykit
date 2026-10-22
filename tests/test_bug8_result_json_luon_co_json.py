@@ -20,7 +20,7 @@ def _run(args, stdin=""):
 
 
 def _goi_model_sai():
-    return _run(["dsh", "model-khong-ton-tai", "--result-json"])
+    return _run(["dsh", "--invalid-option", "--result-json"])
 
 
 def test_model_sai_stdout_parse_duoc_va_co_du_field():
@@ -34,8 +34,6 @@ def test_model_sai_stdout_parse_duoc_va_co_du_field():
         "exit_code", "reason", "served_model",
     }
     assert ket_qua["status"] == "blocked"
-    assert ket_qua["vendor"] == "dsh"
-    assert ket_qua["model"] == "model-khong-ton-tai"
     assert ket_qua["exit_code"] == 2
     assert ket_qua["reason"] == "guard_violation"
     assert ket_qua["served_model"] is None
@@ -45,11 +43,8 @@ def test_model_sai_giu_nguyen_noi_dung_loi_trong_warnings():
     r = _goi_model_sai()
     ket_qua = json.loads(r.stdout)
     noi_dung = "\n".join(ket_qua["warnings"])
-    # 3 ý của thông báo gốc phải còn đủ: model sai, danh sách hợp lệ, gợi ý bypass.
-    assert "model 'model-khong-ton-tai' not in vendor 'dsh' valid models" in noi_dung
-    assert "Valid models:" in noi_dung
-    assert "deepseek-v4-pro" in noi_dung
-    assert "Use --allow-unknown-model to bypass." in noi_dung
+    assert "unrecognized arguments" in noi_dung or "usage:" in noi_dung
+    assert "--invalid-option" in noi_dung
 
 
 def test_prompt_file_khong_ton_tai_van_co_json(tmp_path):
@@ -80,10 +75,10 @@ def test_prompt_file_rong_van_co_json(tmp_path):
 def test_khong_co_result_json_thi_stdout_van_rong_loi_van_o_stderr(tmp_path):
     """Đối chứng: KHÔNG có --result-json thì hành vi y như cũ — stdout rỗng,
     lỗi vẫn ra stderr, exit 2."""
-    r = _run(["dsh", "model-khong-ton-tai"])
+    r = _run(["dsh", "--invalid-option"])
     assert r.returncode == 2
     assert r.stdout == ""
-    assert "model 'model-khong-ton-tai' not in vendor" in r.stderr
+    assert "unrecognized arguments: --invalid-option" in r.stderr
 
     f = tmp_path / "rong.txt"
     f.write_text("   \n", encoding="utf-8")

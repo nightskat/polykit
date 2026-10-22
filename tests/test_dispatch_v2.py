@@ -42,16 +42,18 @@ class TestVendorConfig:
             assert v in names, f"vendor '{v}' missing from vendor_names()"
 
     def test_vendor_names_no_hardcode_old_list(self):
-        """choices phải sinh từ JSON, không phải [gemini, codex, claude, grok, agy, openrouter]."""
-        names = vendor_names()
+        """choices phải sinh từ JSON, so với tập vendors trong cfg chứ không hardcode."""
+        cfg = load_vendor_config()
+        names = vendor_names(cfg)
         assert "dsh" in names
         assert "claude" in names
-        assert len(names) == 6  # v2 JSON has 6 vendors
+        assert len(names) == len(cfg.get("vendors", {}))
+        assert set(names) == set(cfg.get("vendors", {}).keys())
 
     def test_default_model_dsh(self):
         dm = default_model("dsh")
-        # vendors.json ghi deepseek-v4-flash nhưng dispatch override ra pro
-        assert dm == "deepseek-v4-flash"
+        # Cập nhật default dsh -> deepseek-v4-pro
+        assert dm == "deepseek-v4-pro"
 
     def test_default_model_chua_kiem_returns_none(self):
         """Gemini có default_model = CHUA_KIEM → trả None."""
@@ -202,9 +204,8 @@ class TestDispatchCLI:
         info = json.loads(res.stdout)
         assert info["vendor"] == "codex"
         assert info["requested_model"] == "auto"
-        # Đổi terra → 5.5 ngày 20/08 sau bench: cùng chất lượng (3/5 lỗi) mà
-        # tốn 246 reasoning tok thay vì 321-366.
-        assert info["resolved_model"] == "gpt-5.5"
+        # Cập nhật default codex -> gpt-6.1-sol
+        assert info["resolved_model"] == "gpt-6.1-sol"
 
     def test_dump_config_dsh_auto_pro(self):
         """dsh auto phải resolve thành deepseek-v4-pro (KHÔNG phải flash)."""
@@ -310,14 +311,16 @@ class TestVong2:
         assert "fakebin run 'hello world' < /dev/null" in cmd_str
 
     def test_reject_fake_model(self):
-        """4. Model bịa phải bị từ chối exit 2."""
+        """4. Catalog advisory: model unknown hợp grammar được phép trong dump-config kèm warning."""
         res = subprocess.run(
             [sys.executable, "bin/dispatch.py", "dsh", "totally-fake-model", "--dump-config"],
             capture_output=True, text=True,
             cwd=str(Path(__file__).parent.parent),
         )
-        assert res.returncode == 2
-        assert "error: model 'totally-fake-model' not in vendor" in res.stderr
+        assert res.returncode == 0
+        assert "warning: model list for vendor 'dsh' is unknown" in res.stderr
+        info = json.loads(res.stdout)
+        assert info["resolved_model"] == "totally-fake-model"
 
     def test_allow_unknown_model(self):
         """4. --allow-unknown-model cho phép bypass."""

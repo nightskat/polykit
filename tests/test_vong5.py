@@ -17,14 +17,14 @@ def test_vendor_chua_biet_danh_sach_model_dump_config_exit_0():
         assert "warning: model list for vendor" in res.stderr
 
 def test_vendor_da_biet_danh_sach_slug_sai_exit_2():
-    """Vendor đã biết danh sách (`dsh`, `agy`, `codex`, `grok`) + slug sai -> exit 2."""
+    """Catalog advisory: model unknown hợp grammar được phép trong dump-config kèm warning."""
     for vendor in ["dsh", "agy", "codex", "grok"]:
         res = subprocess.run(
             [sys.executable, "bin/dispatch.py", vendor, "fake-model", "--dump-config"],
             capture_output=True, text=True, cwd=str(Path(__file__).parent.parent)
         )
-        assert res.returncode == 2, f"Expected 2 for {vendor}, got {res.returncode}. Stderr: {res.stderr}"
-        assert f"error: model 'fake-model' not in vendor '{vendor}'" in res.stderr
+        assert res.returncode == 0, f"Expected 0 for {vendor}, got {res.returncode}. Stderr: {res.stderr}"
+        assert "warning: model list for vendor" in res.stderr
 
 def test_models_sai_dang_bao_loi_ro():
     """`models` sai dạng (`dict`, `str`) -> báo lỗi rõ, không im."""
