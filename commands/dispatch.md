@@ -21,7 +21,7 @@ Parse `$ARGUMENTS`: token đầu = vendor, phần sau `--` = prompt (mặc đị
 - `--effort <level>`: Chọn reasoning effort (`low`, `medium`, `high`, `max`...).
 - `-f, --file <path>`: Đính kèm file ảnh/PDF cho vision (lặp lại được: `-f a.png -f b.png`).
 - `--synthetic-vision`: Khai báo tường minh file đính kèm là dữ liệu tổng hợp / synthetic.
-- `--allow-sensitive-vision`: Cờ cho dữ liệu nhạy cảm (mặc định bị chặn do chưa có UX consent mỗi lượt).
+- `--allow-sensitive-vision`: Cờ cho dữ liệu nhạy cảm (mặc định bị chặn do trustedUI chưa hỗ trợ xác nhận mỗi lượt).
 - `--prompt-file <path>`: Đọc prompt từ file thay vì stdin (bắt buộc cho prompt dài/đa dòng/có dấu).
 - `--result-json`: Trả về kết quả JSON đầy đủ (`status`, `served_model`, `exit_code`, `warnings`).
 - `--stream-diagnose`: Chạy vendor ở chế độ stream để bắt output khi timeout (BUG-6).
@@ -30,15 +30,16 @@ Parse `$ARGUMENTS`: token đầu = vendor, phần sau `--` = prompt (mặc đị
 - `--allow-unknown-model`: Cho phép gọi model chưa có trong catalog JSON (catalog mang tính advisory).
 - `--no-traps`: Ẩn cảnh báo trap trên stderr.
 
-## ⚠️ Trạng thái Go Dispatch & Vision (CHƯA LIVE TEST)
-- **Go adapters (`opencode`, `hermes`)**: Hiện tại sandbox **chưa được kiểm chứng cách ly an toàn** (`no proven confinement`) → dispatch bị chặn fail-closed ngay cổng với `status=blocked`, reason `sandbox_unsupported`. **Không nói Go dispatch hay vision đang hoạt động.**
-- **Cổng Vision**: Dữ liệu nhạy cảm / sensitive vision mặc định **bị chặn** (`vision_blocked`). Chưa có cơ chế UX consent từ Tuan mỗi lượt thì **không mở**. Cam kết lưu trữ ZDR (Zero Data Retention) **không thay thế** các cổng an toàn.
+## ⚠️ Trạng thái Go Dispatch & Vision (CHƯA OPERATIONAL — CHƯA LIVE TEST)
+- **Go adapters (`opencode`, `hermes`) & Vision**: Vẫn **bị chặn (blocked), chưa operational**. Cổng kiểm soát an toàn (gate) đã được tích hợp cả ở CLI và lib, không còn pending integration.
+  - Go sandbox chưa được kiểm chứng cách ly an toàn (`no proven confinement`) → dispatch bị chặn fail-closed ngay cổng với `status=blocked`, reason `sandbox_unsupported`. **Không nói Go dispatch hay vision đang hoạt động.**
+  - Cổng Vision: Dữ liệu nhạy cảm / sensitive vision mặc định **bị chặn** (`vision_blocked`) do **trustedUI chưa hỗ trợ** xác nhận mỗi lượt. Cam kết lưu trữ ZDR (Zero Data Retention) **không thay thế** các cổng an toàn.
 - **Chính sách Model & Routing**:
   - Model `*-contributor`: **Cấm tuyệt đối** trên mọi vendor (nguy cơ train trên dữ liệu), không cho bypass.
   - Model `*-free`: **Chỉ cho phép khi chọn tường minh** (`explicit-only`); cấm tuyệt đối dùng làm default, auto router, hoặc failover.
   - OpenRouter: Chặn các router generic chưa rõ đích (`auto`, `free`, `free-router`, `:free`) và model `:free` (`unresolved destination`).
   - Catalog models: Mang tính chất **khuyến cáo (advisory)**, không phải whitelist cứng chặn oan model mới.
-- *Ghi chú nghiệm thu*: Mọi mục trên hiện là **CHƯA LIVE TEST**; điều phối sẽ ghi báo cáo nghiệm thu riêng.
+- *Ghi chú nghiệm thu*: Các live test với vendor thật **CHƯA chạy lúc này** nên không tự điền kết quả; trỏ `docs/plans/BAO-CAO-2026-10-22.md` cho kết quả cuối (điều phối sẽ ghi).
 
 ## Prompt NGẮN, một dòng → stdin
 ```
@@ -53,11 +54,14 @@ python3 "${CLAUDE_PLUGIN_ROOT}/bin/dispatch.py" <vendor> [model] --prompt-file <
 ```
 File không đọc được hoặc rỗng → exit 2, chặn trước khi gọi vendor.
 
-## Đọc kết quả
+## Đọc kết quả & Bằng chứng Model Phục vụ (`served_model`)
 Nguồn chính thức là `--result-json`: `status`, `served_model`, `exit_code`, `warnings`.
-Dòng `[polykit] served: <model>` chỉ ra stderr **khi model thật KHÁC model đã yêu cầu**
-(router OpenRouter, lane `agy`, `gemini auto`). Trùng nhau thì im lặng — đó là **hành vi đúng**,
-không phải lỗi mất dấu vết.
+
+- **Nguyên tắc xác thực bằng chứng (`evidence`)**:
+  - Khi output là plaintext hoặc không có trusted envelope (chạy CLI subprocess như agy, gemini CLI, codex, dsh), `served_model = None` (`null` trong JSON). Việc ghim model tường minh (`explicit pin` trên argv/CLI) **KHÔNG chứng minh** model thực tế đã phục vụ.
+  - JSON do assistant (model completion) tự sinh trong văn bản trả về chứa `model`/`modelVersion` **không phải metadata tin cậy**.
+  - **Chỉ có** trường `model` từ HTTP response của OpenRouter hoặc top-level `modelVersion` từ Gemini API response envelope mới được công nhận là bằng chứng xác thực (`evidence`).
+- Dòng `[polykit] served: <model>` chỉ in ra stderr khi có evidence xác nhận model thật **KHÁC** model đã yêu cầu (ví dụ router OpenRouter trả về model cụ thể khác slug yêu cầu). Khi trùng nhau hoặc khi không có trusted envelope (`served_model=None`), dòng này không in ra.
 
 ⚠️ Mã thoát của vendor CLI không đáng tin. Nghiệm thu bằng nội dung/kích thước kết quả,
 và bằng **dấu vết phụ** (file nó bảo đã ghi có thật không, chạy lại có ra đúng số không).
