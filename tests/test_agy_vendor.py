@@ -164,7 +164,8 @@ def test_catalog_in_ra_stderr_van_doc_duoc():
 
 
 def test_auto_chon_tu_catalog_live_khi_default_bien_mat():
-    # Codex review P1: catalog đổi mùa mà `auto` vẫn ghim slug cũ thì dispatch gãy.
+    # Migration theo plan mới: agy auto KHÔNG chọn catalog arbitrary
+    # -> assert pin configured gemini3.8, served_model unknown không bịa.
     future = "gemini-4.0-flash-medium\nclaude-sonnet-9\n"
     seen = {}
 
@@ -177,8 +178,10 @@ def test_auto_chon_tu_catalog_live_khi_default_bien_mat():
                          spec, which=lambda b: "/usr/local/bin/agy",
                          runner=lambda c, **k: _Res(0, "1.1.10") if "--version" in c
                          else _Res(0, future)))
-    assert res.served_model == "gemini-4.0-flash-medium"
-    assert AGY_DEFAULT_MODEL not in seen["cmd"]
+    assert res.served_model == AGY_DEFAULT_MODEL
+    assert AGY_DEFAULT_MODEL in seen["cmd"]
+    assert any("không xác nhận model thực" in w for w in res.warnings)
+    assert any("agy catalog live không chứa default đã duyệt" in w for w in res.warnings)
 
 
 def test_snapshot_tu_choi_ghi_de_file_khong_phai_may_sinh(tmp_path):

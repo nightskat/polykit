@@ -51,26 +51,30 @@ def fake_vendors(monkeypatch):
                     "binary": "true",
                     "headless": "true",
                     "model_flag": None,
-                    "models": []
+                    "default_model": "test-model-v1",
+                    "models": ["test-model-v1"],
                 },
                 "fakevendor_with_flag": {
                     "binary": "fakebin",
                     "headless": "fakebin run '<prompt>' < /dev/null",
                     "model_flag": "--model",
-                    "models": ["fake-model", "fake-4.6"]
-                }
-            }
+                    "default_model": "test-model-v1",
+                    "models": ["test-model-v1", "fake-model", "fake-4.6"],
+                },
+            },
         }
     
     modules_to_patch = []
-    if "lib.vendor_config" in sys.modules:
-        modules_to_patch.append(sys.modules["lib.vendor_config"])
-    if "bin.lib.vendor_config" in sys.modules:
-        modules_to_patch.append(sys.modules["bin.lib.vendor_config"])
-    if "dispatch" in sys.modules:
-        modules_to_patch.append(sys.modules["dispatch"])
-    if "bin.dispatch" in sys.modules:
-        modules_to_patch.append(sys.modules["bin.dispatch"])
+    for mod_name in [
+        "lib.vendor_config",
+        "bin.lib.vendor_config",
+        "lib.dispatcher",
+        "bin.lib.dispatcher",
+        "dispatch",
+        "bin.dispatch",
+    ]:
+        if mod_name in sys.modules:
+            modules_to_patch.append(sys.modules[mod_name])
         
     for mod in modules_to_patch:
         if hasattr(mod, "load_vendor_config"):
@@ -79,3 +83,6 @@ def fake_vendors(monkeypatch):
     yield
     if hasattr(vc.load_vendor_config, "cache_clear"):
         vc.load_vendor_config.cache_clear()
+    for mod in modules_to_patch:
+        if hasattr(mod, "load_vendor_config") and hasattr(mod.load_vendor_config, "cache_clear"):
+            mod.load_vendor_config.cache_clear()

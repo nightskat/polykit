@@ -8,6 +8,10 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+repo_root = Path(__file__).resolve().parent.parent
+if str(repo_root) not in sys.path:
+    sys.path.insert(0, str(repo_root))
+
 import pytest
 
 from lib.vendor_config import (
@@ -261,6 +265,56 @@ class TestDispatchCLI:
 
 # ─── VÒNG 2 FIXES ───
 
+@pytest.fixture
+def fake_vendors(monkeypatch):
+    """Dynamic fakevendor fixture khai default_model cho auto pin, có model_flag và no_flag."""
+    import lib.vendor_config as vc
+    import lib.dispatcher as dsp
+    if hasattr(vc.load_vendor_config, "cache_clear"):
+        vc.load_vendor_config.cache_clear()
+
+    def fake_load(*args, **kwargs):
+        return {
+            "schema_version": 3,
+            "vendors": {
+                "fakevendor_no_flag": {
+                    "binary": "true",
+                    "headless": "true",
+                    "model_flag": None,
+                    "default_model": "fake-model",
+                    "models": ["fake-model"],
+                },
+                "fakevendor_with_flag": {
+                    "binary": "fakebin",
+                    "headless": "fakebin run '<prompt>' < /dev/null",
+                    "model_flag": "--model",
+                    "default_model": "fake-model",
+                    "models": ["fake-model", "fake-4.6"],
+                },
+            },
+        }
+
+    for mod in [vc, dsp]:
+        if hasattr(mod, "load_vendor_config"):
+            monkeypatch.setattr(mod, "load_vendor_config", fake_load)
+
+    for mod_name in (
+        "lib.vendor_config",
+        "bin.lib.vendor_config",
+        "dispatch",
+        "bin.dispatch",
+        "lib.dispatcher",
+        "bin.lib.dispatcher",
+    ):
+        m = sys.modules.get(mod_name)
+        if m and hasattr(m, "load_vendor_config"):
+            monkeypatch.setattr(m, "load_vendor_config", fake_load)
+
+    yield
+    if hasattr(vc.load_vendor_config, "cache_clear"):
+        vc.load_vendor_config.cache_clear()
+
+
 class TestVong2:
     def test_doctor_exit_nonzero(self):
         """1. --doctor phải không nuốt lỗi, trả exit code khác 0."""
@@ -275,15 +329,16 @@ class TestVong2:
             assert e.value.code == 2
 
     def test_openrouter_in_choices(self):
-        """2. openrouter phải nằm trong choices dù không có trong JSON."""
+        """2. openrouter phải nằm trong choices; OR auto blocked thì test choices dùng concrete paid org/model để tách policy khỏi choices."""
         res = subprocess.run(
-            [sys.executable, "bin/dispatch.py", "openrouter", "--dump-config"],
+            [sys.executable, "bin/dispatch.py", "openrouter", "openai/gpt-4o", "--dump-config"],
             capture_output=True, text=True,
             cwd=str(Path(__file__).parent.parent),
         )
         assert res.returncode == 0
         info = json.loads(res.stdout)
         assert info["vendor"] == "openrouter"
+        assert info["resolved_model"] == "openai/gpt-4o"
 
     def test_dynamic_vendor_from_json(self, fake_vendors):
         """3. Vendor giả phải dùng lệnh từ JSON (headless)."""
@@ -311,16 +366,21 @@ class TestVong2:
         assert "fakebin run 'hello world' < /dev/null" in cmd_str
 
     def test_reject_fake_model(self):
-        """4. Catalog advisory: model unknown hợp grammar được phép trong dump-config kèm warning."""
+        """4. Catalog advisory: model unknown hợp grammar được phép trong dump-config (catalog null không ép warning unknown list; injected catalog thật missing cần warning)."""
         res = subprocess.run(
             [sys.executable, "bin/dispatch.py", "dsh", "totally-fake-model", "--dump-config"],
             capture_output=True, text=True,
             cwd=str(Path(__file__).parent.parent),
         )
         assert res.returncode == 0
-        assert "warning: model list for vendor 'dsh' is unknown" in res.stderr
         info = json.loads(res.stdout)
         assert info["resolved_model"] == "totally-fake-model"
+
+        # Policy test: injected catalog thật missing cần warning ở policy tests
+        from lib.vendor_config import resolve_vendor_model
+        target = resolve_vendor_model(vendor="dsh", model="totally-fake-model", catalog_models=["deepseek-v4-pro"])
+        assert target.model == "totally-fake-model"
+        assert any("not present in the current verified catalog" in w for w in target.warnings)
 
     def test_allow_unknown_model(self):
         """4. --allow-unknown-model cho phép bypass."""

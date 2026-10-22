@@ -71,10 +71,10 @@ def test_vong7_text_duplicate_warning(fake_vendors, capsys):
         return subprocess.CompletedProcess(args=args, returncode=1, stdout="", stderr="boom: fake fail")
         
     with patch.object(sys, 'argv', ["dispatch.py", "fakevendor_no_flag", "--no-traps", "--allow-unknown-model"]):
-        with patch('sys.exit'):
-            with patch('shutil.which', return_value='/usr/bin/true'):
-                with patch('sys.stdin.read', return_value="hi"):
-                    with patch('subprocess.run', side_effect=mock_runner):
+        with patch('shutil.which', return_value='/usr/bin/true'):
+            with patch('sys.stdin.read', return_value="hi"):
+                with patch('subprocess.run', side_effect=mock_runner):
+                    with pytest.raises(SystemExit):
                         dispatch.main()
                         
     out, err = capsys.readouterr()
@@ -97,9 +97,9 @@ def test_vong12_dynamic_vendor_not_installed(fake_vendors, capsys):
     
     # 1. fakevendor_no_flag
     with patch.object(sys, 'argv', ["dispatch.py", "fakevendor_no_flag", "fake-model", "--result-json", "--allow-unknown-model"]):
-        with patch('sys.exit'):
-            with patch('shutil.which', return_value=None):
-                with patch('sys.stdin.read', return_value="hello"):
+        with patch('shutil.which', return_value=None):
+            with patch('sys.stdin.read', return_value="hello"):
+                with pytest.raises(SystemExit):
                     dispatch.main()
                     
     out1, err1 = capsys.readouterr()
@@ -112,9 +112,9 @@ def test_vong12_dynamic_vendor_not_installed(fake_vendors, capsys):
     
     # 2. fakevendor_with_flag
     with patch.object(sys, 'argv', ["dispatch.py", "fakevendor_with_flag", "fake-model", "--result-json", "--allow-unknown-model"]):
-        with patch('sys.exit'):
-            with patch('shutil.which', return_value=None):
-                with patch('sys.stdin.read', return_value="hello"):
+        with patch('shutil.which', return_value=None):
+            with patch('sys.stdin.read', return_value="hello"):
+                with pytest.raises(SystemExit):
                     dispatch.main()
                     
     out2, err2 = capsys.readouterr()

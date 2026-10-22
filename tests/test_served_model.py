@@ -13,6 +13,8 @@ from lib.dispatcher import run_vendor
 from lib.evidence import make_record
 from lib.openrouter import or_dispatch
 
+PAID_MODEL = "openrouter/deepseek/deepseek-v4-pro"
+
 
 def _fake_opener(payload: dict):
     class FakeResponse:
@@ -31,7 +33,7 @@ def test_or_dispatch_bắt_được_model_router_đã_chọn():
         "provider": "Google",
         "choices": [{"message": {"content": "hi"}}],
     })
-    res = or_dispatch("hello", model="openrouter/auto", key="fake", opener=opener)
+    res = or_dispatch("hello", model=PAID_MODEL, key="fake", opener=opener)
     assert res.ok
     assert res.served_model == "google/gemini-2.5-flash-lite"
     assert res.provider == "Google"
@@ -39,7 +41,7 @@ def test_or_dispatch_bắt_được_model_router_đã_chọn():
 
 def test_or_dispatch_response_thiếu_field_thì_none_chứ_không_vỡ():
     # Response cũ/không chuẩn: vẫn phải ok, served_model=None (không bịa).
-    res = or_dispatch("hello", key="fake",
+    res = or_dispatch("hello", model=PAID_MODEL, key="fake",
                       opener=_fake_opener({"choices": [{"message": {"content": "hi"}}]}))
     assert res.ok and res.text == "hi"
     assert res.served_model is None and res.provider is None
@@ -48,7 +50,7 @@ def test_or_dispatch_response_thiếu_field_thì_none_chứ_không_vỡ():
 def test_dispatch_openrouter_gắn_served_model_và_nêu_trong_summary():
     import lib.dispatcher as d
 
-    def fake_or_dispatch(prompt, model="auto", timeout=120):
+    def fake_or_dispatch(prompt, model="auto", timeout=120, **kwargs):
         from lib.openrouter import ORResult
         return ORResult(ok=True, text="ok", served_model="anthropic/claude-opus-5")
 
@@ -57,7 +59,7 @@ def test_dispatch_openrouter_gắn_served_model_và_nêu_trong_summary():
     saved = oro.or_dispatch
     oro.or_dispatch = fake_or_dispatch
     try:
-        res = run_vendor(vendor="openrouter", prompt="x", model="openrouter/fusion")
+        res = run_vendor(vendor="openrouter", prompt="x", model=PAID_MODEL)
     finally:
         oro.or_dispatch = saved
         if orig is not None:
