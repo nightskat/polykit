@@ -30,9 +30,13 @@ def filter_failover_candidates(
     1. Cấm tuyệt đối model contributor (rủi ro data training).
     2. Cấm model free (free chỉ được chọn tường minh qua --model, cấm trong failover).
     3. Cấm ứng viên cùng quota_group với vendor_hint (vd: hermes và opencode cùng 'opencode-go').
-    4. Không tự động dispatch task vision hoặc sensitive.
+    4. Không tự động dispatch/recommend task vision hoặc sensitive (trả candidates=[]).
     """
     if not candidates:
+        return []
+
+    # Cờ is_vision hoặc is_sensitive -> trả candidates=[] (chưa modality/privacy/consent verified)
+    if is_vision or is_sensitive:
         return []
 
     try:
@@ -173,8 +177,14 @@ def handle_signal(
         tz_part = f" ({cap.timezone})" if cap and cap.timezone else ""
         reset_part = f" đến {cap.reset_hint}{tz_part}" if cap and cap.reset_hint else ""
 
-        filtered_candidates = None
-        if candidates is not None:
+        if is_vision or is_sensitive:
+            filtered_candidates = []
+            msg = (
+                f"⛔ Cap{vendor_part}{reset_part}. "
+                f"Không gợi ý lane thay thế (chưa modality/privacy/consent verified). "
+                f"Cần xác nhận Tuan từng lượt mới (không tự động dispatch/retry, không kế thừa xác nhận)."
+            )
+        elif candidates is not None:
             filtered_candidates = filter_failover_candidates(
                 candidates,
                 vendor_hint=cap.vendor if cap else vendor_hint,
@@ -189,6 +199,7 @@ def handle_signal(
             safety_part = " (Khuyến nghị, không tự động dispatch/retry)."
             msg = f"⛔ Cap{vendor_part}{reset_part}.{rec_part}{safety_part}"
         else:
+            filtered_candidates = None
             msg = f"⛔ Cap{vendor_part}{reset_part}. Lane: codex main / gemini worker."
 
         notified = _safe_notify(notifier, msg)
@@ -207,8 +218,14 @@ def handle_signal(
         return res
 
     elif signal == "pressure":
-        filtered_candidates = None
-        if candidates is not None:
+        if is_vision or is_sensitive:
+            filtered_candidates = []
+            msg = (
+                f"⚠️ {vendor_hint or 'Claude'} còn ~{100 - pressure_pct}% (pressure {pressure_pct}%). "
+                f"Không gợi ý lane thay thế (chưa modality/privacy/consent verified). "
+                f"Cần xác nhận Tuan từng lượt mới (không tự động dispatch/retry, không kế thừa xác nhận)."
+            )
+        elif candidates is not None:
             filtered_candidates = filter_failover_candidates(
                 candidates,
                 vendor_hint=vendor_hint,
@@ -222,6 +239,7 @@ def handle_signal(
             handoff_target = f"{', '.join(cand_names)} / để cap" if cand_names else "để cap"
             msg = f"⚠️ {vendor_hint or 'Claude'} còn ~{100 - pressure_pct}% (pressure {pressure_pct}%). Handoff sang: {handoff_target}"
         else:
+            filtered_candidates = None
             msg = f"⚠️ Claude còn ~{100 - pressure_pct}% (pressure {pressure_pct}%). Handoff sang đâu? codex / gemini / để cap"
 
         notified = _safe_notify(notifier, msg)

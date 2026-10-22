@@ -360,6 +360,14 @@ def test_failover_filters_contributor_models():
     assert filtered[0] == "codex"
 
 
+def test_filter_failover_candidates_vision_or_sensitive_returns_empty():
+    """is_vision hoặc is_sensitive cấm recommend (chưa modality/privacy/consent verified) -> trả candidates=[]."""
+    candidates = ["codex", "gemini", "hermes"]
+    assert filter_failover_candidates(candidates, vendor_hint="opencode", is_vision=True) == []
+    assert filter_failover_candidates(candidates, vendor_hint="opencode", is_sensitive=True) == []
+    assert filter_failover_candidates(candidates, vendor_hint="opencode", is_vision=True, is_sensitive=True) == []
+
+
 # ===========================================================================
 # 5. Recommendation không auto dispatch / retry
 # ===========================================================================
@@ -384,7 +392,7 @@ def test_failover_no_auto_dispatch_or_retry():
 
 
 def test_failover_vision_sensitive_not_auto_dispatched():
-    """Không dispatch vision/sensitive tự động."""
+    """Không dispatch vision/sensitive tự động và không gợi ý candidate."""
     notifier = MockNotifier()
     res = handle_signal(
         stderr="429 quota exceeded",
@@ -396,6 +404,110 @@ def test_failover_vision_sensitive_not_auto_dispatched():
     )
     assert res["auto_dispatch"] is False
     assert res["auto_retry"] is False
+    assert res["recommended_candidates"] == []
+    assert "codex" not in res["message"]
+    assert "gemini" not in res["message"]
+    assert "Cần xác nhận Tuan từng lượt mới" in res["message"]
+    assert "chưa modality/privacy/consent verified" in res["message"]
+    assert len(notifier.calls) == 1
+    assert "Cần xác nhận Tuan từng lượt mới" in notifier.calls[0]
+
+
+def test_handle_signal_cap_windows_vision_no_candidates():
+    """Cap từ 3 windows với is_vision=True, không có candidates -> không giữ legacy string codex/gemini."""
+    notifier = MockNotifier()
+    windows = {
+        "5h": "ok",
+        "weekly": "capped",
+        "monthly": "ok",
+    }
+    res = handle_signal(
+        windows=windows,
+        vendor_hint="opencode",
+        candidates=None,
+        is_vision=True,
+        notifier=notifier,
+    )
+    assert res["action"] == "ping_reactive"
+    assert res["signal"] == "cap"
+    assert res["auto_dispatch"] is False
+    assert res["auto_retry"] is False
+    assert res["recommended_candidates"] == []
+    assert "codex main" not in res["message"]
+    assert "gemini worker" not in res["message"]
+    assert "Cần xác nhận Tuan từng lượt mới" in res["message"]
+    assert len(notifier.calls) == 1
+    assert "Cần xác nhận Tuan từng lượt mới" in notifier.calls[0]
+
+
+def test_handle_signal_cap_windows_sensitive_with_codex_candidates():
+    """Cap từ windows với is_sensitive=True và candidates có codex -> không gợi ý lane codex."""
+    notifier = MockNotifier()
+    windows = {
+        "5h": "capped",
+        "weekly": "ok",
+        "monthly": "ok",
+    }
+    res = handle_signal(
+        windows=windows,
+        vendor_hint="opencode",
+        candidates=["codex", "gemini"],
+        is_sensitive=True,
+        notifier=notifier,
+    )
+    assert res["action"] == "ping_reactive"
+    assert res["signal"] == "cap"
+    assert res["auto_dispatch"] is False
+    assert res["auto_retry"] is False
+    assert res["recommended_candidates"] == []
+    assert "Gợi ý: codex" not in res["message"]
+    assert "codex" not in res["message"]
+    assert "Cần xác nhận Tuan từng lượt mới" in res["message"]
+    assert len(notifier.calls) == 1
+
+
+def test_handle_signal_pressure_vision_with_codex_candidates():
+    """Pressure signal với is_vision=True và candidates có codex -> không gợi ý lane proactive."""
+    notifier = MockNotifier()
+    res = handle_signal(
+        pressure_pct=85,
+        threshold=80,
+        vendor_hint="claude",
+        candidates=["codex", "gemini"],
+        is_vision=True,
+        notifier=notifier,
+    )
+    assert res["action"] == "ping_proactive"
+    assert res["signal"] == "pressure"
+    assert res["auto_dispatch"] is False
+    assert res["auto_retry"] is False
+    assert res["recommended_candidates"] == []
+    assert "Handoff sang: codex" not in res["message"]
+    assert "codex" not in res["message"]
+    assert "Cần xác nhận Tuan từng lượt mới" in res["message"]
+    assert len(notifier.calls) == 1
+
+
+def test_handle_signal_pressure_sensitive_no_candidates():
+    """Pressure signal với is_sensitive=True không có candidates -> không giữ legacy codex/gemini."""
+    notifier = MockNotifier()
+    res = handle_signal(
+        pressure_pct=90,
+        threshold=80,
+        vendor_hint="claude",
+        candidates=None,
+        is_sensitive=True,
+        notifier=notifier,
+    )
+    assert res["action"] == "ping_proactive"
+    assert res["signal"] == "pressure"
+    assert res["auto_dispatch"] is False
+    assert res["auto_retry"] is False
+    assert res["recommended_candidates"] == []
+    assert "codex / gemini" not in res["message"]
+    assert "codex" not in res["message"]
+    assert "Cần xác nhận Tuan từng lượt mới" in res["message"]
+    assert len(notifier.calls) == 1
 
 
 # ===========================================================================
