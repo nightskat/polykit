@@ -1,7 +1,7 @@
 """Vision security gate, format verification, and PDF conversion for PolyKit.
 
 Pure API for vision gatekeeping before ANY file I/O, subprocess, or network call.
-Quy tắc chính sách (P3, Plan 2026-10-22 mục Lane VISION):
+Quy tắc chính sách (P3, Plan 2026-10-22 mục Lane VISION, Grok Findings 1+2):
 1. Cổng PII / sensitive:
    - Dữ liệu thật / sensitive hoặc không tuyên bố synthetic rõ phải blocked mặc định.
    - Cờ --allow-sensitive-vision là không đủ.
@@ -26,8 +26,16 @@ Quy tắc chính sách (P3, Plan 2026-10-22 mục Lane VISION):
      * deepseek-v4-pro: image=false, pdf=false
      * glm-5.3: image=false, pdf=false
      * *-contributor: blocked hoàn toàn
-   - Adapter chưa verified bị blocked mặc định (không tự enable adapter).
+   - Adapter verification:
+     * API public KHÔNG được tự chứng nhận adapter (không nhận verified_adapters param).
+     * Adapter rỗng ("" / None / whitespace) bị blocked fail-closed trước bất kỳ I/O.
+     * Chỉ so khớp với hằng frozen registry VERIFIED_VISION_ADAPTERS (hiện rỗng).
+     * Không caller flag/token tự tạo mở chốt.
 4. DeepSeek PDF conversion:
+   - Hàm public convert_pdf_to_images bị blocked fail-closed trước bất kỳ I/O,
+     không nhận pdftoppm_bin arbitrary để bypass.
+   - Việc tách PDF chỉ đi qua prepare_vision_input sau khi vượt gate an toàn,
+     thực hiện qua helper nội bộ _convert_pdf_to_images.
    - Dùng pdftoppm tách trang full res, subprocess argv, timeout rõ ràng.
    - Tách theo numeric order tự nhiên (1, 2, ..., 10), không dùng contact sheet.
    - Thiếu binary pdftoppm phải blocked.
@@ -41,7 +49,7 @@ import os
 import re
 import shutil
 import subprocess
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -96,7 +104,7 @@ TRUSTED_MODEL_CAPABILITIES: dict[str, dict[str, bool]] = {
 }
 
 # Adapters verified for vision attachments.
-# Module API không tự enable adapter — mặc định trống (fail-closed).
+# Module API không tự enable adapter — hằng frozen registry mặc định trống (fail-closed).
 VERIFIED_VISION_ADAPTERS: frozenset[str] = frozenset()
 
 # MIME Magic Signatures
@@ -118,7 +126,7 @@ SUPPORTED_MIME_TYPES = {
 @dataclass(frozen=True)
 class SingleTurnConfirmation:
     """Single-turn confirmation binding exact files, model, and provider.
-    
+
     Cannot be reused across retries or failover.
     """
     token: str
@@ -142,7 +150,7 @@ class SingleTurnConfirmation:
             return False, "Confirmation has already been consumed"
         if not self.is_trusted_ui:
             return False, "trusted UI confirmation is not supported yet"
-        
+
         norm_files = tuple(str(Path(f)) for f in files)
         if norm_files != self.exact_files:
             return False, "Confirmation files do not match exact request files"
@@ -191,7 +199,7 @@ def validate_file_format(
     max_bytes: int = DEFAULT_MAX_FILE_BYTES,
 ) -> VisionAttachment:
     """Validate path safety, existence, size, and MIME signature.
-    
+
     No PII or file content is logged or printed.
     """
     # 1. Symlink check (cấm symlink)
@@ -260,12 +268,12 @@ def validate_file_format(
 
 def get_model_capabilities(model: str) -> dict[str, bool]:
     """Retrieve trusted capabilities for model.
-    
+
     Raises VisionBlockedError if model is contributor or unknown.
     """
     if not model or not isinstance(model, str):
         raise VisionBlockedError("Model identifier must be a non-empty string")
-    
+
     # Contributor models always blocked
     if model.lower().endswith("-contributor"):
         raise VisionBlockedError(f"Contributor model '{model}' is blocked for vision")
@@ -278,15 +286,18 @@ def get_model_capabilities(model: str) -> dict[str, bool]:
     return caps
 
 
-def verify_adapter(
-    adapter: str,
-    verified_adapters: Sequence[str] | set[str] | None = None,
-) -> None:
-    """Ensure adapter has verified vision attachment support."""
-    if not adapter:
-        return
-    active_verified = set(verified_adapters) if verified_adapters is not None else set(VERIFIED_VISION_ADAPTERS)
-    if adapter not in active_verified:
+def verify_adapter(adapter: str) -> None:
+    """Ensure adapter has verified vision attachment support.
+
+    Blank adapter is blocked fail-closed.
+    Only adapters in frozen VERIFIED_VISION_ADAPTERS registry are permitted.
+    Caller cannot supply custom verified adapters to bypass this gate.
+    """
+    if not adapter or not isinstance(adapter, str) or not adapter.strip():
+        raise VisionBlockedError(
+            "Vision adapter must be specified and non-empty; blank adapter is blocked"
+        )
+    if adapter not in VERIFIED_VISION_ADAPTERS:
         raise VisionBlockedError(
             f"Vision adapter '{adapter}' is not verified; blocked"
         )
@@ -308,10 +319,9 @@ def check_vision_gate(
     is_failover: bool = False,
     workspace_root: str | Path | None = None,
     max_bytes: int = DEFAULT_MAX_FILE_BYTES,
-    verified_adapters: Sequence[str] | set[str] | None = None,
 ) -> list[VisionAttachment]:
     """Pure gate check before ANY file I/O, subprocess, or network call.
-    
+
     GATE CHECK ORDER:
     1. Sensitive / synthetic gate:
        - Nếu không tuyên bố is_synthetic=True rõ ràng:
@@ -321,7 +331,11 @@ def check_vision_gate(
          * Confirmation không kế thừa retry/failover.
          * Vì chưa có UI xác nhận Tuan đáng tin, sensitive luôn blocked fail-closed.
        - TUYỆT ĐỐI không gọi stat/open/exists/subprocess nếu bị chặn ở cổng này!
-    2. Adapter verification check (adapter chưa verified -> blocked).
+    2. Adapter verification check:
+       - Adapter rỗng ("" / None / whitespace) bị chặn lập tức.
+       - Chỉ chấp nhận adapter nằm trong frozen VERIFIED_VISION_ADAPTERS registry.
+       - Không nhận tham số verified_adapters tự chứng thực.
+       - Chặn TRƯỚC mọi file stat, open, probe.
     3. Capabilities metadata check (theo model cụ thể).
     4. Kiểm tra file sau gate (chỉ với synthetic explicit):
        - Path thường, không symlink, trong workspace, MIME signature, dung lượng.
@@ -373,9 +387,9 @@ def check_vision_gate(
         )
 
     # -----------------------------------------------------------------------
-    # 2. ADAPTER CHECK
+    # 2. ADAPTER CHECK (TRƯỚC MỌI FILE I/O)
     # -----------------------------------------------------------------------
-    verify_adapter(adapter, verified_adapters)
+    verify_adapter(adapter)
 
     # -----------------------------------------------------------------------
     # 3. CAPABILITIES CHECK
@@ -410,7 +424,7 @@ def check_vision_gate(
 
     if has_pdf:
         # Nếu model không hỗ trợ PDF trực tiếp nhưng hỗ trợ image,
-        # cho phép để chuyển đổi bằng pdftoppm sau.
+        # cho phép để chuyển đổi bằng pdftoppm sau qua prepare_vision_input.
         # Nếu model không hỗ trợ cả PDF lẫn image, lập tức chặn.
         if not caps.get("pdf", False) and not caps.get("image", False):
             raise VisionBlockedError(
@@ -426,7 +440,7 @@ def check_vision_gate(
 
 def _natural_page_sort_key(file_path: Path) -> int:
     """Extract page number from filename for natural numeric sorting.
-    
+
     Examples:
       prefix-1.png -> 1
       prefix-2.png -> 2
@@ -438,7 +452,7 @@ def _natural_page_sort_key(file_path: Path) -> int:
     return 0
 
 
-def convert_pdf_to_images(
+def _convert_pdf_to_images(
     pdf_path: str | Path,
     output_dir: str | Path,
     prefix: str = "page",
@@ -446,8 +460,11 @@ def convert_pdf_to_images(
     timeout: int = 30,
     pdftoppm_bin: str | None = None,
 ) -> list[Path]:
-    """Convert PDF to full-resolution individual page images using pdftoppm.
-    
+    """Internal helper for PDF conversion via pdftoppm after vision gate.
+
+    Chỉ được gọi từ prepare_vision_input sau khi đã vượt qua check_vision_gate,
+    hoặc gọi trực tiếp trong isolated internal unit tests.
+
     Quy tắc:
     - Subprocess argv list (không shell=True).
     - Timeout rõ ràng.
@@ -509,6 +526,26 @@ def convert_pdf_to_images(
     return generated
 
 
+def convert_pdf_to_images(
+    pdf_path: str | Path,
+    output_dir: str | Path,
+    prefix: str = "page",
+    dpi: int = 150,
+    timeout: int = 30,
+    pdftoppm_bin: str | None = None,
+) -> list[Path]:
+    """Public wrapper kept for backward compatibility; blocked fail-closed before any I/O.
+
+    Direct PDF conversion is blocked to prevent un-gated subprocess/file I/O.
+    All PDF conversions must proceed via prepare_vision_input after passing check_vision_gate.
+    Does not execute pdftoppm_bin or perform any filesystem I/O.
+    """
+    raise VisionBlockedError(
+        "Direct public convert_pdf_to_images is blocked fail-closed before any I/O. "
+        "PDF conversion must proceed via gated prepare_vision_input."
+    )
+
+
 # ---------------------------------------------------------------------------
 # High-level Preparation API
 # ---------------------------------------------------------------------------
@@ -526,11 +563,12 @@ def prepare_vision_input(
     workspace_root: str | Path | None = None,
     output_dir: str | Path | None = None,
     max_bytes: int = DEFAULT_MAX_FILE_BYTES,
-    verified_adapters: Sequence[str] | set[str] | None = None,
-    pdftoppm_bin: str | None = None,
 ) -> list[Path]:
     """Inspect files through gate, convert PDF to images if model requires it,
     and return list of final attachment paths ready for dispatch.
+
+    Blocked fail-closed if adapter is blank or unverified, or if data is sensitive.
+    Does NOT accept verified_adapters or arbitrary pdftoppm_bin parameters.
     """
     validated = check_vision_gate(
         files=files,
@@ -544,7 +582,6 @@ def prepare_vision_input(
         is_failover=is_failover,
         workspace_root=workspace_root,
         max_bytes=max_bytes,
-        verified_adapters=verified_adapters,
     )
 
     caps = get_model_capabilities(model)
@@ -555,13 +592,12 @@ def prepare_vision_input(
 
     for att in validated:
         if att.is_pdf and not model_supports_pdf:
-            # Model không hỗ trợ PDF trực tiếp (ví dụ DeepSeek) -> Tách từng trang thành ảnh
+            # Model không hỗ trợ PDF trực tiếp (ví dụ DeepSeek) -> Tách từng trang thành ảnh qua private helper
             conv_dir = Path(output_dir) if output_dir else ws / ".vision_converted"
-            pages = convert_pdf_to_images(
+            pages = _convert_pdf_to_images(
                 pdf_path=att.path,
                 output_dir=conv_dir,
                 prefix=att.path.stem,
-                pdftoppm_bin=pdftoppm_bin,
             )
             final_paths.extend(pages)
         else:
