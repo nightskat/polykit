@@ -1,0 +1,17 @@
+{
+  "status": "timeout",
+  "vendor": "hermes",
+  "model": "deepseek-v4.1-flash",
+  "summary": "hermes dispatch exceeded 600s",
+  "warnings": [
+    "[polykit] warning: model list for vendor 'hermes' is unknown, cannot validate 'deepseek-v4.1-flash'",
+    "[polykit] vendor KH\u00d4NG k\u1ecbp in g\u00ec ra stdout tr\u01b0\u1edbc khi b\u1ecb gi\u1ebft.",
+    "[polykit] vendor KH\u00d4NG k\u1ecbp in g\u00ec ra stderr tr\u01b0\u1edbc khi b\u1ecb gi\u1ebft."
+  ],
+  "stdout": "",
+  "exit_code": 124,
+  "reason": "timeout",
+  "served_model": null,
+  "unsandboxed": true,
+  "data_class": "code-nopii"
+}

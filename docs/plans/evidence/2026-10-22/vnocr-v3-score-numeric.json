@@ -1,0 +1,1199 @@
+{
+  "evaluation_type": "upper_bound_token_recovery",
+  "disclaimer": "Upper-bound token recovery, NOT cell accuracy. Raw OCR does not associate extracted tokens to field IDs or table cells. Duplicate tokens cannot prove row/column association.",
+  "total_fields": 142,
+  "recovered_fields": 43,
+  "recovery_percent": 30.28,
+  "by_document": {
+    "page_01_narrow_table.png": {
+      "recovered": 22,
+      "total": 86,
+      "percent": 25.58
+    },
+    "page_02_negative_numbers.png": {
+      "recovered": 13,
+      "total": 38,
+      "percent": 34.21
+    },
+    "page_03_confusing_chars.png": {
+      "recovered": 2,
+      "total": 5,
+      "percent": 40.0
+    },
+    "page_04_degraded_scan.png": {
+      "recovered": 3,
+      "total": 4,
+      "percent": 75.0
+    },
+    "page_05_multipage_p1.png": {
+      "recovered": 0,
+      "total": 4,
+      "percent": 0.0
+    },
+    "page_06_multipage_p2.png": {
+      "recovered": 3,
+      "total": 5,
+      "percent": 60.0
+    }
+  },
+  "by_type": {
+    "date": {
+      "recovered": 3,
+      "total": 6,
+      "percent": 50.0
+    },
+    "code": {
+      "recovered": 7,
+      "total": 52,
+      "percent": 13.46
+    },
+    "text": {
+      "recovered": 4,
+      "total": 25,
+      "percent": 16.0
+    },
+    "amount": {
+      "recovered": 29,
+      "total": 59,
+      "percent": 49.15
+    }
+  },
+  "fields": [
+    {
+      "id": "p1_period_date",
+      "document": "page_01_narrow_table.png",
+      "type": "date",
+      "ground_truth": "2026-06-30",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_report_code",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "BCTC-2026-NARROW",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r01_c1",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "01",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r01_c2",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "DT-01",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r01_c3",
+      "document": "page_01_narrow_table.png",
+      "type": "text",
+      "ground_truth": "Doanh thu bán hàng & dịch vụ",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r01_c4",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "01",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_rev_q1",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "1.234.567.890",
+      "recovered": true,
+      "matched_candidate": "1.234.567.890"
+    },
+    {
+      "id": "p1_r01_c6",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "1.450.230.100",
+      "recovered": true,
+      "matched_candidate": "1.450.230.100"
+    },
+    {
+      "id": "p1_r01_c7",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "2.684.797.990",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r02_c1",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "02",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r02_c2",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "GV-02",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r02_c3",
+      "document": "page_01_narrow_table.png",
+      "type": "text",
+      "ground_truth": "Giá vốn hàng bán",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r02_c4",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "02",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_cogs_q1",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "890.123.456",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r02_c6",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "920.300.000",
+      "recovered": true,
+      "matched_candidate": "920.300.000"
+    },
+    {
+      "id": "p1_r02_c7",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "1.810.423.456",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r03_c1",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "03",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r03_c2",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "LN-03",
+      "recovered": true,
+      "matched_candidate": "LN-03"
+    },
+    {
+      "id": "p1_r03_c3",
+      "document": "page_01_narrow_table.png",
+      "type": "text",
+      "ground_truth": "Lợi nhuận gộp",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r03_c4",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "03",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_gross_profit_q1",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "344.444.434",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r03_c6",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "529.930.100",
+      "recovered": true,
+      "matched_candidate": "529.930.100"
+    },
+    {
+      "id": "p1_r03_c7",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "874.374.534",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r04_c1",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "04",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r04_c2",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "TC-04",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r04_c3",
+      "document": "page_01_narrow_table.png",
+      "type": "text",
+      "ground_truth": "Doanh thu tài chính",
+      "recovered": true,
+      "matched_candidate": "Doanh thu tài chính"
+    },
+    {
+      "id": "p1_r04_c4",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "04",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r04_c5",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "45.678.900",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r04_c6",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "67.890.120",
+      "recovered": true,
+      "matched_candidate": "67.890.120"
+    },
+    {
+      "id": "p1_r04_c7",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "113.569.020",
+      "recovered": true,
+      "matched_candidate": "113.569.020"
+    },
+    {
+      "id": "p1_r05_c1",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "05",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r05_c2",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "CP-05",
+      "recovered": true,
+      "matched_candidate": "CP-05"
+    },
+    {
+      "id": "p1_r05_c3",
+      "document": "page_01_narrow_table.png",
+      "type": "text",
+      "ground_truth": "Chi phí tài chính",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r05_c4",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "05",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r05_c5",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "23.456.780",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r05_c6",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "34.567.890",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r05_c7",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "58.024.670",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r06_c1",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "06",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r06_c2",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "QL-06",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r06_c3",
+      "document": "page_01_narrow_table.png",
+      "type": "text",
+      "ground_truth": "Chi phí quản lý doanh nghiệp",
+      "recovered": true,
+      "matched_candidate": "Chi phí quản lý doanh nghiệp"
+    },
+    {
+      "id": "p1_r06_c4",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "06",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r06_c5",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "120.345.670",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r06_c6",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "145.678.900",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r06_c7",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "266.024.570",
+      "recovered": true,
+      "matched_candidate": "266.024.570"
+    },
+    {
+      "id": "p1_r07_c1",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "07",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r07_c2",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "TT-07",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r07_c3",
+      "document": "page_01_narrow_table.png",
+      "type": "text",
+      "ground_truth": "Tổng lợi nhuận trước thuế",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r07_c4",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "07",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r07_c5",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "246.320.884",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r07_c6",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "417.573.430",
+      "recovered": true,
+      "matched_candidate": "417.573.430"
+    },
+    {
+      "id": "p1_r07_c7",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "663.894.314",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r08_c1",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "08",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r08_c2",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "TNDN-08",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r08_c3",
+      "document": "page_01_narrow_table.png",
+      "type": "text",
+      "ground_truth": "Thuế TNDN hiện hành",
+      "recovered": true,
+      "matched_candidate": "Thuế TNDN hiện hành"
+    },
+    {
+      "id": "p1_r08_c4",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "08",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r08_c5",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "49.264.177",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r08_c6",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "83.514.686",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r08_c7",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "132.778.863",
+      "recovered": true,
+      "matched_candidate": "132.778.863"
+    },
+    {
+      "id": "p1_r09_c1",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "09",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r09_c2",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "ST-09",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r09_c3",
+      "document": "page_01_narrow_table.png",
+      "type": "text",
+      "ground_truth": "Lợi nhuận sau thuế TNDN",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r09_c4",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "09",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r09_c5",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "197.056.707",
+      "recovered": true,
+      "matched_candidate": "197.056.707"
+    },
+    {
+      "id": "p1_r09_c6",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "334.058.744",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r09_c7",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "531.115.451",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r10_c1",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "10",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r10_c2",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "KH-10",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r10_c3",
+      "document": "page_01_narrow_table.png",
+      "type": "text",
+      "ground_truth": "Khấu hao tài sản cố định",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r10_c4",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "10",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r10_c5",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "35.120.000",
+      "recovered": true,
+      "matched_candidate": "35.120.000"
+    },
+    {
+      "id": "p1_r10_c6",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "36.200.000",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r10_c7",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "71.320.000",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r11_c1",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "11",
+      "recovered": true,
+      "matched_candidate": "11"
+    },
+    {
+      "id": "p1_r11_c2",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "PT-11",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r11_c3",
+      "document": "page_01_narrow_table.png",
+      "type": "text",
+      "ground_truth": "Tiền thu từ bán hàng",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r11_c4",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "11",
+      "recovered": true,
+      "matched_candidate": "11"
+    },
+    {
+      "id": "p1_r11_c5",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "1.180.500.000",
+      "recovered": true,
+      "matched_candidate": "1.180.500.000"
+    },
+    {
+      "id": "p1_r11_c6",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "1.410.000.000",
+      "recovered": true,
+      "matched_candidate": "1.410.000.000"
+    },
+    {
+      "id": "p1_r11_c7",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "2.590.500.000",
+      "recovered": true,
+      "matched_candidate": "2.590.500.000"
+    },
+    {
+      "id": "p1_r12_c1",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "12",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r12_c2",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "CT-12",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r12_c3",
+      "document": "page_01_narrow_table.png",
+      "type": "text",
+      "ground_truth": "Tiền chi trả người cung cấp",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r12_c4",
+      "document": "page_01_narrow_table.png",
+      "type": "code",
+      "ground_truth": "12",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r12_c5",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "810.400.000",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r12_c6",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "895.000.000",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p1_r12_c7",
+      "document": "page_01_narrow_table.png",
+      "type": "amount",
+      "ground_truth": "1.705.400.000",
+      "recovered": true,
+      "matched_candidate": "1.705.400.000"
+    },
+    {
+      "id": "p2_balance_date",
+      "document": "page_02_negative_numbers.png",
+      "type": "date",
+      "ground_truth": "2026-09-30",
+      "recovered": true,
+      "matched_candidate": "30/09/2026"
+    },
+    {
+      "id": "p2_report_code",
+      "document": "page_02_negative_numbers.png",
+      "type": "code",
+      "ground_truth": "BC-AM-4212",
+      "recovered": true,
+      "matched_candidate": "BC-AM-4212"
+    },
+    {
+      "id": "p2_r01_c1",
+      "document": "page_02_negative_numbers.png",
+      "type": "code",
+      "ground_truth": "4212",
+      "recovered": true,
+      "matched_candidate": "4212"
+    },
+    {
+      "id": "p2_r01_c2",
+      "document": "page_02_negative_numbers.png",
+      "type": "text",
+      "ground_truth": "Lợi nhuận sau thuế chưa phân phối năm nay",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_r01_c3",
+      "document": "page_02_negative_numbers.png",
+      "type": "amount",
+      "ground_truth": "54.321.000",
+      "recovered": true,
+      "matched_candidate": "54.321.000"
+    },
+    {
+      "id": "p2_loss_carried",
+      "document": "page_02_negative_numbers.png",
+      "type": "amount",
+      "ground_truth": "(12.345)",
+      "recovered": true,
+      "matched_candidate": "(12.345)"
+    },
+    {
+      "id": "p2_r02_c1",
+      "document": "page_02_negative_numbers.png",
+      "type": "code",
+      "ground_truth": "1113",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_r02_c2",
+      "document": "page_02_negative_numbers.png",
+      "type": "text",
+      "ground_truth": "Lưu chuyển tiền thuần từ hoạt động kinh doanh",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_r02_c3",
+      "document": "page_02_negative_numbers.png",
+      "type": "amount",
+      "ground_truth": "120.000.000",
+      "recovered": true,
+      "matched_candidate": "120.000.000"
+    },
+    {
+      "id": "p2_cashflow_neg",
+      "document": "page_02_negative_numbers.png",
+      "type": "amount",
+      "ground_truth": "(98.765.432)",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_r03_c1",
+      "document": "page_02_negative_numbers.png",
+      "type": "code",
+      "ground_truth": "2294",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_r03_c2",
+      "document": "page_02_negative_numbers.png",
+      "type": "text",
+      "ground_truth": "Dự phòng tổn thất đầu tư tài chính dài hạn",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_r03_c3",
+      "document": "page_02_negative_numbers.png",
+      "type": "amount",
+      "ground_truth": "(5.000.000)",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_reserve_neg",
+      "document": "page_02_negative_numbers.png",
+      "type": "amount",
+      "ground_truth": "(15.500.000)",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_r04_c1",
+      "document": "page_02_negative_numbers.png",
+      "type": "code",
+      "ground_truth": "4190",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_r04_c2",
+      "document": "page_02_negative_numbers.png",
+      "type": "text",
+      "ground_truth": "Cổ phiếu quỹ đang nắm giữ",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_r04_c3",
+      "document": "page_02_negative_numbers.png",
+      "type": "amount",
+      "ground_truth": "(25.000.000)",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_r04_c4",
+      "document": "page_02_negative_numbers.png",
+      "type": "amount",
+      "ground_truth": "(25.000.000)",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_r05_c1",
+      "document": "page_02_negative_numbers.png",
+      "type": "code",
+      "ground_truth": "1319",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_r05_c2",
+      "document": "page_02_negative_numbers.png",
+      "type": "text",
+      "ground_truth": "Dự phòng phải thu khó đòi ngắn hạn",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_r05_c3",
+      "document": "page_02_negative_numbers.png",
+      "type": "amount",
+      "ground_truth": "(8.400.000)",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_r05_c4",
+      "document": "page_02_negative_numbers.png",
+      "type": "amount",
+      "ground_truth": "(12.600.000)",
+      "recovered": true,
+      "matched_candidate": "(12.600.000)"
+    },
+    {
+      "id": "p2_r06_c1",
+      "document": "page_02_negative_numbers.png",
+      "type": "code",
+      "ground_truth": "3341",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_r06_c2",
+      "document": "page_02_negative_numbers.png",
+      "type": "text",
+      "ground_truth": "Phải trả công nhân viên còn tồn đọng",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_r06_c3",
+      "document": "page_02_negative_numbers.png",
+      "type": "amount",
+      "ground_truth": "15.200.000",
+      "recovered": true,
+      "matched_candidate": "15.200.000"
+    },
+    {
+      "id": "p2_r06_c4",
+      "document": "page_02_negative_numbers.png",
+      "type": "amount",
+      "ground_truth": "(4.320.000)",
+      "recovered": true,
+      "matched_candidate": "(4.320.000)"
+    },
+    {
+      "id": "p2_r07_c1",
+      "document": "page_02_negative_numbers.png",
+      "type": "code",
+      "ground_truth": "4111",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_r07_c2",
+      "document": "page_02_negative_numbers.png",
+      "type": "text",
+      "ground_truth": "Vốn góp của chủ sở hữu",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_r07_c3",
+      "document": "page_02_negative_numbers.png",
+      "type": "amount",
+      "ground_truth": "500.000.000",
+      "recovered": true,
+      "matched_candidate": "500.000.000"
+    },
+    {
+      "id": "p2_r07_c4",
+      "document": "page_02_negative_numbers.png",
+      "type": "amount",
+      "ground_truth": "500.000.000",
+      "recovered": true,
+      "matched_candidate": "500.000.000"
+    },
+    {
+      "id": "p2_r08_c1",
+      "document": "page_02_negative_numbers.png",
+      "type": "code",
+      "ground_truth": "1111",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_r08_c2",
+      "document": "page_02_negative_numbers.png",
+      "type": "text",
+      "ground_truth": "Tiền mặt tồn quỹ",
+      "recovered": true,
+      "matched_candidate": "Tiền mặt tồn quỹ"
+    },
+    {
+      "id": "p2_r08_c3",
+      "document": "page_02_negative_numbers.png",
+      "type": "amount",
+      "ground_truth": "8.900.000",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_r08_c4",
+      "document": "page_02_negative_numbers.png",
+      "type": "amount",
+      "ground_truth": "2.150.000",
+      "recovered": true,
+      "matched_candidate": "2.150.000"
+    },
+    {
+      "id": "p2_r09_c1",
+      "document": "page_02_negative_numbers.png",
+      "type": "code",
+      "ground_truth": "1121",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_r09_c2",
+      "document": "page_02_negative_numbers.png",
+      "type": "text",
+      "ground_truth": "Tiền gửi ngân hàng không kỳ hạn",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_r09_c3",
+      "document": "page_02_negative_numbers.png",
+      "type": "amount",
+      "ground_truth": "45.000.000",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p2_r09_c4",
+      "document": "page_02_negative_numbers.png",
+      "type": "amount",
+      "ground_truth": "(1.250.000)",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p3_contract_code",
+      "document": "page_03_confusing_chars.png",
+      "type": "code",
+      "ground_truth": "HD-2026-O0l1586B",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p3_ref_code_2006",
+      "document": "page_03_confusing_chars.png",
+      "type": "code",
+      "ground_truth": "REF-2006-0Ol1",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p3_serial_code",
+      "document": "page_03_confusing_chars.png",
+      "type": "code",
+      "ground_truth": "SERIES-8568-2006",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p3_reconciliation_date",
+      "document": "page_03_confusing_chars.png",
+      "type": "date",
+      "ground_truth": "2026-01-15",
+      "recovered": true,
+      "matched_candidate": "15/01/2026"
+    },
+    {
+      "id": "p3_fee_amount",
+      "document": "page_03_confusing_chars.png",
+      "type": "amount",
+      "ground_truth": "8.568.015",
+      "recovered": true,
+      "matched_candidate": "8.568.015"
+    },
+    {
+      "id": "p4_trans_id",
+      "document": "page_04_degraded_scan.png",
+      "type": "code",
+      "ground_truth": "TXN-882006-SCAN",
+      "recovered": true,
+      "matched_candidate": "TXN-882006-SCAN"
+    },
+    {
+      "id": "p4_posting_date",
+      "document": "page_04_degraded_scan.png",
+      "type": "date",
+      "ground_truth": "2026-03-12",
+      "recovered": true,
+      "matched_candidate": "12/03/2026"
+    },
+    {
+      "id": "p4_debit_amount",
+      "document": "page_04_degraded_scan.png",
+      "type": "amount",
+      "ground_truth": "56.810.000",
+      "recovered": true,
+      "matched_candidate": "56.810.000"
+    },
+    {
+      "id": "p4_description",
+      "document": "page_04_degraded_scan.png",
+      "type": "text",
+      "ground_truth": "Phí bảo lãnh thanh toán hợp đồng",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p5_contract_no",
+      "document": "page_05_multipage_p1.png",
+      "type": "code",
+      "ground_truth": "HĐ-2026/SK-HA/01",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p5_contract_date",
+      "document": "page_05_multipage_p1.png",
+      "type": "date",
+      "ground_truth": "2026-04-18",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p5_client_name",
+      "document": "page_05_multipage_p1.png",
+      "type": "text",
+      "ground_truth": "Công ty Cổ phần Công nghệ Sao Kim",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p5_vendor_name",
+      "document": "page_05_multipage_p1.png",
+      "type": "text",
+      "ground_truth": "Công ty TNHH Phát triển Phần mềm Hải Âu",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p6_subtotal_amount",
+      "document": "page_06_multipage_p2.png",
+      "type": "amount",
+      "ground_truth": "450.000.000",
+      "recovered": true,
+      "matched_candidate": "450.000.000"
+    },
+    {
+      "id": "p6_vat_amount",
+      "document": "page_06_multipage_p2.png",
+      "type": "amount",
+      "ground_truth": "45.000.000",
+      "recovered": true,
+      "matched_candidate": "45.000.000"
+    },
+    {
+      "id": "p6_total_amount",
+      "document": "page_06_multipage_p2.png",
+      "type": "amount",
+      "ground_truth": "495.000.000",
+      "recovered": true,
+      "matched_candidate": "495.000.000"
+    },
+    {
+      "id": "p6_effective_date",
+      "document": "page_06_multipage_p2.png",
+      "type": "date",
+      "ground_truth": "2026-05-01",
+      "recovered": false,
+      "matched_candidate": null
+    },
+    {
+      "id": "p6_clause_title",
+      "document": "page_06_multipage_p2.png",
+      "type": "text",
+      "ground_truth": "GIÁ TRỊ VÀ PHƯƠNG THỨC THANH TOÁN",
+      "recovered": false,
+      "matched_candidate": null
+    }
+  ]
+}

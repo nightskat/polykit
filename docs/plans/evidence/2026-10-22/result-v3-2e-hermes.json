@@ -1,0 +1,15 @@
+{
+  "status": "ok",
+  "vendor": "hermes",
+  "model": "deepseek-v4.1-flash",
+  "summary": "hermes completed successfully",
+  "warnings": [
+    "[polykit] warning: model list for vendor 'hermes' is unknown, cannot validate 'deepseek-v4.1-flash'"
+  ],
+  "stdout": "Xong. Ch\u1ec9 s\u1eeda `tests/test_synthetic_vision_gate.py` (test_vision.py kh\u00f4ng c\u1ea7n \u0111\u1ee5ng \u2014 v\u1ed1n pass 57/57). Kh\u00f4ng s\u1eeda `bin/lib/vision.py`, kh\u00f4ng agent/commit.\n\nK\u1ebft qu\u1ea3 focused:\n    pytest tests/test_synthetic_vision_gate.py tests/test_vision.py \u2192 132 passed\n\n\u0110\u00e3 l\u00e0m:\n- `assert_no_runner` gi\u1edd spy `os.stat(wraps=os.stat)` \u2192 gi\u1eef semantics th\u1eadt (Path.stat g\u1ecdi th\u1eb3ng os.stat; mock tr\u1ea7n tr\u1ea3 MagicMock l\u00e0m `Path.is_symlink()` n\u1ed5 `TypeError: an integer is required` tr\u01b0\u1edbc khi c\u1ed5ng k\u1ecbp t\u1eeb ch\u1ed1i). V\u1eabn spy `subprocess.run` + `shutil.which` v\u00e0 assert runner = 0. B\u1ecf assert \"no open/stat\" \u1edf helper n\u00e0y v\u00ec validation synthetic b\u1ea3n ch\u1ea5t ph\u1ea3i \u0111\u1ecdc manifest + b\u0103m file.\n- Th\u00eam helper `assert_blocked_before_io` (no open/stat/subprocess/which) ch\u1ec9 d\u00f9ng cho nh\u00e1nh policy ch\u1ea1y tr\u01b0\u1edbc gate: undeclared (`is_synthetic=False`), `allow_sensitive`, `confirmation`, adapter r\u1ed7ng/unverified, model ch\u01b0a x\u00e1c minh/contributor.\n- Model param: `unknown-model`, `gpt-6.1-sol`, `*-contributor` \u2192 assert before-I/O; `glm-5.3` (model tin c\u1eady nh\u01b0ng image=false/pdf=false) mismatch ch\u1ec9 bi\u1ebft sau khi \u0111\u1ecdc manifest \u2192 v\u1eabn l\u00e0 ca \u00e2m, ch\u1ec9 assert blocked + runner=0.\n- `test_outside_path_blocked_without_runner` gi\u1eef nguy\u00ean ca \u00e2m, ch\u1ec9 h\u1ea1 k\u1ef3 v\u1ecdng I/O \u2192 runner=0.\n\nM\u1ed9t \u0111i\u1ec3m c\u1ea7n b\u1ea1n bi\u1ebft (quy\u1ebft \u0111\u1ecbnh h\u1ee3p \u0111\u1ed3ng, kh\u00f4ng ph\u1ea3i n\u1edbi gate):\n- Ca `sha256 = PNG_SHA.upper()` trong b\u1ea3ng \"tampered entry\" kh\u00f4ng th\u1ec3 pass n\u1ebfu kh\u00f4ng s\u1eeda gate: vision.py normalize `.lower()` \u1edf m\u1ecdi ch\u1ed7 so hash, n\u00ean uppercase c\u1ee7a \u0110\u00daNG digest v\u1eabn qua. T\u00f4i chuy\u1ec3n ca n\u00e0y th\u00e0nh test ri\u00eang `test_uppercase_sha256_same_digest_is_case_insensitive_not_tamper` (assert qua c\u1ed5ng, hash kh\u00f4ng \u0111\u1ed5i gi\u00e1 tr\u1ecb), c\u00e1c ca digest kh\u00e1c/sai ki\u1ec3u/`'0'*64` v\u1eabn b\u1ecb ch\u1eb7n. N\u1ebfu b\u1ea1n mu\u1ed1n manifest b\u1eaft bu\u1ed9c lowercase canonical th\u00ec ph\u1ea3i s\u1eeda gate (ngo\u00e0i scope l\u00f4 n\u00e0y).\n\nNgo\u00e0i ph\u1ea1m vi: full suite `tests/` = 946 passed, 1 failed \u1edf `test_go_builders.py::TestOpenCodeBuilder::test_opencode_default_model_and_effort` (delimiter prompt, kh\u00f4ng li\u00ean quan vision, c\u00f3 t\u1eeb tr\u01b0\u1edbc).\n",
+  "exit_code": 0,
+  "reason": null,
+  "served_model": null,
+  "unsandboxed": true,
+  "data_class": "code-nopii"
+}

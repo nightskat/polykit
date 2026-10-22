@@ -514,11 +514,17 @@ def _build_opencode_argv(
     attachments: list[str] | None = None,
     source: str = "explicit",
     data_class: str | None = None,
+    synthetic_vision: bool = False,
+    fmt: str = "text",
+    workdir: str | None = None,
 ) -> list[str]:
     """Helper nội bộ xây dựng danh sách argv cho opencode run.
 
     KHÔNG gọi shell. Giữ prompt nguyên vẹn vị trí cuối (positional).
     -f dùng cho danh sách attachment (synthetic validation lô vision sau).
+    `--` đứng ngay trước prompt để `-f` (array) không nuốt prompt thành file.
+    fmt="json" ⇒ `--format json` (opencode phát raw JSON event stream, giữ được
+    event tool_use để phát hiện nhiễm bẩn); fmt="text" giữ hành vi cũ.
     Dùng selector chuẩn hoá từ policy/resolver thay vì chuỗi thô.
     Lane unsandboxed chỉ mở khi caller khai báo data_class='code-nopii' và
     cổng dữ liệu (PII + attachment/vision) qua. Không có tham số bool override.
@@ -535,7 +541,10 @@ def _build_opencode_argv(
             data_class=data_class,
             prompt=prompt,
             attachments=attachments,
+            synthetic_vision=synthetic_vision,
             vendor="opencode",
+            model=selector.model,
+            workdir=workdir,
         )
     except GoDataGateBlocked as e:
         raise DispatchError(
@@ -544,6 +553,37 @@ def _build_opencode_argv(
             model=selector.model,
             provider=selector.provider or GO_PROVIDER,
         ) from e
+
+    # Xử lý attachment qua prepare_vision_input: DeepSeek tách trang PDF, GLM giữ PDF trực tiếp
+    final_attachment_paths: list[str] = []
+    if attachments:
+        try:
+            from lib.vision import prepare_vision_input, VisionError
+        except ImportError:
+            from bin.lib.vision import prepare_vision_input, VisionError
+        try:
+            prepared = prepare_vision_input(
+                files=attachments,
+                model=selector.model,
+                provider=selector.provider or GO_PROVIDER,
+                adapter="opencode",
+                is_synthetic=synthetic_vision,
+            )
+            final_attachment_paths = [str(p) for p in prepared]
+        except VisionError as e:
+            raise DispatchError(
+                str(e),
+                reason="vision_blocked",
+                model=selector.model,
+                provider=selector.provider or GO_PROVIDER,
+            ) from e
+        except Exception as e:
+            raise DispatchError(
+                f"prepare_vision_input failed: {e}",
+                reason="vision_blocked",
+                model=selector.model,
+                provider=selector.provider or GO_PROVIDER,
+            ) from e
 
     bin_path = get_opencode_bin()
     norm_model = selector.model
@@ -558,9 +598,17 @@ def _build_opencode_argv(
         "--variant",
         norm_effort,
     ]
-    if attachments:
-        for att in attachments:
+    if fmt == "json":
+        # Raw JSON event stream: tool_use events survive for contamination checks.
+        cmd.extend(["--format", "json"])
+    if final_attachment_paths:
+        for att in final_attachment_paths:
             cmd.extend(["-f", str(att)])
+    # `-f/--file` là array (variadic) và `message` là positional array: không có
+    # `--`, yargs nuốt prompt làm phần tử -f tiếp theo ⇒ vendor chết với
+    # "File not found: <toàn prompt>". `--` chốt hết flag/file, prompt luôn
+    # thành positional kể cả khi prompt bắt đầu bằng '-'.
+    cmd.append("--")
     cmd.append(prompt)
     return cmd
 
@@ -572,6 +620,7 @@ def _build_hermes_argv(
     source: str = "explicit",
     data_class: str | None = None,
     attachments: list[str] | None = None,
+    synthetic_vision: bool = False,
 ) -> list[str]:
     """Helper nội bộ xây dựng danh sách argv cho hermes.
 
@@ -597,6 +646,7 @@ def _build_hermes_argv(
             data_class=data_class,
             prompt=prompt,
             attachments=attachments,
+            synthetic_vision=synthetic_vision,
             vendor="hermes",
         )
     except GoDataGateBlocked as e:
@@ -636,6 +686,8 @@ def build_opencode_cmd(
     source: str = "explicit",
     *,
     data_class: str | None = None,
+    synthetic_vision: bool = False,
+    fmt: str = "text",
 ) -> list[str]:
     """Builder cho OpenCode Go adapter.
 
@@ -643,6 +695,10 @@ def build_opencode_cmd(
     caller khai báo tường minh data_class='code-nopii' (keyword-only) và cổng
     dữ liệu qua; thiếu cờ ⇒ DispatchError reason 'sandbox_unsupported'.
     Không có tham số bool nào bỏ được cổng.
+
+    `fmt="json"` thêm `--format json` để giữ event stream thô (tool_use/…).
+    `workdir` chỉ dùng làm cwd của tiến trình con, KHÔNG đổi trusted root của
+    cổng vision (hằng số module).
     """
     validate_sandbox(sandbox)
     return _build_opencode_argv(
@@ -652,6 +708,9 @@ def build_opencode_cmd(
         attachments=attachments,
         source=source,
         data_class=data_class,
+        synthetic_vision=synthetic_vision,
+        fmt=fmt,
+        workdir=workdir,
     )
 
 
@@ -665,6 +724,7 @@ def build_hermes_cmd(
     *,
     attachments: list[str] | None = None,
     data_class: str | None = None,
+    synthetic_vision: bool = False,
 ) -> list[str]:
     """Builder cho Hermes Go adapter.
 
@@ -685,6 +745,7 @@ def build_hermes_cmd(
         source=source,
         data_class=data_class,
         attachments=attachments,
+        synthetic_vision=synthetic_vision,
     )
 
 

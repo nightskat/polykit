@@ -1,0 +1,2 @@
+gợi ý: 1 trang NÊN NHÌN ẢNH dù có thể đủ độ phủ (trang ghép nhiều vùng / dải chữ hẹp) — xem page_hints trong coverage.json. Vắng gợi ý KHÔNG có nghĩa trang đã được kiểm kê.
+coverage: 6 pages, all pages covered (overall status: completed)

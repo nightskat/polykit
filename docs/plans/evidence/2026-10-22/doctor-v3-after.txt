@@ -1,0 +1,20 @@
+VENDOR     | STATE                | PATH                                               | VERSION        
+---------------------------------------------------------------------------------------------------------
+codex      | ready                | /Users/nightskat/.local/lib/node_modules/@openai/codex/bin/codex.js | codex-cli 0.163.0
+gemini     | ready                | /Users/nightskat/.local/lib/node_modules/@google/gemini-cli/bundle/gemini.js | 0.65.0         
+claude     | ready                | /Users/nightskat/.local/share/claude/versions/2.1.301 | 2.1.301 (Claude Code)
+grok       | ready                | /Users/nightskat/.local/lib/node_modules/@xai-official/grok/bin/grok-native | grok 1.0.67 (2fe064390d07)
+agy        | ready                | /Users/nightskat/.local/bin/agy                    | 1.4.5          
+openrouter | ready                | api:openrouter                                     | None           
+dsh        | ready                | /Users/nightskat/.local/lib/node_modules/@deepseek-ai/dsh/lib/bin.js | 0.2.1-rc.2     
+opencode   | auth_unverified      | /Users/nightskat/.opencode/bin/opencode            | 1.19.3         
+  -> Probe phụ không xác minh được auth; thử dispatch nhỏ khi cần
+  -> ⚠️ ZDR: DeepSeek ZDR sắp hết hạn vào 2026-10-31 (còn 9 ngày) — gia hạn chưa được xác minh (cần theo dõi gia hạn từng tháng, không tự động gia hạn)
+hermes     | ready                | /Users/nightskat/.local/bin/hermes                 | Hermes Agent v0.22.2 (2026.9.24) · stable · local d923a5eb487a
+Install directory: /Users/nightskat/.hermes/hermes-agent
+Install method: git
+Python: 3.14.7
+OpenAI SDK: 2.24.0
+Update available — run 'hermes update'
+  -> Sẵn sàng — auth xác minh từ live dispatch lúc 2026-10-22T09:42:25.883521+00:00
+  -> ⚠️ ZDR: DeepSeek ZDR sắp hết hạn vào 2026-10-31 (còn 9 ngày) — gia hạn chưa được xác minh (cần theo dõi gia hạn từng tháng, không tự động gia hạn)

@@ -1,0 +1,21 @@
+
+[CẢNH BÁO / NOTICE] Harness runs unsandboxed. Prompt-only restriction ('do not read workspace') is NOT strong security proof; an unconfined model could technically access workspace files if capable. Each call runs with --cd into an empty scratch dir and --format json is kept for tool-event detection; calls that used tools are excluded from accuracy. Results must be interpreted with this architectural boundary in mind.
+
+[1/6] Dispatching page_01_narrow_table.png to deepseek-v4.1-flash (effort=high)...
+[2/6] Dispatching page_02_negative_numbers.png to deepseek-v4.1-flash (effort=high)...
+[3/6] Dispatching page_03_confusing_chars.png to deepseek-v4.1-flash (effort=high)...
+[4/6] Dispatching page_04_degraded_scan.png to deepseek-v4.1-flash (effort=high)...
+[5/6] Dispatching page_05_multipage_p1.png to deepseek-v4.1-flash (effort=high)...
+[6/6] Dispatching page_06_multipage_p2.png to deepseek-v4.1-flash (effort=high)...
+
+Benchmark completed. Summary written to: docs/plans/bench-v3-deepseek-final/run_summary.json
+
+=== Benchmark Run Result (deepseek-v4.1-flash - mode=images) ===
+Quota Attempts: 6
+Inference Success: 6 (100.0%)
+Contaminated (tool use, excluded): 0
+Images: 137/142 (96.48%)
+PDF: n/a (not part of mode=images)
+Primary (mode=images): 137/142 (96.48%)
+Results stored at: docs/plans/bench-v3-deepseek-final
+

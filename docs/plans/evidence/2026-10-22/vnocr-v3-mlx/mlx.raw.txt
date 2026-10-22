@@ -1,0 +1,228 @@
+===== page_01_narrow_table.png
+CÔNG TY CP THU'ONG MAI SAO MAI (GIÀ LÂP)
+BÁO CÁO LU'U CHUYÊN TIÈN T H'P NHÁT - BÀNG CT HP
+K k toán kt thúc ngày: 30/06/2026
+Mã tài liu: BCTC-2026-NARROW
+Đon vi tính: Đồng Vit Nam (VNĐ)
+STT
+Mã só
+Chi tiêu tài chính
+TM
+Quý 1/2026
+Quý 2/2026
+Lăy k 2026
+01
+DT-01
+Doanh thu bán hàng & dich v
+01
+1.234.567.890
+1.450.230.100
+2.684.797.990
+02
+GV-02
+Giá vn hàng bán
+02
+890.123.456
+920.300.000
+1.810.423.456
+03
+LN-03
+Li nhun gp
+03
+344.444.434
+529.930.100
+874.374.534
+04
+TC-04
+Doanh thu tài chính
+04
+45.678.900
+67.890.120
+113.569.020
+05
+CP-05
+Chi phí tài chính
+05
+23.456.780
+34.567.890
+58.024.670
+06
+QL-06
+Chi phí qun lý doanh nghip
+06
+120.345.670
+145.678.900
+266.024.570
+07
+TT-07
+Tồng li nhun trưc thu
+07
+246.320.884
+417.573.430
+663.894.314
+08
+TNDN-08
+Thu TNDN hin hành
+08
+49.264.177
+83.514.686
+132.778.863
+09
+ST-09
+Li nhun sau thu TNDN
+09
+197.056.707
+334.058.744
+531.115.451
+10
+KH-10
+Khu hao tài sn c đnh
+10
+35.120.000
+36.200.000
+71.320.000
+11
+PT-11
+Tin thu tr bán hàng
+11
+1.180.500.000
+1.410.000.000
+2.590.500.000
+12
+CT-12
+Tin chi trà ngưi cung cp
+12
+810.400.000
+895.000.000
+1.705.400.000
+Ghi chú: Toàn b dr liu đưc lp trên co s dồn tích gi đnh phc v kim chun thi giác máy tính.
+===== page_02_negative_numbers.png
+CÔNG TY CP ĐÀU TU' BÅC HÀ (GIÅ LÂP)
+BÀNG CÂN ĐÓI TÔNG H'P VÀ D' PHÒNG TÔN THÁT TÀI CHÍNH
+Thi đim lp báo cáo: 30/09/2026
+Mã đi chiêu: BC-AM-4212
+Quy ưc: S âm đưc trinh bày trong ngoc đơn ( )
+Mã TK
+Khon mc k toán / Chi tiu d phòng
+S đu năm
+S cui Quý 3/2026
+4212
+Li nhun sau thu chưa phân phi năm nay
+54.321.000
+(12.345)
+1113
+Lưu chuyn tin thun t hot đng kinh doanh
+120.000.000
+(98.765.432)
+2294
+D phòng tn tht đàu tư tài chính dài hn
+(5.000.000)
+(15.500.000)
+4190
+C phiu qu đang nm gi
+(25.000.000)
+(25.000.000)
+1319
+D phòng phi thu khó đòi ngn hn
+(8.400.000)
+(12.600.000)
+3341
+Phi tr công nhân vin còn tn đng
+15.200.000
+(4.320.000)
+4111
+vn góp ca ch s hũu
+500.000.000
+500.000.000
+1111
+Tin mt tn qu
+8.900.000
+2.150.000
+1121
+Tin gi ngân hàng không k hn
+45.000.000
+(1.250.000)
+===== page_03_confusing_chars.png
+TRUNG TÂM ĐÔI SOÁT D LIÊU DIÊN T (GIÀ LÂP)
+BIÊN BÀN ĐI SOÁT M HÔ SO' - BÀI TEST KÝ T' D NHÀM LÃN
+Ngày lp biên bn đi soát: 15/01/2026
+Mc tiêu: Đánh giá phân bit 0/O 1/I 5/6/8 2026/2006
+Mã hp đồng đin t mi (năm 2026):
+HD-2026-0011586B
+Mã tham chiu h sơ cũ (năm 2006):
+REF-2006-0011
+S xê-ri thit b kim đnh:
+SERIES-8568-2006
+Mã chúng t ph thuc:
+VOUCHER-1100-2026
+S tin phí đi soát dich v:
+8.568.015 VND
+Quy chun đi soát k thut s:
+1. Yêu cu h thng OCR/Vision trích xut chính xác trng ký t quang hc.
+2. Không áp dng thut toán t sa li (autocorrect) đi vi các chui đnh danh.
+3. Kim tra tính toàn vn ca mã s trên co s so khp trng ký t đc lp.
+4. Phân bit rõ năm tài chính 2026 và 2006 theo ng cnh tùng chúng tù lưru trũ.
+5. D liu đôi soát hoàn toàn đưc sinh ngu nhiên có kim soát (deterministic).
+===== page_04_degraded_scan.png
+NGÂN HÀNG THU'ONG MAI GIÀ LÄP VIÉT NAM
+ÜY NHIÊM CHI / GIAY BÁO NO (BÀN SCAN LU'U TRÜ CHÚ'NG TÚ)
+Mä chúng tùr giao dich:
+TXN-882006-SCAN
+Ngày hach toán hé thóng:
+12/03/2026
+Tài khon trich no:
+01234567890 (VND)
+Só tiên ghi no thuc té:
+56.810.000 VND
+Bâng chū:
+Nām muoi sáu triu tám trām muòi nghin đông chān
+Nói dung giao dich:
+Phi bào länh thanh toán hop đòng
+Don vi thu hurng: CÓNG TY TNHH PHAN MÊM THÁI BiNH DUONG
+Tài khoan nhân: 9876543210 - Ngân hang TMCP Ngoai Thuong
+Trang thái: GIAO DICH DÃ DUOC XÁC THUC THÁNH CÔNG
+Ch ký kim soát vin: Đ KÝ DIN T (M AUTH-7719-OK)
+Luru ý luu kho: Bàn scan đā qua nén áānh só cht lurong tháp
+===== page_05_multipage_p1.png
+CÔNG HÒA XÃ HI CHÙ NGHÎA VIÊT NAM
+Đc lp - T do - Hnh phúc
+HP ĐÔNG DICH V CÔNG NGHÊ THÔNG TIN
+sô:HD-2026/SK-HA/01
+- Căn c B lut Dân s nuc Cng hòa Xã hi Ch nghĩa Vit Nam năm 2015;
+- Căn c Lut Thương mi và nhu cu thc t ca hai bên tha thun;
+Hôm nay, ngày 18 tháng 04 năm 2026, chúng tôi gồm có:
+BÊN A (BÊN SÚ DNG DICH VU):
+Tên đơn vi: Công ty C phn Công ngh Sao Kim
+Đia chi: Tng 5, Tòa nhà Công ngh Gi Lp, Qun 1, TP. H Chí Minh
+Mã s thu: 0312987654 - Đin thoi: (028) 3822 0000
+BÊN B (BÊN CUNG CÁP DICH V):
+Tên đơn v: Công ty TNHH Phát trin Phn mm Hi Âu
+Đa chi: Tàng 8, Tháp Phn mm Sáng To, Qun Càu Giy, TP. Hà Ni
+Mã s thu: 0109876543 - Đin thoi: (024) 3799 1111
+ĐIÊU 1: PHAM VI DICH V VÀ NÔI DUNG THC HIN
+1.1 Bên B nhn cung cp bn quyn phn mm phân tích hóa đơn đin t t đng.
+1.2 Tích hp h thng trích xut d liu OCR và đi soát s sách k toán cho Bên A.
+1.3 Toàn b mã ngun và tài liu chuyn giao tuân th quy chun k thut an toàn.
+Trang 1 / 2
+===== page_06_multipage_p2.png
+H'P ĐÔNG DICH V CÔNG NGH THÔNG TIN (TIÉP THEO)
+sô: HD-2026/SK-HA/01
+DIÊU 2: GIÁ TRI VÀ PHUONG THÚC THANH TOÁN
+1. Giá tr dch v trưc thu:
+450.000.000 VND
+2. Thu sut Giá tri gia tăng (GTGT 10%):
+45.000.000 VND
+3. Tồng giá tr thanh toán sau thu:
+495.000.000 VND
+(Bng chũ: Bn trăm chín mưoi lăm triu đồng chn)
+ĐIÊU 3: HIÊU L'C THI HÀNH VÀ CAM KÊT CHUNG
+3.1 Hp đng có hiu lrc thi hành k t ngày: 01/05/2026 đn ht ngày 31/12/2026.
+3.2 Hai bên cam kt thc hin đúng và đy đ các điu khon đã tha thun.
+3.3 Mi tranh chp phát sinh s đưc ưu tiên giài quyt qua thưong lưng hòa gii.
+ĐAI DIÊN HP PHÁP BÊN A
+ĐAI DIN HP PHÁP BÊN B
+(Ký, ghi rõ ho tên và đóng du)
+(Ký, ghi rõ ho tên và đóng du)
+[Đ  ĐIN ]
+[Đ  ĐIN ]
+Trang 2 / 2

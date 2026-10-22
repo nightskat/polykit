@@ -1,0 +1,15 @@
+{
+  "status": "ok",
+  "vendor": "hermes",
+  "model": "deepseek-v4.1-flash",
+  "summary": "hermes completed successfully",
+  "warnings": [
+    "[polykit] warning: model list for vendor 'hermes' is unknown, cannot validate 'deepseek-v4.1-flash'"
+  ],
+  "stdout": "Xong. Ch\u1ec9 s\u1eeda `tests/test_vision_bench_score.py` (29 passed).\n\n3 fix:\n- `import subprocess` \u2014 fake_run raise `subprocess.TimeoutExpired` b\u1ecb NameError, timeout test gi\u1edd tr\u1ea3 rc=124, timeout=720.\n- images-mode: 4 PNG (g\u1ed3m page_05/page_06) \u21d2 denominator 5, \u0111\u00fang p1_a/p4_a/p5_a = 3 correct, missing p5_b/p6_a \u2192 60%. Th\u00eam assert l\u1ecdc per-call: m\u1ed7i call ch\u1ec9 gi\u1eef id thu\u1ed9c doc c\u1ee7a n\u00f3 (`p5_a` ch\u1ec9 \u1edf call page_05, field_ids page_05 = [p5_a, p5_b]), v\u00e0 call page_06 \u2192 status `no_task_fields`, parsed_predictions None.\n- all-mode: images 5/4, pdf 3/3, additive primary 8/7 (tr\u01b0\u1edbc ghi 5/4).\n\nscore.py v\u00e0 run.py kh\u00f4ng \u0111\u1ed5i \u2014 h\u00e0nh vi th\u1eadt \u0111\u00e3 \u0111\u00fang, ch\u1ec9 assert c\u0169 sai (gi\u1ea3 \u0111\u1ecbnh images \u2260 page_05/06).\n",
+  "exit_code": 0,
+  "reason": null,
+  "served_model": null,
+  "unsandboxed": true,
+  "data_class": "code-nopii"
+}

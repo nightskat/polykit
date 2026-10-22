@@ -1,0 +1,16 @@
+{
+  "status": "ok",
+  "vendor": "hermes",
+  "model": "deepseek-v4.1-flash",
+  "summary": "hermes completed successfully",
+  "warnings": [
+    "[polykit] warning: model list for vendor 'hermes' is unknown, cannot validate 'deepseek-v4.1-flash'",
+    "auth ch\u01b0a x\u00e1c minh \u0111\u01b0\u1ee3c cho hermes (kh\u00f4ng r\u00f5 l\u00fd do) \u2014 v\u1eabn dispatch, l\u1ed7i th\u1eadt (n\u1ebfu c\u00f3) s\u1ebd do vendor t\u1ef1 b\u00e1o"
+  ],
+  "stdout": "Xong l\u00f4 2b trong 3 file, kh\u00f4ng \u0111\u1ee5ng file kh\u00e1c.\n\n\u0110\u00e3 s\u1eeda\n- bin/lib/go_data_gate.py: kh\u00f4i ph\u1ee5c `def evaluate_go_data_gate(` b\u1ecb m\u1ea5t khi ch\u00e8n 2 helper m\u1edbi (d\u00f2ng 169 c\u0169 l\u00e0 `*,` tr\u1ea7n \u2192 SyntaxError unmatched ')'). py_compile OK, import l\u1ea1i \u0111\u01b0\u1ee3c.\n- bin/lib/dispatcher.py: c\u1ed5ng b\u01b0\u1edbc 4 gi\u1edd truy\u1ec1n `model=resolved_model` + `workdir=workdir`; `_dispatch_go_adapter` nh\u1eadn `synthetic_vision` v\u00e0 chuy\u1ec3n xu\u1ed1ng c\u1ea3 `build_opencode_cmd` / `build_hermes_cmd`.\n- bin/lib/dispatch_core.py: `_build_opencode_argv` nh\u1eadn `workdir`, c\u1ed5ng g\u1ecdi v\u1edbi `model=selector.model` + `workdir`; `build_opencode_cmd` forward `workdir` xu\u1ed1ng.\n\n\u0110\u00e3 ki\u1ec3m b\u1eb1ng ch\u1ea1y th\u1eadt\n- tests/test_go_nopii_gate.py + test_dispatch_builders.py + test_bug14_go_probe.py: 91 passed.\n- PNG trusted (page_01_narrow_table.png) + `--synthetic-vision` + code-nopii qua opencode/deepseek-v4.1-flash: `_dispatch_go_adapter` \u2192 ok, unsandboxed=true, runner spawn, argv c\u00f3 `-f <png>`; `run_vendor` \u0111\u01b0\u1eddng \u0111\u1ea7y \u0111\u1ee7 c\u0169ng ok + runner spawn.\n- hermes c\u00f9ng input: blocked/vision_blocked, runner=0. Sensitive flags v\u1eabn ch\u1eb7n (test s\u1eb5n c\u00f3 pass). Kh\u00f4ng c\u00f3 tham s\u1ed1 bool n\u00e0o m\u1edf c\u1ed5ng \u2014 ch\u1ec9 `data_class=\"code-nopii\"` + `synthetic_vision` + manifest/hash kh\u1edbp registry.\n- workdir: `--cd` v\u00e0o c\u00e2y kh\u00e1c c\u00f3 manifest ri\u00eang \u2192 vision_blocked; /tmp th\u01b0\u1eddng v\u00e0 repo th\u1eadt \u2192 cho qua.\n\nC\u00f2n treo (kh\u00f4ng ph\u1ea3i 3 file n\u00e0y, kh\u00f4ng t\u1ef1 s\u1eeda)\n- tests/test_vision.py: 6 fail, v\u00e0 file \u0111ang b\u1ecb ng\u01b0\u1eddi kh\u00e1c s\u1eeda live (mtime 16:39, s\u1ed1 fail t\u1ee5t 18\u21926 gi\u1eefa 2 l\u1ea7n ch\u1ea1y) \u2014 thu\u1ed9c ch\u1ee7 vision.py.\n- tests/test_vision_bench_score.py: 3 fail (scorer/bench runner).\n- Ch\u01b0a ch\u1ea1y CLI `bin/dispatch.py` v\u1edbi PNG positive th\u1eadt v\u00ec s\u1ebd spawn opencode + network; nh\u00e1nh \u0111\u00f3 m\u1edbi ch\u1ee9ng minh t\u1edbi l\u1edbp runner stub.\n",
+  "exit_code": 0,
+  "reason": null,
+  "served_model": null,
+  "unsandboxed": true,
+  "data_class": "code-nopii"
+}

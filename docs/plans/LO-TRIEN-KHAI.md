@@ -38,7 +38,7 @@ Không dữ liệu khách hàng, không sửa cấu hình/credential cá nhân, 
   vision transport và xác nhận trusted UI mỗi lượt chưa operational. Không bật lane PGBank.
 
 ## Vòng 2 — ngoại lệ code-nopii (BRIEF-SOL-2.md)
-13. e856d43: commit docs vòng 1 dựa trên live-results.json.
+13. e856d43: commit docs vòng 1 dựa trên evidence/2026-10-22/live-results.json.
 14. 57e8328: cổng code-nopii, checker prompt và metadata; agy không ra kết quả → DeepSeek; điều phối 770 passed.
 15. 6780e42: README/dispatch docs và live evidence; agy timeout → DeepSeek; điều phối 770 passed.
 16. Grok-4.7 review riêng: 2 Medium + 1 Low (REVIEW-GROK-ROUND2.md).

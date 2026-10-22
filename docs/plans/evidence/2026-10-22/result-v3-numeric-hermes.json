@@ -1,0 +1,15 @@
+{
+  "status": "ok",
+  "vendor": "hermes",
+  "model": "deepseek-v4.1-flash",
+  "summary": "hermes completed successfully",
+  "warnings": [
+    "[polykit] warning: model list for vendor 'hermes' is unknown, cannot validate 'deepseek-v4.1-flash'"
+  ],
+  "stdout": "Xong. Ch\u1ec9 s\u1eeda `bench/vision/score.py` + `tests/test_vision_bench_score.py`, kh\u00f4ng \u0111\u1ee5ng code exact/text/date, kh\u00f4ng agent, kh\u00f4ng commit.\n\nThay \u0111\u1ed5i parser (bench/vision/score.py)\n- Th\u00eam `_strip_currency_suffix()`: b\u00f3c \u0110\u00daNG M\u1ed8T \u0111\u01a1n v\u1ecb ti\u1ec1n t\u1ec7 \u1edf cu\u1ed1i, ch\u1ec9 3 gi\u00e1 tr\u1ecb `VND` / `VN\u0110` / `\u0111`, so tr\u00ean chu\u1ed7i casefold n\u00ean `vnd`, `Vn\u0111`, `\u0110` \u0111\u1ec1u \u0111\u01b0\u1ee3c.\n- B\u1eaft bu\u1ed9c c\u00f3 whitespace gi\u1eefa s\u1ed1 v\u00e0 \u0111\u01a1n v\u1ecb (`12345VND` b\u1ecb lo\u1ea1i), \u0111\u01a1n v\u1ecb ph\u1ea3i \u1edf cu\u1ed1i v\u00e0 ch\u1ec9 m\u1ed9t l\u1ea7n (`123 vnd vnd` b\u1ecb lo\u1ea1i), kh\u00f4ng \u0111\u01a1n v\u1ecb n\u00e0o kh\u00e1c (`USD`, `EUR`, `VN` b\u1ecb lo\u1ea1i).\n- B\u00f3c suffix x\u1ea3y ra TR\u01af\u1edaC b\u01b0\u1edbc c\u1ea5m ch\u1eef c\u00e1i, n\u00ean m\u1ecdi ch\u1eef l\u1ea1 c\u00f2n l\u1ea1i v\u1eabn fail nh\u01b0 c\u0169: `123abc`, `VND123`, `VND 12345`, `123 VND xyz` \u2192 None.\n- D\u1ea5u v\u00e0 ngo\u1eb7c v\u1eabn x\u1eed l\u00fd sau \u0111\u00f3: `(12.345) VN\u0110` \u2192 -12345; sign xung \u0111\u1ed9t `-(12.345)`, `(-12.345)` \u2192 None.\n- Si\u1ebft th\u00eam kho\u1ea3ng tr\u1eafng b\u00ean trong: ch\u1ec9 nh\u1eadn l\u00e0m d\u1ea5u ph\u00e2n c\u00e1ch ngh\u00ecn (`56 810 000`), n\u00ean `12345 67890`, `1 2 3` b\u1ecb lo\u1ea1i thay v\u00ec b\u1ecb n\u1ed1i th\u00e0nh m\u1ed9t s\u1ed1 sai (multi-amount).\n\nK\u1ebft qu\u1ea3 th\u1ef1c nghi\u1ec7m\n- `56.810.000 VND == 56810000`, `(12.345) VN\u0110 == -12345` \u2014 \u0111\u1ec1u \u0111\u00fang.\n- Reject \u0111\u00fang: `123abc`, `VND123`, `123 VND xyz`, `123 USD`, `12345VND`, `123 vnd vnd`, `123 VND 456`, `VND`, `\u0111`, `NaN VND`, `12.345\u0111`.\n- `compare_field(\"amount\", \"56.810.000\", \"56.810.000 VND\")` \u2192 correct=True, reason=None (h\u1ebft false negative); s\u1ed1 l\u1ec7ch v\u1eabn `amount_mismatch`; `USD` v\u1eabn `invalid_amount_format`.\n\nTests: th\u00eam 3 test (whitelist, rejection, scoring), b\u1ecf 2 assertion c\u0169 \u0111\u00e3 m\u00e2u thu\u1eabn (`\"12345 VN\u0110\"` v\u00e0 `\"12.345\u0111\"` t\u1eebng b\u1ecb \u00e9p None). `tests/test_vision_bench_score.py` 32 passed; to\u00e0n b\u1ed9 `tests/` 950 passed trong 28.7s.\n\nKh\u00f4ng l\u00e0m (optional trong brief): ch\u01b0a th\u00eam c\u1edd \"format mismatch\" ri\u00eang khi prediction c\u00f3 suffix nh\u01b0ng s\u1ed1 \u0111\u00fang \u2014 mu\u1ed1n ph\u00e2n bi\u1ec7t format vs numeric th\u00ec ph\u1ea3i s\u1eeda `compare_field`, n\u00f3i m\u1ed9t ti\u1ebfng m\u00ecnh th\u00eam.\n",
+  "exit_code": 0,
+  "reason": null,
+  "served_model": null,
+  "unsandboxed": true,
+  "data_class": "code-nopii"
+}

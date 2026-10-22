@@ -1,0 +1,233 @@
+{
+  "call_index": 1,
+  "task_id": "multipage_contract_pdf",
+  "document": "multipage_contract.pdf",
+  "scope": "pdf",
+  "file_path": "/Users/nightskat/Developer/polykit-wt-bench/bench/vision/synthetic/multipage_contract.pdf",
+  "workdir": "docs/plans/bench-v3-deepseek-pdf-hardened/scratch/multipage_contract_pdf",
+  "command": [
+    "/Users/nightskat/.pyenv/versions/3.11.8/bin/python",
+    "/Users/nightskat/Developer/polykit-wt-bench/bin/dispatch.py",
+    "opencode",
+    "--model",
+    "deepseek-v4.1-flash",
+    "--effort",
+    "high",
+    "--data-class",
+    "code-nopii",
+    "--synthetic-vision",
+    "--file",
+    "/Users/nightskat/Developer/polykit-wt-bench/bench/vision/synthetic/multipage_contract.pdf",
+    "--timeout",
+    "600",
+    "--format",
+    "json",
+    "--cd",
+    "docs/plans/bench-v3-deepseek-pdf-hardened/scratch/multipage_contract_pdf",
+    "--result-json",
+    "--prompt-file",
+    "docs/plans/bench-v3-deepseek-pdf-hardened/prompts/prompt_multipage_contract_pdf.txt"
+  ],
+  "latency_seconds": 19.9113,
+  "returncode": 0,
+  "status": "ok",
+  "contaminated": false,
+  "contamination_status": null,
+  "dispatch_status": "ok",
+  "field_ids": [
+    "p5_client_name",
+    "p5_contract_date",
+    "p5_contract_no",
+    "p5_vendor_name",
+    "p6_clause_title",
+    "p6_effective_date",
+    "p6_subtotal_amount",
+    "p6_total_amount",
+    "p6_vat_amount"
+  ],
+  "score": {
+    "evaluation_type": "deterministic_typed_accuracy",
+    "scope_field_ids": [
+      "p5_client_name",
+      "p5_contract_date",
+      "p5_contract_no",
+      "p5_vendor_name",
+      "p6_clause_title",
+      "p6_effective_date",
+      "p6_subtotal_amount",
+      "p6_total_amount",
+      "p6_vat_amount"
+    ],
+    "total_fields": 9,
+    "correct_fields": 8,
+    "accuracy_percent": 88.89,
+    "by_document": {
+      "page_05_multipage_p1.png": {
+        "correct": 4,
+        "total": 4,
+        "percent": 100.0
+      },
+      "page_06_multipage_p2.png": {
+        "correct": 4,
+        "total": 5,
+        "percent": 80.0
+      }
+    },
+    "by_type": {
+      "code": {
+        "correct": 1,
+        "total": 1,
+        "percent": 100.0
+      },
+      "date": {
+        "correct": 2,
+        "total": 2,
+        "percent": 100.0
+      },
+      "text": {
+        "correct": 2,
+        "total": 3,
+        "percent": 66.67
+      },
+      "amount": {
+        "correct": 3,
+        "total": 3,
+        "percent": 100.0
+      }
+    },
+    "fields": [
+      {
+        "id": "p5_contract_no",
+        "document": "page_05_multipage_p1.png",
+        "page": 5,
+        "name": "Số hiệu hợp đồng kinh tế",
+        "type": "code",
+        "ground_truth_raw": "HĐ-2026/SK-HA/01",
+        "prediction_raw": "HĐ-2026/SK-HA/01",
+        "parsed_gt": "HĐ-2026/SK-HA/01",
+        "parsed_pred": "HĐ-2026/SK-HA/01",
+        "correct": true,
+        "error_reason": null
+      },
+      {
+        "id": "p5_contract_date",
+        "document": "page_05_multipage_p1.png",
+        "page": 5,
+        "name": "Ngày ký kết hợp đồng",
+        "type": "date",
+        "ground_truth_raw": "2026-04-18",
+        "prediction_raw": "2026-04-18",
+        "parsed_gt": "2026-04-18",
+        "parsed_pred": "2026-04-18",
+        "correct": true,
+        "error_reason": null
+      },
+      {
+        "id": "p5_client_name",
+        "document": "page_05_multipage_p1.png",
+        "page": 5,
+        "name": "Tên pháp nhân Bên A",
+        "type": "text",
+        "ground_truth_raw": "Công ty Cổ phần Công nghệ Sao Kim",
+        "prediction_raw": "Công ty Cổ phần Công nghệ Sao Kim",
+        "parsed_gt": "Công ty Cổ phần Công nghệ Sao Kim",
+        "parsed_pred": "Công ty Cổ phần Công nghệ Sao Kim",
+        "correct": true,
+        "error_reason": null
+      },
+      {
+        "id": "p5_vendor_name",
+        "document": "page_05_multipage_p1.png",
+        "page": 5,
+        "name": "Tên pháp nhân Bên B",
+        "type": "text",
+        "ground_truth_raw": "Công ty TNHH Phát triển Phần mềm Hải Âu",
+        "prediction_raw": "Công ty TNHH Phát triển Phần mềm Hải Âu",
+        "parsed_gt": "Công ty TNHH Phát triển Phần mềm Hải Âu",
+        "parsed_pred": "Công ty TNHH Phát triển Phần mềm Hải Âu",
+        "correct": true,
+        "error_reason": null
+      },
+      {
+        "id": "p6_subtotal_amount",
+        "document": "page_06_multipage_p2.png",
+        "page": 6,
+        "name": "Giá trị hợp đồng trước thuế",
+        "type": "amount",
+        "ground_truth_raw": "450.000.000",
+        "prediction_raw": "450.000.000 VNĐ",
+        "parsed_gt": "450000000",
+        "parsed_pred": "450000000",
+        "correct": true,
+        "error_reason": null
+      },
+      {
+        "id": "p6_vat_amount",
+        "document": "page_06_multipage_p2.png",
+        "page": 6,
+        "name": "Tiền thuế GTGT 10%",
+        "type": "amount",
+        "ground_truth_raw": "45.000.000",
+        "prediction_raw": "45.000.000 VNĐ",
+        "parsed_gt": "45000000",
+        "parsed_pred": "45000000",
+        "correct": true,
+        "error_reason": null
+      },
+      {
+        "id": "p6_total_amount",
+        "document": "page_06_multipage_p2.png",
+        "page": 6,
+        "name": "Tổng giá trị thanh toán hợp đồng sau thuế",
+        "type": "amount",
+        "ground_truth_raw": "495.000.000",
+        "prediction_raw": "495.000.000 VNĐ",
+        "parsed_gt": "495000000",
+        "parsed_pred": "495000000",
+        "correct": true,
+        "error_reason": null
+      },
+      {
+        "id": "p6_effective_date",
+        "document": "page_06_multipage_p2.png",
+        "page": 6,
+        "name": "Ngày hiệu lực hợp đồng",
+        "type": "date",
+        "ground_truth_raw": "2026-05-01",
+        "prediction_raw": "01/05/2026",
+        "parsed_gt": "2026-05-01",
+        "parsed_pred": "2026-05-01",
+        "correct": true,
+        "error_reason": null
+      },
+      {
+        "id": "p6_clause_title",
+        "document": "page_06_multipage_p2.png",
+        "page": 6,
+        "name": "Tiêu đề điều khoản thanh toán",
+        "type": "text",
+        "ground_truth_raw": "GIÁ TRỊ VÀ PHƯƠNG THỨC THANH TOÁN",
+        "prediction_raw": "ĐIỀU 2: GIÁ TRỊ VÀ PHƯƠNG THỨC THANH TOÁN",
+        "parsed_gt": "GIÁ TRỊ VÀ PHƯƠNG THỨC THANH TOÁN",
+        "parsed_pred": "ĐIỀU 2: GIÁ TRỊ VÀ PHƯƠNG THỨC THANH TOÁN",
+        "correct": false,
+        "error_reason": "text_mismatch"
+      }
+    ]
+  },
+  "raw_stdout": "{\n  \"status\": \"ok\",\n  \"vendor\": \"opencode\",\n  \"model\": \"deepseek-v4.1-flash\",\n  \"summary\": \"opencode completed successfully\",\n  \"warnings\": [\n    \"[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'deepseek-v4.1-flash'\"\n  ],\n  \"stdout\": \"{\\\"type\\\":\\\"step_start\\\",\\\"timestamp\\\":1792663890425,\\\"sessionID\\\":\\\"ses_e9ce7fbc7ffeyLBhoxNrVHQpRn\\\",\\\"part\\\":{\\\"id\\\":\\\"prt_1631829ee001Um995B6WL7EQLj\\\",\\\"messageID\\\":\\\"msg_1631805f8001xmF9jJdGYTX9Y0\\\",\\\"sessionID\\\":\\\"ses_e9ce7fbc7ffeyLBhoxNrVHQpRn\\\",\\\"snapshot\\\":\\\"742822490a47d99f96fb8c5bb5d047acd88c9f3b\\\",\\\"type\\\":\\\"step-start\\\"}}\\n{\\\"type\\\":\\\"text\\\",\\\"timestamp\\\":1792663894600,\\\"sessionID\\\":\\\"ses_e9ce7fbc7ffeyLBhoxNrVHQpRn\\\",\\\"part\\\":{\\\"id\\\":\\\"prt_163183743001nfUpjxnDSl5V3v\\\",\\\"messageID\\\":\\\"msg_1631805f8001xmF9jJdGYTX9Y0\\\",\\\"sessionID\\\":\\\"ses_e9ce7fbc7ffeyLBhoxNrVHQpRn\\\",\\\"type\\\":\\\"text\\\",\\\"text\\\":\\\"{\\\\\\\"p5_contract_no\\\\\\\": \\\\\\\"H\\u0110-2026/SK-HA/01\\\\\\\", \\\\\\\"p5_contract_date\\\\\\\": \\\\\\\"2026-04-18\\\\\\\", \\\\\\\"p5_client_name\\\\\\\": \\\\\\\"C\\u00f4ng ty C\\u1ed5 ph\\u1ea7n C\\u00f4ng ngh\\u1ec7 Sao Kim\\\\\\\", \\\\\\\"p5_vendor_name\\\\\\\": \\\\\\\"C\\u00f4ng ty TNHH Ph\\u00e1t tri\\u1ec3n Ph\\u1ea7n m\\u1ec1m H\\u1ea3i \\u00c2u\\\\\\\", \\\\\\\"p6_subtotal_amount\\\\\\\": \\\\\\\"450.000.000 VN\\u0110\\\\\\\", \\\\\\\"p6_vat_amount\\\\\\\": \\\\\\\"45.000.000 VN\\u0110\\\\\\\", \\\\\\\"p6_total_amount\\\\\\\": \\\\\\\"495.000.000 VN\\u0110\\\\\\\", \\\\\\\"p6_effective_date\\\\\\\": \\\\\\\"01/05/2026\\\\\\\", \\\\\\\"p6_clause_title\\\\\\\": \\\\\\\"\\u0110I\\u1ec0U 2: GI\\u00c1 TR\\u1eca V\\u00c0 PH\\u01af\\u01a0NG TH\\u1ee8C THANH TO\\u00c1N\\\\\\\"}\\\",\\\"time\\\":{\\\"start\\\":1792663893827,\\\"end\\\":1792663894596}}}\\n{\\\"type\\\":\\\"step_finish\\\",\\\"timestamp\\\":1792663894708,\\\"sessionID\\\":\\\"ses_e9ce7fbc7ffeyLBhoxNrVHQpRn\\\",\\\"part\\\":{\\\"id\\\":\\\"prt_163183ab1001rIYKuyTrCR5lPE\\\",\\\"reason\\\":\\\"stop\\\",\\\"snapshot\\\":\\\"742822490a47d99f96fb8c5bb5d047acd88c9f3b\\\",\\\"messageID\\\":\\\"msg_1631805f8001xmF9jJdGYTX9Y0\\\",\\\"sessionID\\\":\\\"ses_e9ce7fbc7ffeyLBhoxNrVHQpRn\\\",\\\"type\\\":\\\"step-finish\\\",\\\"tokens\\\":{\\\"total\\\":22072,\\\"input\\\":15256,\\\"output\\\":189,\\\"reasoning\\\":483,\\\"cache\\\":{\\\"write\\\":0,\\\"read\\\":6144}},\\\"cost\\\":0.002710032}}\\n\",\n  \"exit_code\": 0,\n  \"reason\": null,\n  \"served_model\": null,\n  \"unsandboxed\": true,\n  \"data_class\": \"code-nopii\"\n}\n",
+  "raw_stderr": "[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'deepseek-v4.1-flash'\n[polykit] ⚠ traps for opencode:\n  1. opencode run --model opencode-go/<m> --variant <effort>: cờ đổi ở bản mới; stdin DEVNULL; không shell\n",
+  "model_stdout": "{\"type\":\"step_start\",\"timestamp\":1792663890425,\"sessionID\":\"ses_e9ce7fbc7ffeyLBhoxNrVHQpRn\",\"part\":{\"id\":\"prt_1631829ee001Um995B6WL7EQLj\",\"messageID\":\"msg_1631805f8001xmF9jJdGYTX9Y0\",\"sessionID\":\"ses_e9ce7fbc7ffeyLBhoxNrVHQpRn\",\"snapshot\":\"742822490a47d99f96fb8c5bb5d047acd88c9f3b\",\"type\":\"step-start\"}}\n{\"type\":\"text\",\"timestamp\":1792663894600,\"sessionID\":\"ses_e9ce7fbc7ffeyLBhoxNrVHQpRn\",\"part\":{\"id\":\"prt_163183743001nfUpjxnDSl5V3v\",\"messageID\":\"msg_1631805f8001xmF9jJdGYTX9Y0\",\"sessionID\":\"ses_e9ce7fbc7ffeyLBhoxNrVHQpRn\",\"type\":\"text\",\"text\":\"{\\\"p5_contract_no\\\": \\\"HĐ-2026/SK-HA/01\\\", \\\"p5_contract_date\\\": \\\"2026-04-18\\\", \\\"p5_client_name\\\": \\\"Công ty Cổ phần Công nghệ Sao Kim\\\", \\\"p5_vendor_name\\\": \\\"Công ty TNHH Phát triển Phần mềm Hải Âu\\\", \\\"p6_subtotal_amount\\\": \\\"450.000.000 VNĐ\\\", \\\"p6_vat_amount\\\": \\\"45.000.000 VNĐ\\\", \\\"p6_total_amount\\\": \\\"495.000.000 VNĐ\\\", \\\"p6_effective_date\\\": \\\"01/05/2026\\\", \\\"p6_clause_title\\\": \\\"ĐIỀU 2: GIÁ TRỊ VÀ PHƯƠNG THỨC THANH TOÁN\\\"}\",\"time\":{\"start\":1792663893827,\"end\":1792663894596}}}\n{\"type\":\"step_finish\",\"timestamp\":1792663894708,\"sessionID\":\"ses_e9ce7fbc7ffeyLBhoxNrVHQpRn\",\"part\":{\"id\":\"prt_163183ab1001rIYKuyTrCR5lPE\",\"reason\":\"stop\",\"snapshot\":\"742822490a47d99f96fb8c5bb5d047acd88c9f3b\",\"messageID\":\"msg_1631805f8001xmF9jJdGYTX9Y0\",\"sessionID\":\"ses_e9ce7fbc7ffeyLBhoxNrVHQpRn\",\"type\":\"step-finish\",\"tokens\":{\"total\":22072,\"input\":15256,\"output\":189,\"reasoning\":483,\"cache\":{\"write\":0,\"read\":6144}},\"cost\":0.002710032}}\n",
+  "parsed_predictions": {
+    "p5_contract_no": "HĐ-2026/SK-HA/01",
+    "p5_contract_date": "2026-04-18",
+    "p5_client_name": "Công ty Cổ phần Công nghệ Sao Kim",
+    "p5_vendor_name": "Công ty TNHH Phát triển Phần mềm Hải Âu",
+    "p6_subtotal_amount": "450.000.000 VNĐ",
+    "p6_vat_amount": "45.000.000 VNĐ",
+    "p6_total_amount": "495.000.000 VNĐ",
+    "p6_effective_date": "01/05/2026",
+    "p6_clause_title": "ĐIỀU 2: GIÁ TRỊ VÀ PHƯƠNG THỨC THANH TOÁN"
+  },
+  "timestamp": "2026-10-22T10:11:34.895999+00:00"
+}

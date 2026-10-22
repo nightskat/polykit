@@ -1,0 +1,99 @@
+[
+  {
+    "command": [
+      "/Users/nightskat/.pyenv/versions/3.11.8/bin/python",
+      "bin/dispatch.py",
+      "opencode",
+      "--model",
+      "deepseek-v4.1-flash",
+      "--data-class",
+      "code-nopii",
+      "--synthetic-vision",
+      "--file",
+      "docs/plans/vision-synthetic.png",
+      "--prompt",
+      "SYNTHETIC ONLY",
+      "--result-json",
+      "--no-traps"
+    ],
+    "result": {
+      "status": "blocked",
+      "vendor": "opencode",
+      "model": "deepseek-v4.1-flash",
+      "summary": "vendor opencode blocked: vision_blocked",
+      "warnings": [
+        "[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'deepseek-v4.1-flash'",
+        "opencode: lane unsandboxed code-nopii không nhận vision/attachment (synthetic vision validation failed: Attachment docs/plans/vision-synthetic.png is outside fixed synthetic directory: /Users/nightskat/Developer/polykit-wt-bench/bench/vision/synthetic). Cổng vision với dữ liệu thật giữ nguyên chặn.",
+        "[polykit] reason=vision_blocked; unsandboxed=false; data_class='code-nopii' — KHÔNG probe, KHÔNG spawn, KHÔNG network."
+      ],
+      "stdout": "",
+      "exit_code": 1,
+      "reason": "vision_blocked",
+      "served_model": null,
+      "unsandboxed": false,
+      "data_class": "code-nopii"
+    }
+  },
+  {
+    "command": [
+      "/Users/nightskat/.pyenv/versions/3.11.8/bin/python",
+      "bin/dispatch.py",
+      "opencode",
+      "--data-class",
+      "code-nopii",
+      "--allow-sensitive-vision",
+      "--prompt",
+      "SYNTHETIC ONLY",
+      "--result-json",
+      "--no-traps"
+    ],
+    "result": {
+      "status": "blocked",
+      "vendor": "opencode",
+      "model": "deepseek-v4.1-flash",
+      "summary": "vendor opencode blocked: vision_blocked",
+      "warnings": [
+        "[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'deepseek-v4.1-flash'",
+        "opencode: lane unsandboxed code-nopii không nhận vision/attachment (allow_sensitive_vision). Cổng vision với dữ liệu thật giữ nguyên chặn.",
+        "[polykit] reason=vision_blocked; unsandboxed=false; data_class='code-nopii' — KHÔNG probe, KHÔNG spawn, KHÔNG network."
+      ],
+      "stdout": "",
+      "exit_code": 1,
+      "reason": "vision_blocked",
+      "served_model": null,
+      "unsandboxed": false,
+      "data_class": "code-nopii"
+    }
+  },
+  {
+    "command": [
+      "/Users/nightskat/.pyenv/versions/3.11.8/bin/python",
+      "bin/dispatch.py",
+      "opencode",
+      "--model",
+      "gemini-4-argon-contributor",
+      "--data-class",
+      "code-nopii",
+      "--prompt",
+      "SYNTHETIC ONLY",
+      "--result-json",
+      "--no-traps"
+    ],
+    "result": {
+      "status": "blocked",
+      "vendor": "opencode",
+      "model": "gemini-4-argon-contributor",
+      "summary": "dispatch blocked: Contributor models train on user data and are strictly forbidden.",
+      "warnings": [
+        "[polykit] error: Contributor models train on user data and are strictly forbidden.",
+        "[polykit] reason=contributor_model_blocked; requested='gemini-4-argon-contributor' source=explicit — blocked trước probe/spawn/network."
+      ],
+      "stdout": "",
+      "exit_code": 2,
+      "reason": "contributor_model_blocked",
+      "served_model": null,
+      "unsandboxed": false,
+      "data_class": null
+    }
+  }
+]

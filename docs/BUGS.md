@@ -24,15 +24,48 @@
 | BUG-11 | ✅ ĐÃ SỬA | `pytest` bơm bản ghi rác vào `dispatch-log.jsonl` thật |
 | BUG-1 | ⚪️ ĐÓNG | Dòng `[polykit] served:` chỉ in khi model thật KHÁC model yêu cầu — không phải bug |
 | QUAN SÁT-4 | 🔴 MỞ | `agy` nuốt prompt đầu sau khi nghỉ lâu: dispatch hoàn tất nhưng không in JSON/finding |
-| BUG-14 | 🔴 MỞ | `doctor` báo Agy/DSH `ready` nhưng lần dispatch kế tiếp lại `auth_unverified` |
+| BUG-14 | ✅ Go ĐÃ SỬA; lịch sử Agy/DSH giữ nguyên | doctor opencode/hermes dùng chung evidence probe với dispatch (vòng 3) |
 | BUG-17 | ✅ ĐÃ SỬA | `--timeout` KHÔNG xuống tới `--print-timeout` của `agy` → agy tự cắt ở mặc định 5m0s, mất trắng lượt |
 | BUG-18 | ✅ ĐÃ SỬA | `grok` bị trần chung `--timeout 120` giết oan (39% lượt timeout) + log không ghi `latency_ms` |
 
 ---
 
+## Dogfood vòng 3 — 22/10/2026
+
+- Lô gate: `~/.pyenv/versions/3.11.8/bin/python bin/dispatch.py agy --prompt-file docs/plans/evidence/2026-10-22/lo-v3-2.md --cd "$PWD" --timeout 600 --result-json > docs/plans/evidence/2026-10-22/result-v3-2-agy.json` → status=timeout, reason=timeout, exit_code=124, stdout rỗng; warnings xác nhận vendor không in stdout/stderr. Có sửa dở bin/lib/vision.py; chưa nghiệm thu. Đây là timeout công việc, chưa kết luận wrapper sai. Chia tiếp gate/integration và fallback Hermes qua dispatch.
+
+- Lô generator bổ sung: `~/.pyenv/versions/3.11.8/bin/python bin/dispatch.py agy --prompt-file docs/plans/evidence/2026-10-22/lo-v3-3.md --cd "$PWD" --timeout 600 --result-json > docs/plans/evidence/2026-10-22/result-v3-3-agy.json` → timeout/124, stdout rỗng; đã ghi generator/GT dở, điều phối kiểm test trước fallback lô nhỏ.
+
+- Lô scorer: `~/.pyenv/versions/3.11.8/bin/python bin/dispatch.py agy --prompt-file docs/plans/evidence/2026-10-22/lo-v3-4.md --cd "$PWD" --timeout 600 --result-json > docs/plans/evidence/2026-10-22/result-v3-4-agy.json` → timeout/124; warnings giữ stdout đang chạy tests và stderr `root agent idle; waiting up to 10m0s for 1 background task(s)` dù brief cấm gọi nhân viên; chưa xác định task nền là test hay agent. Code có ghi, phải kiểm độc lập.
+- Lô BUG-14: `~/.pyenv/versions/3.11.8/bin/python bin/dispatch.py agy --prompt-file docs/plans/evidence/2026-10-22/lo-v3-5.md --cd "$PWD" --timeout 600 --result-json > docs/plans/evidence/2026-10-22/result-v3-5-agy.json` → timeout/124, stdout rỗng; vendor/doctor sửa dở. Sẽ fallback lô nhỏ sau test.
+
+- Fallback gate: `~/.pyenv/versions/3.11.8/bin/python bin/dispatch.py hermes --data-class code-nopii --prompt-file docs/plans/evidence/2026-10-22/lo-v3-2a.md --cd "$PWD" --timeout 600 --result-json > docs/plans/evidence/2026-10-22/result-v3-2a-hermes.json` → timeout/124 rỗng, unsandboxed=true. Sau đó `.../python bin/dispatch.py opencode --data-class code-nopii --prompt OK --dump-config --result-json` crash trước JSON: go_data_gate.py:179 SyntaxError unmatched ')'. Pytest 146 failed/690 passed. Để điều phối không tự viết code sản phẩm, dùng bản dispatch tại commit đã test cf6342b giải nén vào scratch để giao maker sửa worktree này; vẫn mọi lượt qua python bin/dispatch.py PolyKit.
+
+- Live gate smoke: `.../python bin/dispatch.py opencode --model deepseek-v4.1-flash --effort high --data-class code-nopii --synthetic-vision --file "$PWD/bench/vision/synthetic/page_04_degraded_scan.png" --prompt '<synthetic extraction, no tools>' --format json --timeout 180 --result-json` → blocked vision_blocked: builder nói `attachment without --synthetic-vision` dù CLI có cờ. Evidence live-v3-smoke.json. Chưa spawn (unsandboxed=false); lỗi truyền cờ tầng builder, không phải ảnh/model.
+
+- Fallback `lo-v3-4a.md` và `lo-v3-5a.md` qua `python bin/dispatch.py hermes --data-class code-nopii --prompt-file ... --cd "$PWD" --timeout 600 --result-json` đều timeout/124 rỗng (JSON result-v3-4a-hermes.json, result-v3-5a-hermes.json). Code có ghi: BUG14 subset 67 passed; scorer còn 3 test lỗi fixture/import. Chia tiếp lô sửa test nhỏ.
+
+- Bench thật `python bench/vision/run.py --model {deepseek-v4.1-flash,glm-5.3-flash} --effort {high,max} --mode all --output-dir docs/plans/bench-v3-{deepseek,glm}`: mỗi model 7 dispatch đều exit1/vendor_exit_nonzero ~4–5s, chưa inference. Lỗi thật `Error: File not found: Bạn là trợ lý...` — opencode coi prompt thành file vì `-f` variadic thiếu delimiter `--` trước positional prompt. Evidence raw_calls giữ command/warnings. Không gọi 0% này là độ chính xác model. Sửa argv trước retry.
+
+- Fallback vision `python <scratch>/polykit-v3-dispatch-stable/bin/dispatch.py hermes --data-class code-nopii --prompt-file "$PWD/docs/plans/evidence/2026-10-22/lo-v3-2c.md" --cd "$PWD" --timeout 600 --result-json` timeout/124; files/tests ghi dở, suite 31 failed/906 passed (nhiều test spy Path.stat làm pathlib.is_symlink TypeError). Chia lô chỉ sửa fixture spy, không nới gate.
+
+- Grok review diff: `python bin/dispatch.py grok --model grok-4.7 --prompt-file docs/plans/evidence/2026-10-22/lo-v3-review.md --cd "$PWD" --timeout 600 --result-json` → timeout/124; warnings giữ câu mở đầu đọc diff, chưa có finding. Không coi đã review xong. Chia review gate và auth/scorer, nhúng nguồn vào prompt để giảm tool roundtrip.
+
+- Soi code sau mở PDF: `prepare_vision_input(output_dir=...)` còn nhận thư mục caller, `_convert_pdf_to_images` glob mọi prefix-*.png sau convert; file cũ/prefix-99.png hoặc symlink có thể lẫn vào output không được gate. Chưa gửi dữ liệu thật/tái hiện network; finding code review của điều phối, cần isolated fresh conversion + regression.
+- GLM PDF direct sau sửa argv: upstream HTTP400 deserialize ChatCompletionRequestUserMessageContent, không inference (raw call_07 bench-v3-glm-retry). PNG 6 trang inference thành công. Không tự fallback rồi ghi direct-PDF thành công.
+
+- Review gate nhúng nguồn 24KB qua `python bin/dispatch.py grok --model grok-4.7 --prompt-file docs/plans/evidence/2026-10-22/lo-v3-review-gate.md --cd "$PWD" --timeout 600 --result-json` cũng timeout/124 rỗng. Review auth/scorer cùng cách đã trả status=ok và 3 findings; gate chưa có kết luận reviewer, chia tiếp đoạn ngắn nhất.
+
+- Harden PDF `python bin/dispatch.py hermes --data-class code-nopii --prompt-file docs/plans/evidence/2026-10-22/lo-v3-pdf-harden.md --cd "$PWD" --timeout 600 --result-json` timeout/124 rỗng; code/test đã ghi. Điều phối full suite sau đó 1043 passed (20.08s), không suy timeout nghĩa chưa làm gì.
+- Prompt bench vòng đầu có nhãn hàng ở name của ô số, gián tiếp gợi đáp án ô text cùng hàng. Không phải baseline OCR thuần không gợi ý. Thêm prompt hygiene chỉ tọa độ row/column, chạy lại dữ liệu thật synthetic; giữ vòng cũ làm evidence, không đổi số hồi tố thành pure OCR.
+
 ## 🔴 CÒN MỞ
 
-### 🔴 BUG-14 — `doctor` và `dispatch` mâu thuẫn trạng thái auth
+### BUG-14 — `doctor` và `dispatch` mâu thuẫn trạng thái auth
+
+Cập nhật vòng 3 (22/10/2026), phạm vi opencode/hermes đã sửa: detect() và doctor dùng chung live dispatch evidence TTL 1 giờ, đúng vendor/lane/model; không suy auth từ catalog. Failure tường minh mới thắng success; future success không promote, failure lệch tối đa 5s fail-closed; metadata sai kiểu bị loại. Legacy thiếu provider chỉ nhận model Go đã biết. Không đọc/sửa credential. Test regression tests/test_bug14_go_probe.py; full acceptance xem docs/plans/tests-v3-acceptance.txt. Live doctor-v3-acceptance.txt có Go ready kèm timestamp bằng chứng. Không tuyên bố đã retest toàn bộ lịch sử Agy/DSH bên dưới.
+
+Đã sửa các lỗi dogfood vòng 3: syntax gate dang dở; truyền synthetic_vision tới builder; delimiter opencode -f; PDF output private chống stale/symlink; scorer loại tool_result và nhận hậu tố tiền whitelist; prompt bảng bỏ nhãn GT. Bằng chứng âm live-v3-negative.json vẫn blocked, unsandboxed=false. GLM direct PDF HTTP400 và timeout reviewer/maker còn là giới hạn được ghi nhận, không gọi đã sửa upstream.
 
 Ngày 21/08/2026, sau khi `doctor.py` chạy thành công (Agy 1.1.16 và DSH 0.1.0-rc.7 đều là
 `ready`), hai dispatch ban đầu chạy đủ 120 giây rồi timeout rỗng. Retry ngay Agy cùng prompt,

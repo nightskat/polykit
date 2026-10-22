@@ -618,6 +618,8 @@ def _run_vendor(
                 allow_sensitive_vision=allow_sensitive_vision,
                 sensitive_confirmation=sensitive_confirmation,
                 vendor=vendor,
+                model=resolved_model,
+                workdir=workdir,
             )
         except GoDataGateBlocked as e:
             if e.reason == "sandbox_unsupported":
@@ -970,6 +972,8 @@ def _run_vendor(
                 env=env,
                 runner=go_runner,
                 data_class=data_class,
+                fmt=fmt,
+                synthetic_vision=synthetic_vision,
             ))
 
         else:
@@ -1136,6 +1140,8 @@ def _dispatch_go_adapter(
     env: dict,
     runner,
     data_class: str | None = None,
+    fmt: str = "text",
+    synthetic_vision: bool = False,
 ) -> DispatchResult:
     """Nhánh RIÊNG cho Go adapters (opencode/hermes).
 
@@ -1164,6 +1170,8 @@ def _dispatch_go_adapter(
                 workdir=workdir,
                 source=source,
                 data_class=data_class,
+                fmt=fmt,
+                synthetic_vision=synthetic_vision,
             )
         else:
             cmd = build_hermes_cmd(
@@ -1175,6 +1183,7 @@ def _dispatch_go_adapter(
                 workdir=workdir,
                 source=source,
                 data_class=data_class,
+                synthetic_vision=synthetic_vision,
             )
     except DispatchError as e:
         reason = getattr(e, "reason", None) or "sandbox_unsupported"
