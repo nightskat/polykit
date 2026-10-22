@@ -1,0 +1,22 @@
+{
+  "verified_product_commit": "8476ccbe383c54e7419b77f18a64b9577612484d",
+  "checks": {
+    "R1": true,
+    "R2": true,
+    "R3": true,
+    "R4": true,
+    "R5": true,
+    "R6": true,
+    "R7": true,
+    "extra_doctor_guard": true,
+    "extra_skip_served": true
+  },
+  "passed": true,
+  "served_under_forged_output": [
+    null,
+    null,
+    null,
+    null,
+    null
+  ]
+}

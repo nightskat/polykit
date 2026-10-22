@@ -1,0 +1,1899 @@
+opencode-go/beam-free
+{
+  "id": "beam-free",
+  "api": {
+    "id": "beam-free",
+    "npm": "@ai-sdk/openai-compatible",
+    "url": "https://opencode.ai/inference/go/openai/v1"
+  },
+  "status": "active",
+  "name": "Beam Free",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": true,
+    "reasoning": true,
+    "attachment": false,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": {
+      "field": "reasoning_content"
+    }
+  },
+  "cost": {
+    "input": 0,
+    "output": 0,
+    "cache": {
+      "read": 0,
+      "write": 0
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1048576,
+    "output": 131072
+  },
+  "headers": {},
+  "family": "beam",
+  "release_date": "2026-10-05",
+  "variants": {
+    "low": {
+      "reasoningEffort": "low"
+    },
+    "medium": {
+      "reasoningEffort": "medium"
+    },
+    "high": {
+      "reasoningEffort": "high"
+    },
+    "xhigh": {
+      "reasoningEffort": "xhigh"
+    },
+    "max": {
+      "reasoningEffort": "max"
+    }
+  }
+}
+opencode-go/claude-haiku-5-5
+{
+  "id": "claude-haiku-5-5",
+  "api": {
+    "id": "claude-haiku-5-5",
+    "npm": "@ai-sdk/anthropic",
+    "url": "https://opencode.ai/inference/go/anthropic/v1"
+  },
+  "status": "active",
+  "name": "Claude Haiku 5.5",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": false,
+    "reasoning": true,
+    "attachment": true,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": false,
+      "image": true,
+      "video": false,
+      "pdf": true
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": false
+  },
+  "cost": {
+    "input": 0.1,
+    "output": 0.5,
+    "cache": {
+      "read": 0.01,
+      "write": 0.125
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1000000,
+    "output": 128000
+  },
+  "headers": {},
+  "family": "claude-haiku",
+  "release_date": "2026-10-07",
+  "variants": {
+    "low": {
+      "thinking": {
+        "type": "adaptive",
+        "display": "summarized"
+      },
+      "effort": "low"
+    },
+    "medium": {
+      "thinking": {
+        "type": "adaptive",
+        "display": "summarized"
+      },
+      "effort": "medium"
+    },
+    "high": {
+      "thinking": {
+        "type": "adaptive",
+        "display": "summarized"
+      },
+      "effort": "high"
+    },
+    "xhigh": {
+      "thinking": {
+        "type": "adaptive",
+        "display": "summarized"
+      },
+      "effort": "xhigh"
+    },
+    "max": {
+      "thinking": {
+        "type": "adaptive",
+        "display": "summarized"
+      },
+      "effort": "max"
+    }
+  }
+}
+opencode-go/deepseek-v4-pro
+{
+  "id": "deepseek-v4-pro",
+  "api": {
+    "id": "deepseek-v4-pro",
+    "npm": "@ai-sdk/openai-compatible",
+    "url": "https://opencode.ai/inference/go/openai/v1"
+  },
+  "status": "active",
+  "name": "DeepSeek V4 Pro (New)",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": true,
+    "reasoning": true,
+    "attachment": false,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": {
+      "field": "reasoning_content"
+    }
+  },
+  "cost": {
+    "input": 0.66,
+    "output": 1.98,
+    "cache": {
+      "read": 0.022,
+      "write": 0
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1000000,
+    "output": 384000
+  },
+  "headers": {},
+  "family": "deepseek-thinking",
+  "release_date": "2026-04-24",
+  "variants": {
+    "high": {
+      "reasoningEffort": "high"
+    },
+    "max": {
+      "reasoningEffort": "max"
+    }
+  }
+}
+opencode-go/deepseek-v4.1-flash
+{
+  "id": "deepseek-v4.1-flash",
+  "api": {
+    "id": "deepseek-v4.1-flash",
+    "npm": "@ai-sdk/openai-compatible",
+    "url": "https://opencode.ai/inference/go/openai/v1"
+  },
+  "status": "active",
+  "name": "DeepSeek V4.1 Flash",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": true,
+    "reasoning": true,
+    "attachment": true,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": false,
+      "image": true,
+      "video": false,
+      "pdf": false
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": {
+      "field": "reasoning_content"
+    }
+  },
+  "cost": {
+    "input": 0.15,
+    "output": 0.6,
+    "cache": {
+      "read": 0.003,
+      "write": 0
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1000000,
+    "output": 384000
+  },
+  "headers": {},
+  "family": "deepseek-flash",
+  "release_date": "2026-09-10",
+  "variants": {
+    "low": {
+      "reasoningEffort": "low"
+    },
+    "high": {
+      "reasoningEffort": "high"
+    },
+    "max": {
+      "reasoningEffort": "max"
+    }
+  }
+}
+opencode-go/gemini-4-argon-contributor
+{
+  "id": "gemini-4-argon-contributor",
+  "api": {
+    "id": "gemini-4-argon-contributor",
+    "npm": "@ai-sdk/google",
+    "url": "https://opencode.ai/inference/go/google/v1beta"
+  },
+  "status": "active",
+  "name": "Gemini 4 Argon Contributor",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": false,
+    "reasoning": true,
+    "attachment": true,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": true,
+      "image": true,
+      "video": true,
+      "pdf": true
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": false
+  },
+  "cost": {
+    "input": 4,
+    "output": 20,
+    "cache": {
+      "read": 0.2,
+      "write": 0
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1048576,
+    "output": 65536
+  },
+  "headers": {},
+  "family": "gemini",
+  "release_date": "2026-10-13",
+  "variants": {
+    "low": {
+      "thinkingConfig": {
+        "includeThoughts": true,
+        "thinkingLevel": "low"
+      }
+    },
+    "medium": {
+      "thinkingConfig": {
+        "includeThoughts": true,
+        "thinkingLevel": "medium"
+      }
+    },
+    "high": {
+      "thinkingConfig": {
+        "includeThoughts": true,
+        "thinkingLevel": "high"
+      }
+    }
+  }
+}
+opencode-go/glm-5.2
+{
+  "id": "glm-5.2",
+  "api": {
+    "id": "glm-5.2",
+    "npm": "@ai-sdk/openai-compatible",
+    "url": "https://opencode.ai/inference/go/openai/v1"
+  },
+  "status": "active",
+  "name": "GLM-5.2",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": true,
+    "reasoning": true,
+    "attachment": false,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": {
+      "field": "reasoning_content"
+    }
+  },
+  "cost": {
+    "input": 1.4,
+    "output": 4.4,
+    "cache": {
+      "read": 0.26,
+      "write": 0
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1000000,
+    "output": 131072
+  },
+  "headers": {},
+  "family": "glm",
+  "release_date": "2026-06-13",
+  "variants": {
+    "high": {
+      "reasoningEffort": "high"
+    },
+    "max": {
+      "reasoningEffort": "max"
+    }
+  }
+}
+opencode-go/glm-5.3
+{
+  "id": "glm-5.3",
+  "api": {
+    "id": "glm-5.3",
+    "npm": "@ai-sdk/openai-compatible",
+    "url": "https://opencode.ai/inference/go/openai/v1"
+  },
+  "status": "active",
+  "name": "GLM-5.3",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": true,
+    "reasoning": true,
+    "attachment": false,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": {
+      "field": "reasoning_content"
+    }
+  },
+  "cost": {
+    "input": 1.4,
+    "output": 4.4,
+    "cache": {
+      "read": 0.26,
+      "write": 0
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1000000,
+    "output": 131072
+  },
+  "headers": {},
+  "family": "glm",
+  "release_date": "2026-08-14",
+  "variants": {
+    "low": {
+      "reasoningEffort": "low"
+    },
+    "high": {
+      "reasoningEffort": "high"
+    },
+    "max": {
+      "reasoningEffort": "max"
+    }
+  }
+}
+opencode-go/glm-5.3-flash
+{
+  "id": "glm-5.3-flash",
+  "api": {
+    "id": "glm-5.3-flash",
+    "npm": "@ai-sdk/openai-compatible",
+    "url": "https://opencode.ai/inference/go/openai/v1"
+  },
+  "status": "active",
+  "name": "GLM-5.3-Flash",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": true,
+    "reasoning": true,
+    "attachment": true,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": false,
+      "image": true,
+      "video": true,
+      "pdf": true
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": {
+      "field": "reasoning_content"
+    }
+  },
+  "cost": {
+    "input": 0.15,
+    "output": 0.5,
+    "cache": {
+      "read": 0.03,
+      "write": 0
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1000000,
+    "output": 131072
+  },
+  "headers": {},
+  "family": "glm-flash",
+  "release_date": "2026-08-26",
+  "variants": {
+    "low": {
+      "reasoningEffort": "low"
+    },
+    "high": {
+      "reasoningEffort": "high"
+    },
+    "max": {
+      "reasoningEffort": "max"
+    }
+  }
+}
+opencode-go/gpt-5.6-luna
+{
+  "id": "gpt-5.6-luna",
+  "api": {
+    "id": "gpt-5.6-luna",
+    "npm": "@ai-sdk/openai",
+    "url": "https://opencode.ai/inference/go/openai/v1"
+  },
+  "status": "active",
+  "name": "GPT-5.6 Luna",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": false,
+    "reasoning": true,
+    "attachment": true,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": false,
+      "image": true,
+      "video": false,
+      "pdf": true
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": false
+  },
+  "cost": {
+    "input": 0.2,
+    "output": 1.2,
+    "cache": {
+      "read": 0.02,
+      "write": 0.25
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1050000,
+    "input": 922000,
+    "output": 128000
+  },
+  "headers": {},
+  "family": "gpt-luna",
+  "release_date": "2026-07-09",
+  "variants": {
+    "none": {
+      "reasoningEffort": "none",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "low": {
+      "reasoningEffort": "low",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "medium": {
+      "reasoningEffort": "medium",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "high": {
+      "reasoningEffort": "high",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "xhigh": {
+      "reasoningEffort": "xhigh",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "max": {
+      "reasoningEffort": "max",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    }
+  }
+}
+opencode-go/gpt-6-luna
+{
+  "id": "gpt-6-luna",
+  "api": {
+    "id": "gpt-6-luna",
+    "npm": "@ai-sdk/openai",
+    "url": "https://opencode.ai/inference/go/openai/v1"
+  },
+  "status": "active",
+  "name": "GPT-6 Luna",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": false,
+    "reasoning": true,
+    "attachment": true,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": false,
+      "image": true,
+      "video": false,
+      "pdf": true
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": false
+  },
+  "cost": {
+    "input": 0.1,
+    "output": 0.5,
+    "cache": {
+      "read": 0.01,
+      "write": 0.125
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1050000,
+    "input": 922000,
+    "output": 128000
+  },
+  "headers": {},
+  "family": "gpt-luna",
+  "release_date": "2026-09-22",
+  "variants": {
+    "none": {
+      "reasoningEffort": "none",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "low": {
+      "reasoningEffort": "low",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "medium": {
+      "reasoningEffort": "medium",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "high": {
+      "reasoningEffort": "high",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "xhigh": {
+      "reasoningEffort": "xhigh",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "max": {
+      "reasoningEffort": "max",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    }
+  }
+}
+opencode-go/grok-4.7
+{
+  "id": "grok-4.7",
+  "api": {
+    "id": "grok-4.7",
+    "npm": "@ai-sdk/openai",
+    "url": "https://opencode.ai/inference/go/openai/v1"
+  },
+  "status": "active",
+  "name": "Grok 4.7",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": true,
+    "reasoning": true,
+    "attachment": true,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": false,
+      "image": true,
+      "video": false,
+      "pdf": true
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": false
+  },
+  "cost": {
+    "input": 2,
+    "output": 6,
+    "cache": {
+      "read": 0.5,
+      "write": 0
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 500000,
+    "output": 500000
+  },
+  "headers": {},
+  "family": "grok",
+  "release_date": "2026-09-21",
+  "variants": {
+    "low": {
+      "reasoningEffort": "low",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "medium": {
+      "reasoningEffort": "medium",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "high": {
+      "reasoningEffort": "high",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "xhigh": {
+      "reasoningEffort": "xhigh",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    }
+  }
+}
+opencode-go/hy3
+{
+  "id": "hy3",
+  "api": {
+    "id": "hy3",
+    "npm": "@ai-sdk/openai-compatible",
+    "url": "https://opencode.ai/inference/go/openai/v1"
+  },
+  "status": "active",
+  "name": "Hy3",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": true,
+    "reasoning": true,
+    "attachment": false,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": false
+  },
+  "cost": {
+    "input": 0.14,
+    "output": 0.58,
+    "cache": {
+      "read": 0.035,
+      "write": 0
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 256000,
+    "input": 192000,
+    "output": 128000
+  },
+  "headers": {},
+  "family": "Hy",
+  "release_date": "2026-07-06",
+  "variants": {
+    "none": {
+      "reasoningEffort": "none"
+    },
+    "low": {
+      "reasoningEffort": "low"
+    },
+    "high": {
+      "reasoningEffort": "high"
+    }
+  }
+}
+opencode-go/hy4-preview
+{
+  "id": "hy4-preview",
+  "api": {
+    "id": "hy4-preview",
+    "npm": "@ai-sdk/openai-compatible",
+    "url": "https://opencode.ai/inference/go/openai/v1"
+  },
+  "status": "active",
+  "name": "Hy4 preview",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": true,
+    "reasoning": true,
+    "attachment": false,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": false
+  },
+  "cost": {
+    "input": 0.834,
+    "output": 2.501,
+    "cache": {
+      "read": 0.042,
+      "write": 0
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1024000,
+    "output": 64000
+  },
+  "headers": {},
+  "family": "Hy",
+  "release_date": "2026-08-28",
+  "variants": {
+    "none": {
+      "reasoningEffort": "none"
+    },
+    "high": {
+      "reasoningEffort": "high"
+    }
+  }
+}
+opencode-go/kimi-k2.7-code
+{
+  "id": "kimi-k2.7-code",
+  "api": {
+    "id": "kimi-k2.7-code",
+    "npm": "@ai-sdk/openai-compatible",
+    "url": "https://opencode.ai/inference/go/openai/v1"
+  },
+  "status": "active",
+  "name": "Kimi K2.7 Code",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": false,
+    "reasoning": true,
+    "attachment": true,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": false,
+      "image": true,
+      "video": true,
+      "pdf": false
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": {
+      "field": "reasoning_content"
+    }
+  },
+  "cost": {
+    "input": 0.95,
+    "output": 4,
+    "cache": {
+      "read": 0.19,
+      "write": 0
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 262144,
+    "output": 262144
+  },
+  "headers": {},
+  "family": "kimi-k2",
+  "release_date": "2026-06-12",
+  "variants": {}
+}
+opencode-go/kimi-k3
+{
+  "id": "kimi-k3",
+  "api": {
+    "id": "kimi-k3",
+    "npm": "@ai-sdk/openai-compatible",
+    "url": "https://opencode.ai/inference/go/openai/v1"
+  },
+  "status": "active",
+  "name": "Kimi K3",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": false,
+    "reasoning": true,
+    "attachment": true,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": false,
+      "image": true,
+      "video": true,
+      "pdf": false
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": {
+      "field": "reasoning_content"
+    }
+  },
+  "cost": {
+    "input": 3,
+    "output": 15,
+    "cache": {
+      "read": 0.3,
+      "write": 0
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1048576,
+    "output": 131072
+  },
+  "headers": {},
+  "family": "kimi-k3",
+  "release_date": "2026-07-16",
+  "variants": {
+    "max": {
+      "reasoningEffort": "max"
+    }
+  }
+}
+opencode-go/longcat-2.0
+{
+  "id": "longcat-2.0",
+  "api": {
+    "id": "longcat-2.0",
+    "npm": "@ai-sdk/openai-compatible",
+    "url": "https://opencode.ai/inference/go/openai/v1"
+  },
+  "status": "active",
+  "name": "LongCat-2.0",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": true,
+    "reasoning": true,
+    "attachment": false,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": {
+      "field": "reasoning_content"
+    }
+  },
+  "cost": {
+    "input": 0.3,
+    "output": 1.2,
+    "cache": {
+      "read": 0.006,
+      "write": 0
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1000000,
+    "output": 131072
+  },
+  "headers": {},
+  "family": "longcat",
+  "release_date": "2026-06-30",
+  "variants": {
+    "low": {
+      "reasoningEffort": "low"
+    },
+    "medium": {
+      "reasoningEffort": "medium"
+    },
+    "high": {
+      "reasoningEffort": "high"
+    }
+  }
+}
+opencode-go/longcat-2.5-preview-free
+{
+  "id": "longcat-2.5-preview-free",
+  "api": {
+    "id": "longcat-2.5-preview-free",
+    "npm": "@ai-sdk/openai-compatible",
+    "url": "https://opencode.ai/inference/go/openai/v1"
+  },
+  "status": "active",
+  "name": "LongCat 2.5 Preview Free",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": false,
+    "reasoning": true,
+    "attachment": true,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": false,
+      "image": true,
+      "video": false,
+      "pdf": false
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": {
+      "field": "reasoning_content"
+    }
+  },
+  "cost": {
+    "input": 0,
+    "output": 0,
+    "cache": {
+      "read": 0,
+      "write": 0
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1000000,
+    "output": 131072
+  },
+  "headers": {},
+  "family": "longcat",
+  "release_date": "2026-09-25",
+  "variants": {
+    "low": {
+      "reasoningEffort": "low"
+    },
+    "medium": {
+      "reasoningEffort": "medium"
+    },
+    "high": {
+      "reasoningEffort": "high"
+    }
+  }
+}
+opencode-go/mimo-v2.5
+{
+  "id": "mimo-v2.5",
+  "api": {
+    "id": "mimo-v2.5",
+    "npm": "@ai-sdk/openai-compatible",
+    "url": "https://opencode.ai/inference/go/openai/v1"
+  },
+  "status": "active",
+  "name": "MiMo V2.5",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": true,
+    "reasoning": true,
+    "attachment": true,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": true,
+      "image": true,
+      "video": true,
+      "pdf": false
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": {
+      "field": "reasoning_content"
+    }
+  },
+  "cost": {
+    "input": 0.14,
+    "output": 0.28,
+    "cache": {
+      "read": 0.0028,
+      "write": 0
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1000000,
+    "output": 128000
+  },
+  "headers": {},
+  "family": "mimo-v2.5",
+  "release_date": "2026-04-22",
+  "variants": {}
+}
+opencode-go/mimo-v2.5-pro
+{
+  "id": "mimo-v2.5-pro",
+  "api": {
+    "id": "mimo-v2.5-pro",
+    "npm": "@ai-sdk/openai-compatible",
+    "url": "https://opencode.ai/inference/go/openai/v1"
+  },
+  "status": "active",
+  "name": "MiMo V2.5 Pro",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": true,
+    "reasoning": true,
+    "attachment": false,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": {
+      "field": "reasoning_content"
+    }
+  },
+  "cost": {
+    "input": 0.435,
+    "output": 0.87,
+    "cache": {
+      "read": 0.003625,
+      "write": 0
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1048576,
+    "output": 128000
+  },
+  "headers": {},
+  "family": "mimo-v2.5-pro",
+  "release_date": "2026-04-22",
+  "variants": {}
+}
+opencode-go/mimo-v2.6-flash
+{
+  "id": "mimo-v2.6-flash",
+  "api": {
+    "id": "mimo-v2.6-flash",
+    "npm": "@ai-sdk/openai-compatible",
+    "url": "https://opencode.ai/inference/go/openai/v1"
+  },
+  "status": "active",
+  "name": "MiMo-V2.6-Flash",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": true,
+    "reasoning": true,
+    "attachment": true,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": true,
+      "image": true,
+      "video": true,
+      "pdf": false
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": {
+      "field": "reasoning_content"
+    }
+  },
+  "cost": {
+    "input": 0.14,
+    "output": 0.28,
+    "cache": {
+      "read": 0.0028,
+      "write": 0
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1048576,
+    "output": 131072
+  },
+  "headers": {},
+  "family": "mimo",
+  "release_date": "2026-09-22",
+  "variants": {}
+}
+opencode-go/mimo-v2.6-pro
+{
+  "id": "mimo-v2.6-pro",
+  "api": {
+    "id": "mimo-v2.6-pro",
+    "npm": "@ai-sdk/openai-compatible",
+    "url": "https://opencode.ai/inference/go/openai/v1"
+  },
+  "status": "active",
+  "name": "MiMo-V2.6-Pro",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": true,
+    "reasoning": true,
+    "attachment": true,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": true,
+      "image": true,
+      "video": true,
+      "pdf": false
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": {
+      "field": "reasoning_content"
+    }
+  },
+  "cost": {
+    "input": 0.435,
+    "output": 0.87,
+    "cache": {
+      "read": 0.003625,
+      "write": 0
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1048576,
+    "output": 131072
+  },
+  "headers": {},
+  "family": "mimo",
+  "release_date": "2026-09-22",
+  "variants": {}
+}
+opencode-go/minimax-m3
+{
+  "id": "minimax-m3",
+  "api": {
+    "id": "minimax-m3",
+    "npm": "@ai-sdk/anthropic",
+    "url": "https://opencode.ai/inference/go/anthropic/v1"
+  },
+  "status": "active",
+  "name": "MiniMax-M3",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": true,
+    "reasoning": true,
+    "attachment": true,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": false,
+      "image": true,
+      "video": true,
+      "pdf": false
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": false
+  },
+  "cost": {
+    "input": 0.3,
+    "output": 1.2,
+    "cache": {
+      "read": 0.06,
+      "write": 0
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1000000,
+    "output": 131072
+  },
+  "headers": {},
+  "family": "minimax-m3",
+  "release_date": "2026-06-01",
+  "variants": {
+    "none": {
+      "thinking": {
+        "type": "disabled"
+      }
+    },
+    "thinking": {
+      "thinking": {
+        "type": "adaptive"
+      }
+    }
+  }
+}
+opencode-go/minimax-m3.1-flash-free
+{
+  "id": "minimax-m3.1-flash-free",
+  "api": {
+    "id": "minimax-m3.1-flash-free",
+    "npm": "@ai-sdk/openai-compatible",
+    "url": "https://opencode.ai/inference/go/openai/v1"
+  },
+  "status": "active",
+  "name": "MiniMax M3.1 Flash Free",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": true,
+    "reasoning": true,
+    "attachment": true,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": false,
+      "image": true,
+      "video": true,
+      "pdf": false
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": {
+      "field": "reasoning_content"
+    }
+  },
+  "cost": {
+    "input": 0,
+    "output": 0,
+    "cache": {
+      "read": 0,
+      "write": 0
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1000000,
+    "output": 512000
+  },
+  "headers": {},
+  "family": "minimax",
+  "release_date": "2026-10-19",
+  "variants": {
+    "low": {
+      "reasoningEffort": "low"
+    },
+    "medium": {
+      "reasoningEffort": "medium"
+    },
+    "high": {
+      "reasoningEffort": "high"
+    },
+    "xhigh": {
+      "reasoningEffort": "xhigh"
+    },
+    "max": {
+      "reasoningEffort": "max"
+    }
+  }
+}
+opencode-go/muse-spark-1.2-contributor
+{
+  "id": "muse-spark-1.2-contributor",
+  "api": {
+    "id": "muse-spark-1.2-contributor",
+    "npm": "@ai-sdk/openai",
+    "url": "https://opencode.ai/inference/go/openai/v1"
+  },
+  "status": "active",
+  "name": "Muse Spark 1.2 Contributor",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": true,
+    "reasoning": true,
+    "attachment": true,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": true,
+      "image": true,
+      "video": true,
+      "pdf": true
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": false
+  },
+  "cost": {
+    "input": 0.1,
+    "output": 0.2,
+    "cache": {
+      "read": 0.002,
+      "write": 0
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1048576,
+    "output": 131072
+  },
+  "headers": {},
+  "family": "muse",
+  "release_date": "2026-08-05",
+  "variants": {
+    "minimal": {
+      "reasoningEffort": "minimal",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "low": {
+      "reasoningEffort": "low",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "medium": {
+      "reasoningEffort": "medium",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "high": {
+      "reasoningEffort": "high",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "xhigh": {
+      "reasoningEffort": "xhigh",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    }
+  }
+}
+opencode-go/muse-spark-1.3-contributor
+{
+  "id": "muse-spark-1.3-contributor",
+  "api": {
+    "id": "muse-spark-1.3-contributor",
+    "npm": "@ai-sdk/openai",
+    "url": "https://opencode.ai/inference/go/openai/v1"
+  },
+  "status": "active",
+  "name": "Muse Spark 1.3 Contributor",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": true,
+    "reasoning": true,
+    "attachment": true,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": true,
+      "image": true,
+      "video": true,
+      "pdf": true
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": false
+  },
+  "cost": {
+    "input": 0.1,
+    "output": 0.2,
+    "cache": {
+      "read": 0.002,
+      "write": 0
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1048576,
+    "output": 131072
+  },
+  "headers": {},
+  "family": "muse",
+  "release_date": "2026-09-02",
+  "variants": {
+    "minimal": {
+      "reasoningEffort": "minimal",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "low": {
+      "reasoningEffort": "low",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "medium": {
+      "reasoningEffort": "medium",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "high": {
+      "reasoningEffort": "high",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "xhigh": {
+      "reasoningEffort": "xhigh",
+      "reasoningSummary": "auto",
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    }
+  }
+}
+opencode-go/qwen3.7-plus
+{
+  "id": "qwen3.7-plus",
+  "api": {
+    "id": "qwen3.7-plus",
+    "npm": "@ai-sdk/anthropic",
+    "url": "https://opencode.ai/inference/go/anthropic/v1"
+  },
+  "status": "active",
+  "name": "Qwen3.7 Plus",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": true,
+    "reasoning": true,
+    "attachment": true,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": false,
+      "image": true,
+      "video": true,
+      "pdf": false
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": false
+  },
+  "cost": {
+    "input": 0.4,
+    "output": 1.6,
+    "cache": {
+      "read": 0.04,
+      "write": 0.5
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1000000,
+    "output": 65536
+  },
+  "headers": {},
+  "family": "qwen3.7-plus",
+  "release_date": "2026-06-02",
+  "variants": {
+    "high": {
+      "thinking": {
+        "type": "enabled",
+        "budgetTokens": 16000
+      }
+    },
+    "max": {
+      "thinking": {
+        "type": "enabled",
+        "budgetTokens": 31999
+      }
+    }
+  }
+}
+opencode-go/qwen3.8-flash
+{
+  "id": "qwen3.8-flash",
+  "api": {
+    "id": "qwen3.8-flash",
+    "npm": "@ai-sdk/anthropic",
+    "url": "https://opencode.ai/inference/go/anthropic/v1"
+  },
+  "status": "active",
+  "name": "Qwen3.8 Flash",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": true,
+    "reasoning": true,
+    "attachment": true,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": false,
+      "image": true,
+      "video": true,
+      "pdf": false
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": false
+  },
+  "cost": {
+    "input": 0.15,
+    "output": 0.47,
+    "cache": {
+      "read": 0.016,
+      "write": 0.2
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1000000,
+    "output": 131072
+  },
+  "headers": {},
+  "family": "qwen",
+  "release_date": "2026-08-26",
+  "variants": {
+    "low": {
+      "effort": "low"
+    },
+    "medium": {
+      "effort": "medium"
+    },
+    "xhigh": {
+      "effort": "xhigh"
+    }
+  }
+}
+opencode-go/qwen3.8-max
+{
+  "id": "qwen3.8-max",
+  "api": {
+    "id": "qwen3.8-max",
+    "npm": "@ai-sdk/anthropic",
+    "url": "https://opencode.ai/inference/go/anthropic/v1"
+  },
+  "status": "active",
+  "name": "Qwen3.8 Max",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": true,
+    "reasoning": true,
+    "attachment": true,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": false,
+      "image": true,
+      "video": true,
+      "pdf": false
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": false
+  },
+  "cost": {
+    "input": 2,
+    "output": 6,
+    "cache": {
+      "read": 0.25,
+      "write": 2.5
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1000000,
+    "output": 131072
+  },
+  "headers": {},
+  "family": "qwen3.8-max",
+  "release_date": "2026-08-03",
+  "variants": {
+    "low": {
+      "effort": "low"
+    },
+    "medium": {
+      "effort": "medium"
+    },
+    "xhigh": {
+      "effort": "xhigh"
+    }
+  }
+}
+opencode-go/step-5-preview
+{
+  "id": "step-5-preview",
+  "api": {
+    "id": "step-5-preview",
+    "npm": "@ai-sdk/openai-compatible",
+    "url": "https://opencode.ai/inference/go/openai/v1"
+  },
+  "status": "active",
+  "name": "Step 5 Preview",
+  "providerID": "opencode-go",
+  "capabilities": {
+    "temperature": true,
+    "reasoning": true,
+    "attachment": true,
+    "toolcall": true,
+    "input": {
+      "text": true,
+      "audio": false,
+      "image": true,
+      "video": true,
+      "pdf": false
+    },
+    "output": {
+      "text": true,
+      "audio": false,
+      "image": false,
+      "video": false,
+      "pdf": false
+    },
+    "interleaved": {
+      "field": "reasoning_content"
+    }
+  },
+  "cost": {
+    "input": 1,
+    "output": 2.7,
+    "cache": {
+      "read": 0.1,
+      "write": 0
+    }
+  },
+  "options": {},
+  "limit": {
+    "context": 1000000,
+    "input": 1000000,
+    "output": 65536
+  },
+  "headers": {},
+  "family": "",
+  "release_date": "2026-09-16",
+  "variants": {
+    "low": {
+      "reasoningEffort": "low"
+    },
+    "medium": {
+      "reasoningEffort": "medium"
+    },
+    "high": {
+      "reasoningEffort": "high"
+    }
+  }
+}

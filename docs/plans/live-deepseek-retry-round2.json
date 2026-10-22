@@ -1,0 +1,21 @@
+{
+  "argv": [
+    "python3",
+    "bin/dispatch.py",
+    "opencode",
+    "--data-class",
+    "code-nopii",
+    "--effort",
+    "high",
+    "--prompt",
+    "Synthetic code-only test. Do not read files or use tools. Reply exactly LIVE_OK.",
+    "--timeout",
+    "180",
+    "--result-json",
+    "--no-traps"
+  ],
+  "exit_code": 0,
+  "elapsed": 13.65,
+  "stdout": "{\n  \"status\": \"ok\",\n  \"vendor\": \"opencode\",\n  \"model\": \"deepseek-v4.1-flash\",\n  \"summary\": \"opencode completed successfully\",\n  \"warnings\": [\n    \"[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'deepseek-v4.1-flash'\",\n    \"auth ch\\u01b0a x\\u00e1c minh \\u0111\\u01b0\\u1ee3c cho opencode (kh\\u00f4ng r\\u00f5 l\\u00fd do) \\u2014 v\\u1eabn dispatch, l\\u1ed7i th\\u1eadt (n\\u1ebfu c\\u00f3) s\\u1ebd do vendor t\\u1ef1 b\\u00e1o\",\n    \"\\u001b[0m\",\n    \"> build \\u00b7 deepseek-v4.1-flash\",\n    \"\\u001b[0m\"\n  ],\n  \"stdout\": \"LIVE_OK\\n\",\n  \"exit_code\": 0,\n  \"reason\": null,\n  \"served_model\": null,\n  \"unsandboxed\": true,\n  \"data_class\": \"code-nopii\"\n}\n",
+  "stderr": "[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'deepseek-v4.1-flash'\nWARNING: auth chưa xác minh được cho opencode (không rõ lý do) — vẫn dispatch, lỗi thật (nếu có) sẽ do vendor tự báo\n"
+}

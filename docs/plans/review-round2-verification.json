@@ -1,0 +1,46 @@
+[
+  {
+    "vendor": "opencode",
+    "case": "checker_pass_then_fail",
+    "status": "blocked",
+    "unsandboxed": false,
+    "runner_calls": 0
+  },
+  {
+    "vendor": "opencode",
+    "case": "helper_attachment",
+    "status": "blocked",
+    "unsandboxed": false,
+    "runner_calls": 0
+  },
+  {
+    "vendor": "opencode",
+    "case": "skip",
+    "status": "skipped",
+    "data_class": "code-nopii",
+    "unsandboxed": false,
+    "runner_calls": 0
+  },
+  {
+    "vendor": "hermes",
+    "case": "checker_pass_then_fail",
+    "status": "blocked",
+    "unsandboxed": false,
+    "runner_calls": 0
+  },
+  {
+    "vendor": "hermes",
+    "case": "helper_attachment",
+    "status": "blocked",
+    "unsandboxed": false,
+    "runner_calls": 0
+  },
+  {
+    "vendor": "hermes",
+    "case": "skip",
+    "status": "skipped",
+    "data_class": "code-nopii",
+    "unsandboxed": false,
+    "runner_calls": 0
+  }
+]

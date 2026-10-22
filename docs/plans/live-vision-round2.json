@@ -1,0 +1,20 @@
+{
+  "argv": [
+    "opencode",
+    "run",
+    "--model",
+    "opencode-go/deepseek-v4.1-flash",
+    "--variant",
+    "high",
+    "--format",
+    "json",
+    "-f",
+    "/Users/nightskat/Developer/polykit-wt-hermes/docs/plans/vision-synthetic.png",
+    "--",
+    "Synthetic OCR test only. Do not use tools or read other files. Read attached image. Return amount, date, ID exactly."
+  ],
+  "exit_code": 0,
+  "elapsed": 66.123237875,
+  "stdout": "{\"type\":\"step_start\",\"timestamp\":1792652395213,\"sessionID\":\"ses_e9d97c0fdffePLXrfcd8ZzlGDy\",\"part\":{\"id\":\"prt_16268be83001aiUIPn72191MrJ\",\"messageID\":\"msg_162686dad001pnn4G0XLZ4vxr9\",\"sessionID\":\"ses_e9d97c0fdffePLXrfcd8ZzlGDy\",\"snapshot\":\"a69aba64954849f4dbeaeff7f43f088d1a8f7beb\",\"type\":\"step-start\"}}\n{\"type\":\"text\",\"timestamp\":1792652395229,\"sessionID\":\"ses_e9d97c0fdffePLXrfcd8ZzlGDy\",\"part\":{\"id\":\"prt_16268c167001gJDpSoTN53YAyn\",\"messageID\":\"msg_162686dad001pnn4G0XLZ4vxr9\",\"sessionID\":\"ses_e9d97c0fdffePLXrfcd8ZzlGDy\",\"type\":\"text\",\"text\":\"Amount: 123456789 VND\\nDate: 2026-10-22\\nID: TEST-042\",\"time\":{\"start\":1792652394855,\"end\":1792652395026}}}\n{\"type\":\"step_finish\",\"timestamp\":1792652396451,\"sessionID\":\"ses_e9d97c0fdffePLXrfcd8ZzlGDy\",\"part\":{\"id\":\"prt_16268c66e001Si1osAbU5eMsvb\",\"reason\":\"stop\",\"snapshot\":\"a69aba64954849f4dbeaeff7f43f088d1a8f7beb\",\"messageID\":\"msg_162686dad001pnn4G0XLZ4vxr9\",\"sessionID\":\"ses_e9d97c0fdffePLXrfcd8ZzlGDy\",\"type\":\"step-finish\",\"tokens\":{\"total\":18883,\"input\":17020,\"output\":25,\"reasoning\":46,\"cache\":{\"write\":0,\"read\":1792}},\"cost\":0.002600976}}\n",
+  "stderr": ""
+}
