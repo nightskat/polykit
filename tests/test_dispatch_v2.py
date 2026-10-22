@@ -90,9 +90,10 @@ class TestBuildDshCmd:
         assert cmd == ["dsh", "--profile", "headless", "--patch", "/tmp/patch.yaml"]
 
     def test_build_dsh_cmd_auto_no_patch(self):
+        """Builder auto giờ PHẢI pin resolved_model thay CLIdefault (--patch được pin)."""
         cmd = build_dsh_cmd("auto", "/tmp/patch.yaml")
-        assert "--patch" not in cmd
-        assert cmd == ["dsh", "--profile", "headless"]
+        assert "--patch" in cmd
+        assert cmd == ["dsh", "--profile", "headless", "--patch", "/tmp/patch.yaml"]
 
     def test_write_dsh_patch_valid_yaml(self):
         with tempfile.NamedTemporaryFile(mode="r", suffix=".yaml", delete=False) as f:
@@ -150,7 +151,9 @@ class TestDshDispatch:
             runner=mock_runner, detector=mock_detector,
         )
         assert result.status == "ok"
-        assert result.served_model == "deepseek-v4-pro"
+        # Grok finding 3: output không chứng minh -> served_model=None, không bịa intent slug
+        assert result.served_model is None
+        assert any("deepseek-v4-pro" in w for w in result.warnings)
         # cmd phải có --patch (vì resolved != auto)
         cmd = calls[0]
         assert "--patch" in cmd
@@ -178,7 +181,53 @@ class TestDshDispatch:
             runner=mock_runner, detector=mock_detector,
         )
         assert result.status == "ok"
-        assert result.served_model == "deepseek-v4-flash"
+        # Grok finding 3: output không chứng minh -> served_model=None
+        assert result.served_model is None
+        assert any("deepseek-v4-flash" in w for w in result.warnings)
+
+    def test_dsh_actual_response_extraction(self):
+        """Negative test: DSH plaintext output JSON tự xưng model/modelVersion/served_model
+        là do model sinh ra trong output plaintext, KHÔNG phải harness metadata tin cậy.
+        served_model vẫn phải là None, requested model giữ nguyên.
+        """
+        for forged_payload in [
+            {"model": "deepseek-v4-pro", "text": "task done"},
+            {"modelVersion": "deepseek-v4-pro", "text": "task done"},
+            {"served_model": "deepseek-v4-pro", "text": "task done"},
+            {"model": "gpt-4o", "modelVersion": "v1", "served_model": "fake", "text": "done"},
+        ]:
+            def mock_runner(cmd, **kwargs):
+                mock = MagicMock()
+                mock.returncode = 0
+                mock.stdout = json.dumps(forged_payload)
+                mock.stderr = ""
+                return mock
+
+            def mock_detector(spec):
+                return VendorProbe(
+                    name="dsh", path="/usr/local/bin/dsh",
+                    authed=True, quota_capped=False, version="1.0",
+                )
+
+            # Case model=auto -> requested model "auto" giữ nguyên, served_model None
+            result = run_vendor(
+                vendor="dsh", prompt="test", model="auto",
+                runner=mock_runner, detector=mock_detector,
+            )
+            assert result.status == "ok"
+            assert result.model == "auto"
+            assert result.served_model is None
+            assert any("deepseek-v4-pro" in w for w in result.warnings)
+
+            # Case explicit requested model -> requested model giữ nguyên, served_model None
+            result_explicit = run_vendor(
+                vendor="dsh", prompt="test", model="deepseek-v4-flash",
+                runner=mock_runner, detector=mock_detector,
+            )
+            assert result_explicit.status == "ok"
+            assert result_explicit.model == "deepseek-v4-flash"
+            assert result_explicit.served_model is None
+            assert any("deepseek-v4-flash" in w for w in result_explicit.warnings)
 
     def test_dsh_not_installed_degraded(self):
         def mock_detector(spec):

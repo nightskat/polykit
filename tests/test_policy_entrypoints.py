@@ -357,7 +357,9 @@ def test_run_vendor_gemini_auto_preserved_no_invented_model():
     assert res.model == "auto"
     assert res.served_model is None
 
-    # Case response provides proof:
+    # Case CLI stdout tự sinh JSON (assistant viết ra): KHÔNG phải trusted
+    # metadata -> served_model vẫn None, chỉ model/modelVersion ở HTTP API
+    # top-level mới tính là evidence.
     spy_proven = SpyRunner(stdout='{"model": "gemini-3.5-flash"}')
     res_proven = run_vendor(
         vendor="gemini",
@@ -367,7 +369,8 @@ def test_run_vendor_gemini_auto_preserved_no_invented_model():
     )
     assert res_proven.status == "ok"
     assert res_proven.model == "auto"
-    assert res_proven.served_model == "gemini-3.5-flash"
+    assert res_proven.served_model is None
+    assert any("chưa xác minh model thật" in w for w in res_proven.warnings), res_proven.warnings
 
     # Case explicit without proof:
     res_explicit = run_vendor(
@@ -777,13 +780,16 @@ def test_run_vendor_agy_served_model_marked_as_intent():
     assert res.served_model is None
     assert any("chưa xác minh model thật" in w or "không xác nhận model thực" in w for w in res.warnings), res.warnings
 
-    # Case response provides proof:
+    # Case CLI stdout tự sinh JSON (assistant viết ra): KHÔNG phải trusted
+    # metadata -> served_model None; chỉ HTTP API top-level modelVersion mới
+    # là evidence.
     spy_proof = SpyRunner(stdout='{"modelVersion": "gemini-3.8-flash-high"}')
     res_proof = run_vendor(vendor="agy", prompt="ping", model="auto", runner=spy_proof,
                            detector=lambda spec: probe)
     assert res_proof.status == "ok"
     assert res_proof.model == "auto"
-    assert res_proof.served_model == "gemini-3.8-flash-high"
+    assert res_proof.served_model is None
+    assert any("chưa xác minh model thật" in w for w in res_proof.warnings), res_proof.warnings
 
     # Case explicit without proof:
     res_explicit = run_vendor(vendor="agy", prompt="ping", model=AGY_DEFAULT_MODEL,

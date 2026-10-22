@@ -40,8 +40,11 @@ def test_vong6_error_branch(fake_claude):
     res = run_cli(["claude", "--no-traps", "--result-json", "--allow-unknown-model"], env={"FAKE_OC_FAIL": "1"})
     data = json.loads(res.stdout)
     assert data["status"] == "error"
-    assert data["served_model"] == "claude-opus-5", f"Expected claude-opus-5, got {data['served_model']}"
+    # CLI plaintext: model "claude-opus-5" chỉ là REQUESTED, không phải served.
+    assert data["model"] == "claude-opus-5"
+    assert data["served_model"] is None
     assert not any("không nhận cờ model" in w for w in data["warnings"])
+    assert len(data["warnings"]) == len(set(data["warnings"])), data["warnings"]
     assert "không nhận cờ model" not in res.stderr
 
 def test_vong6_quota_branch(fake_claude):
@@ -49,16 +52,22 @@ def test_vong6_quota_branch(fake_claude):
     data = json.loads(res.stdout)
     assert data["status"] == "skipped"
     assert data["reason"] == "quota_capped"
-    assert data["served_model"] == "claude-opus-5", f"Expected claude-opus-5, got {data['served_model']}"
+    # CLI plaintext: model "claude-opus-5" chỉ là REQUESTED, không phải served.
+    assert data["model"] == "claude-opus-5"
+    assert data["served_model"] is None
     assert not any("không nhận cờ model" in w for w in data["warnings"])
+    assert len(data["warnings"]) == len(set(data["warnings"])), data["warnings"]
     assert "không nhận cờ model" not in res.stderr
 
 def test_vong6_ok_branch(fake_claude):
     res = run_cli(["claude", "--no-traps", "--result-json", "--allow-unknown-model"])
     data = json.loads(res.stdout)
     assert data["status"] == "ok"
-    assert data["served_model"] == "claude-opus-5", f"Expected claude-opus-5, got {data['served_model']}"
+    # CLI plaintext: model "claude-opus-5" chỉ là REQUESTED, không phải served.
+    assert data["model"] == "claude-opus-5"
+    assert data["served_model"] is None
     assert not any("không nhận cờ model" in w for w in data["warnings"])
+    assert len(data["warnings"]) == len(set(data["warnings"])), data["warnings"]
     assert "không nhận cờ model" not in res.stderr
 
 def test_vong7_text_duplicate_warning(fake_vendors, capsys):
