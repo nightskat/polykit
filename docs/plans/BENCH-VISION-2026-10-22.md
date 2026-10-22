@@ -49,7 +49,7 @@ Trong bộ synthetic này, mỗi model đọc đúng 94 trường mà raw vnocr 
 
 ## Evidence / tái chạy
 - bench/vision/{generate,run,score}.py và README.md; registry bin/lib/vision.py. Không tái sinh fixture trên font/máy khác rồi tự mở gate: hash thay phải review/cập nhật registry.
-- Vòng chính: docs/plans/bench-v3-{deepseek,glm}-final/run_summary.json, raw_calls/, prompts/ (lưu nguyên result JSON/status/reason/warnings/command/time).
-- PDF: bench-v3-deepseek-pdf-hardened/; GLM direct lỗi ở bench-v3-glm-retry/raw_calls/call_07_multipage_contract_pdf.json.
-- Baseline: vnocr-v3-final/{run_manifest.json,ocr.raw.txt}; vnocr-v3-score-numeric.json; vnocr-v3-timing.json; vnocr-v3-mlx/ và stderr. Hash nguồn từng trang trong manifest.
-- Các vòng trước: bench-v3-{deepseek,glm}/, *-retry/, *-rescored.json. Điểm trong *-retry ban đầu dùng parser chưa nhận hậu tố tiền; số rescored ghi rõ thay đổi chấm, không phải lượt model mới.
+- Vòng chính: docs/plans/evidence/2026-10-22/bench-v3-{deepseek,glm}-final/run_summary.json, raw_calls/, prompts/ (lưu nguyên result JSON/status/reason/warnings/command/time).
+- PDF: evidence/2026-10-22/bench-v3-deepseek-pdf-hardened/; GLM direct lỗi ở evidence/2026-10-22/bench-v3-glm-retry/raw_calls/call_07_multipage_contract_pdf.json.
+- Baseline: evidence/2026-10-22/vnocr-v3-final/{run_manifest.json,ocr.raw.txt}; evidence/2026-10-22/vnocr-v3-score-numeric.json; evidence/2026-10-22/vnocr-v3-timing.json; evidence/2026-10-22/vnocr-v3-mlx/ và stderr. Hash nguồn từng trang trong manifest.
+- Các vòng trước: evidence/2026-10-22/bench-v3-{deepseek,glm}/, evidence/2026-10-22/*-retry/, evidence/2026-10-22/*-rescored.json. Điểm trong *-retry ban đầu dùng parser chưa nhận hậu tố tiền; số rescored ghi rõ thay đổi chấm, không phải lượt model mới.

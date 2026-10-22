@@ -1,10 +1,10 @@
 # Grok review vòng 3
 
 - Calls tất cả qua python bin/dispatch.py grok --model grok-4.7 --timeout 600 --result-json; prompt/result files cạnh tài liệu này.
-- Full diff review (lo-v3-review.md): timeout, chỉ lời mở đầu; không coi là review hoàn tất.
-- Gate nguồn nhúng 24KB (lo-v3-review-gate.md): timeout rỗng; chia tiếp, đã ghi BUGS trước retry.
-- Gate snippet ngắn (lo-v3-review-gate-small.md): status=ok, không thấy finding thực trong phạm vi manifest/path/hash gate. Không mở rộng thành chứng nhận toàn repo/TOCTOU/sandbox; reviewer chỉ thấy snippet.
-- Auth/scorer (lo-v3-review-auth-score.md): status=ok, 3 findings High như bảng. Điều phối kiểm lại và giao Hermes sửa qua dispatch, không tự viết code sản phẩm.
+- Full diff review (evidence/2026-10-22/lo-v3-review.md): timeout, chỉ lời mở đầu; không coi là review hoàn tất.
+- Gate nguồn nhúng 24KB (evidence/2026-10-22/lo-v3-review-gate.md): timeout rỗng; chia tiếp, đã ghi BUGS trước retry.
+- Gate snippet ngắn (evidence/2026-10-22/lo-v3-review-gate-small.md): status=ok, không thấy finding thực trong phạm vi manifest/path/hash gate. Không mở rộng thành chứng nhận toàn repo/TOCTOU/sandbox; reviewer chỉ thấy snippet.
+- Auth/scorer (evidence/2026-10-22/lo-v3-review-auth-score.md): status=ok, 3 findings High như bảng. Điều phối kiểm lại và giao Hermes sửa qua dispatch, không tự viết code sản phẩm.
 
 | Finding | Xử lý | Kiểm chứng |
 |---|---|---|

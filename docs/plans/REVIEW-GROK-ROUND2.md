@@ -82,8 +82,8 @@ Sửa tối thiểu: mọi return sau khi cổng đã qua phải set `data_class
 
 - 4b252b4 (maker DeepSeek, agy timeout): sửa cả F1/F2/F3; blocked trước runner luôn false, helper Hermes truyền attachment vào gate, skipped giữ data_class và warning chưa spawn.
 - Điều phối tự chạy full suite: 793 passed in 20.19s; git diff --check sạch.
-- Điều phối tự tái hiện 3 nhánh × 2 vendor, không dùng probe của reviewer: cả 6 đúng, runner=0. Evidence: review-round2-verification.json.
-- Live lại sau sửa: opencode DeepSeek high, GLM max và Hermes default đều LIVE_OK; thiếu cờ/attachment/sensitive đều blocked. Evidence: live-final-round2.json.
+- Điều phối tự tái hiện 3 nhánh × 2 vendor, không dùng probe của reviewer: cả 6 đúng, runner=0. Evidence: evidence/2026-10-22/review-round2-verification.json.
+- Live lại sau sửa: opencode DeepSeek high, GLM max và Hermes default đều LIVE_OK; thiếu cờ/attachment/sensitive đều blocked. Evidence: evidence/2026-10-22/live-final-round2.json.
 
 ## Giới hạn kiểm
 

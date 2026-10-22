@@ -12,7 +12,7 @@ Các default dưới đây là đề xuất cho IMPLEMENT; chưa kiểm catalog/
 | Vendor | Model + effort đề xuất | Lệnh kiểm chứng và kết quả phiên này |
 |---|---|---|
 | codex | `gpt-6.1-sol` + `low` | `codex debug models </dev/null`: exit 0, có slug và default reasoning `low`; không có `gpt-5.5`. Builder dùng `-c model_reasoning_effort=low`. |
-| agy | Giữ `gemini-3.8-flash-high` (Tuan chốt) | ĐÃ KIỂM: Claude chạy `agy models` ngoài sandbox; đã đọc `agy-models.txt` tại thư mục bằng chứng bên dưới. Có Gemini 4 Argon/3.8 Flash, Opus/Sonnet 5.5 mỗi loại low/medium/high và `gpt-oss-120b-medium`; ghim slug, không truyền effort lần hai. |
+| agy | Giữ `gemini-3.8-flash-high` (Tuan chốt) | ĐÃ KIỂM: Claude chạy `agy models` ngoài sandbox; đã đọc `evidence/2026-10-22/agy-models.txt` tại thư mục bằng chứng bên dưới. Có Gemini 4 Argon/3.8 Flash, Opus/Sonnet 5.5 mỗi loại low/medium/high và `gpt-oss-120b-medium`; ghim slug, không truyền effort lần hai. |
 | dsh | Giữ `deepseek-v4-pro` + `high`: tau 76,96% ≈ Flash 76,80%, chưa đủ đổi default | Giữ default thực thi `DSH_DEFAULT_MODEL`, đồng bộ JSON đang ghi flash. `dsh --profile headless --dump-config`: EPERM khi ghi profile; CHƯA xác minh effort tại máy. |
 | grok | Giữ `grok-4.6` + đề xuất `low` có điều kiện; CSV thiếu 4.7 nên chưa đề xuất nâng | `grok models </dev/null`: exit 0, có 4.6/4.5, CLI default 4.5; stderr báo settings fetch failed. `grok --help` có `--reasoning-effort`; chưa xác minh 4.6 nhận low, không công bố đã ghim thành công. |
 | gemini | Tạm `auto`; đề xuất `gemini-3.8-flash` nếu tài khoản hỗ trợ: GPQA 95,64%, rẻ hơn Argon; effort CHƯA KIỂM | `gemini --help </dev/null` không có lệnh list model/effort; mở `gemini`, dùng `/model` để kiểm danh sách thật. Chưa mở TUI; giữ `models=null`/CHUA_KIEM đến khi xác minh tài khoản và lane thực thi. |
@@ -69,13 +69,13 @@ Bench OpenRouter đo qua API; effort/routing/harness có thể khác CLI và gó
 - Config giữ model slug trần, provider/effort riêng; pin một lần qua resolver chung cho CLI và lời gọi thư viện.
 - Khi chọn GLM Flash mà không ghi effort, lấy `max` từ hồ sơ; mapping effort vẫn cần smoke. Chưa thay bằng GLM thường: tau +1,62 điểm % nhưng cost ≈8,3 lần, GPQA chỉ +0,61 điểm %.
 - Đề xuất thử `mimo-v2.6-flash` cho tool/agentic (tau 78,67%, $0,01539; GPQA chỉ 73,93%); Qwen Flash/Max chưa đủ bằng chứng thay default. Chỉ duyệt model có trong catalog Go người dùng cung cấp, chặn cứng `*-contributor`; `*-free` không làm default, cho chọn tường minh (Tuan chốt 22/10).
-- Theo `go-page.md`, Go ≈34.670 req/5h DeepSeek Flash, 6.320 GLM Flash, 30.100 MiMo Flash; GLM ít lượt hơn DeepSeek ≈5,5 lần. Đây là ước tính, không bảo đảm số lượt thực tế; cost API không suy ra quota Go.
+- Theo `evidence/2026-10-22/go-page.md`, Go ≈34.670 req/5h DeepSeek Flash, 6.320 GLM Flash, 30.100 MiMo Flash; GLM ít lượt hơn DeepSeek ≈5,5 lần. Đây là ước tính, không bảo đảm số lượt thực tế; cost API không suy ra quota Go.
 - Trần Go: cửa sổ 5h = 20% hạn mức tháng, tuần = 50%, tháng = 100%; failover phải đọc cả ba cửa sổ, không đổi harness để né trần chung.
 - DeepSeek không train + ZDR hiện chỉ tới **31/10/2026**, gia hạn từng tháng: watcher/doctor cảnh báo sắp hết, hết hạn hoặc chưa xác minh gia hạn; không coi 0 ngày lưu là vĩnh viễn.
 - OpenCode binary: `Path.home() / '.opencode/bin/opencode'`, expand thành absolute path; không phụ thuộc alias/PATH.
 - Argv: `opencode run --model opencode-go/<m> --variant <effort> <PROMPT>`; `stdin=subprocess.DEVNULL`, không dùng shell.
 - `~/.opencode/bin/opencode run --help </dev/null` exit 0: xác nhận `--model` và `--variant` tại bản cài.
-- Lần gọi `models opencode-go` trước bị lỗi log; nay đã đọc metadata thật `opencode-go-verbose.txt`, có hai slug và capabilities; chưa chứng minh effort/dispatch thành công.
+- Lần gọi `models opencode-go` trước bị lỗi log; nay đã đọc metadata thật `evidence/2026-10-22/opencode-go-verbose.txt`, có hai slug và capabilities; chưa chứng minh effort/dispatch thành công.
 - Hermes argv dự kiến: `hermes -z <PROMPT> --provider opencode-go -m <m> --reasoning <effort>`, stdin DEVNULL.
 - ĐÃ KIỂM: theo kết quả Claude chạy `hermes --help` ngoài sandbox, exit 0, có `-z PROMPT`, `-m`, `--provider`, `--reasoning`; khớp parser Context7. Help chưa chứng minh dispatch/effort thành công.
 - Không tự sửa lock/quyền hay cài lại CLI; nếu cờ bản cài khác tài liệu, báo unsupported, không đoán cờ thay thế.
@@ -115,7 +115,7 @@ Dispatch dự kiến nhận danh sách đính kèm ảnh/PDF, kiểm MIME + `cap
 
 Metadata Go thật (khác khả năng vận chuyển file của harness):
 
-| Model | input.image / input.pdf | Train / lưu trữ theo go-page.md | Đề xuất |
+| Model | input.image / input.pdf | Train / lưu trữ theo evidence/2026-10-22/go-page.md | Đề xuất |
 |---|---|---|---|
 | `deepseek-v4.1-flash` | true / false | Không / 0 ngày tới 31/10/2026 | Default vision tạm thời, phải còn xác minh ZDR |
 | `glm-5.3-flash` | true / true | Không / 0 ngày | Dự phòng, nhận PDF trực tiếp nếu smoke đạt; quota thấp |

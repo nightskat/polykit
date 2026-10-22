@@ -29,4 +29,4 @@
 - Toolkit README đã thêm riêng mục PolyKit (trước đó không có mục này): 9 vendor, default mới, code-nopii; không sửa mục khác.
 - Không push, không merge main, không xoá worktree, không sửa credential, không dữ liệu khách hàng, không model contributor. Không gọi Codex child nên không gặp Codex429.
 - Treo: GLM PDF direct HTTP400; free explicit cũ chưa retest; chưa baseline field-map Apple Vision+MLX; chưa độ ổn định nhiều seed; chưa đối kháng local filesystem/PII production. Không mở lane ngân hàng.
-- Chi tiết: BENCH-VISION-2026-10-22.md, REVIEW-GROK-VONG3.md; raw_calls/prompts/run_summary dưới bench-v3-*-final/, PDF hardened, doctor-v3-acceptance.txt, live-v3-negative.json, tests-v3-acceptance.txt.
+- Chi tiết: BENCH-VISION-2026-10-22.md, REVIEW-GROK-VONG3.md; raw_calls/prompts/run_summary dưới `docs/plans/evidence/2026-10-22/bench-v3-*-final/`, PDF hardened, `evidence/2026-10-22/doctor-v3-acceptance.txt`, `evidence/2026-10-22/live-v3-negative.json`, `evidence/2026-10-22/tests-v3-acceptance.txt`.

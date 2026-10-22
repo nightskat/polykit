@@ -89,8 +89,8 @@ Chấm trên bản trích xuất OCR có sẵn tại repo:
 ```bash
 python3 bench/vision/score.py \
   --ground-truth bench/vision/synthetic/ground_truth.json \
-  --ocr-text docs/plans/vnocr-v3/ocr.raw.txt \
-  --output docs/plans/vnocr-v3/recovery_report.json \
+  --ocr-text docs/plans/evidence/2026-10-22/vnocr-v3/ocr.raw.txt \
+  --output docs/plans/evidence/2026-10-22/vnocr-v3/recovery_report.json \
   --summary
 ```
 

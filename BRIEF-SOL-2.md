@@ -15,7 +15,7 @@ opencode/hermes ĐƯỢC chạy không sandbox CHỈ với việc code / dữ li
    - Cổng vision với dữ liệu thật GIỮ NGUYÊN chặn.
    Maker agy, fallback DeepSeek; test bắt buộc cho từng nhánh.
 2. Grok-4.7 review riêng phần này (bypass cờ, PII lọt).
-3. LIVE TEST với prompt vô hại tổng hợp: opencode × {deepseek-v4.1-flash high, glm-5.3-flash max}, hermes × default, model *-free tường minh 1 lần (ghi kết quả), contributor → blocked, không cờ → blocked. Vision: ảnh tổng hợp docs/plans/vision-synthetic.png qua opencode -f với deepseek (tách trang nếu PDF) → so đúng/sai số trong ảnh.
+3. LIVE TEST với prompt vô hại tổng hợp: opencode × {deepseek-v4.1-flash high, glm-5.3-flash max}, hermes × default, model *-free tường minh 1 lần (ghi kết quả), contributor → blocked, không cờ → blocked. Vision: ảnh tổng hợp docs/plans/evidence/2026-10-22/vision-synthetic.png qua opencode -f với deepseek (tách trang nếu PDF) → so đúng/sai số trong ảnh.
 4. Ghi docs/plans/BAO-CAO-2026-10-22.md (≤60 dòng): tất cả commit 2 vòng, test count, finding grok + xử lý, bảng live test (lệnh → kết quả thật), việc treo. Chưa chạy thì ghi CHƯA CHẠY.
 
 Cấm: push, merge main, sửa ~/.hermes ~/.codex credential, đụng dữ liệu khách hàng, model *-contributor.

@@ -102,8 +102,8 @@ Người dùng có thể thêm vendor mới bằng cách chỉnh sửa JSON sche
     - Thiếu `pg-redact`: chỉ ghi warning rõ; text vẫn chạy được vì caller đã khai báo `code-nopii`, còn attachment vẫn bị cấm.
     - Attachment & mọi cờ vision synthetic/sensitive (`-f`/`--file`, `--synthetic-vision`, `--allow-sensitive-vision`, xác nhận nhạy cảm) đều **chặn tuyệt đối** (`reason=vision_blocked`), kể cả khi không có file thật.
   - **Đây không phải sandbox**: chưa có cách ly nào được chứng minh (`no proven confinement`), và `pg-redact` chỉ kiểm **prompt** — không bảo đảm workspace sạch. Vendor chạy có tool đọc/ghi workspace, nên lane này chỉ dùng cho code không PII; dữ liệu thật (tên/CIF/MST/số dư) vẫn cấm tuyệt đối.
-  - Cổng Vision của dispatch **vẫn đóng**: không có đường dispatch vision, và `--synthetic-vision` không mở lane Go. Ảnh tổng hợp chỉ được thử **trực tiếp ngoài dispatch** (`opencode run ... -f docs/plans/vision-synthetic.png`), đọc ra đủ 3 trường (Amount, Date, ID) — bằng chứng `docs/plans/live-vision-round2.json`; đây không phải tính năng của dispatch.
-  - **Live test 22/10/2026 (vòng 2)** — bằng chứng `docs/plans/live-text-round2.json`, `live-deepseek-retry-round2.json`:
+  - Cổng Vision của dispatch **vẫn đóng**: không có đường dispatch vision, và `--synthetic-vision` không mở lane Go. Ảnh tổng hợp chỉ được thử **trực tiếp ngoài dispatch** (`opencode run ... -f docs/plans/evidence/2026-10-22/vision-synthetic.png`), đọc ra đủ 3 trường (Amount, Date, ID) — bằng chứng `docs/plans/evidence/2026-10-22/live-vision-round2.json`; đây không phải tính năng của dispatch.
+  - **Live test 22/10/2026 (vòng 2)** — bằng chứng `docs/plans/evidence/2026-10-22/live-text-round2.json`, `live-deepseek-retry-round2.json`:
     - `opencode` DeepSeek-v4.1-flash high: lượt đầu fail vì vendor `database is locked`, retry trả `LIVE_OK` (13,65s).
     - `opencode --model glm-5.3-flash`: `LIVE_OK` (18,39s). `hermes` default DeepSeek-v4.1-flash: `LIVE_OK` (15,23s).
     - `--model deepseek-v4.1-flash-free` (explicit): vendor trả lỗi `UnknownError: Unexpected server error. Check server logs for details.` — lỗi phía vendor, không phải PolyKit chặn.
