@@ -14,7 +14,7 @@ from lib.vendors import detect_all, REGISTRY
 from lib.state_store import build_state, write_state
 from lib.states import VendorState, VendorProbe
 from lib.evidence import read_evidence
-from lib.doctor_quota import quota_capped_since
+from lib.doctor_quota import quota_capped_since, evaluate_auth_evidence, is_go_vendor
 
 # Số bản ghi evidence đọc ngược lại khi suy trạng thái quota (xem run_doctor).
 EVIDENCE_LOOKBACK = 500
@@ -195,6 +195,58 @@ def annotate_zdr(state: dict, now: str) -> dict:
 
     return state
 
+def annotate_auth_evidence(state: dict, records: list[dict], now: str) -> dict:
+    """BUG-14: Dùng chung probe evidence từ live dispatch thành công gần đây.
+
+    Nếu vendor ở state 'auth_unverified' hoặc 'ready' có live dispatch:
+    - Đánh giá bằng chứng auth gần đây đúng vendor/provider/model/quota group.
+    - Cập nhật state='ready' nếu trước đó là auth_unverified và có live dispatch ok trong TTL.
+    - Cập nhật state='installed_not_authed' nếu có explicit auth failure mới hơn.
+    - Ghi nhận timestamp bằng chứng và provenance vào metadata và warnings.
+    """
+    for name, vdata in state.get("vendors", {}).items():
+        if not vdata.get("cli_path"):
+            continue
+        # BUG-14: bằng chứng dispatch chỉ là cơ sở auth cho lane Go (opencode/hermes).
+        # Vendor khác có probe riêng (auth_check_cmd/assume_authed) — không lấy bằng
+        # chứng của lane này để đổi trạng thái vendor khác.
+        if not is_go_vendor(name):
+            continue
+
+        spec = REGISTRY.get(name)
+        provider = vdata.get("provider") or (spec.provider if spec else None)
+        quota_group = vdata.get("quota_group") or (spec.quota_group if spec else None)
+
+        auth_res = evaluate_auth_evidence(
+            records,
+            name,
+            now,
+            provider=provider,
+            quota_group=quota_group,
+        )
+
+        v_state = vdata.get("state")
+        if auth_res["authed"] is True:
+            ev_ts = auth_res["evidence_ts"]
+            vdata["auth_evidence_ts"] = ev_ts
+            vdata["auth_evidence_source"] = "dispatch_log"
+            if v_state == VendorState.AUTH_UNVERIFIED.value:
+                vdata["state"] = VendorState.READY.value
+                vdata["error"] = None
+            warn_msg = f"[{name}] auth xác minh từ live dispatch lúc {ev_ts}"
+            v_warns = vdata.setdefault("warnings", [])
+            if warn_msg not in v_warns:
+                v_warns.append(warn_msg)
+            st_warns = state.setdefault("warnings", [])
+            if warn_msg not in st_warns:
+                st_warns.append(warn_msg)
+        elif auth_res["authed"] is False:
+            if v_state in (VendorState.AUTH_UNVERIFIED.value, VendorState.READY.value):
+                vdata["state"] = VendorState.INSTALLED_NOT_AUTHED.value
+                vdata["error"] = auth_res.get("reason") or "explicit_auth_failure"
+
+    return state
+
 def annotate_quota_capped(state: dict, records: list[dict], now: str) -> dict:
     """BUG-4: hạ vendor `ready` xuống `quota_capped` nếu log evidence vừa có
     bản ghi quota_capped còn hiệu lực (trong cửa sổ, chưa bị status=ok đè).
@@ -210,8 +262,6 @@ def annotate_quota_capped(state: dict, records: list[dict], now: str) -> dict:
     return state
 
 def run_doctor(probes=None, now=None, records=None) -> dict:
-    if probes is None:
-        probes = detect_all()
     if now is None:
         now = datetime.now(timezone.utc).isoformat()
     if records is None:
@@ -219,8 +269,11 @@ def run_doctor(probes=None, now=None, records=None) -> dict:
         # bản ghi quota_capped trôi ra khỏi cửa sổ đọc, doctor lại báo ready như cũ.
         # Đọc rộng hơn hẳn cửa sổ 5 giờ; lọc theo thời gian đã nằm ở quota_capped_since.
         records = read_evidence(limit=EVIDENCE_LOOKBACK)
+    if probes is None:
+        probes = detect_all(records=records, now=now)
     state = build_state(probes, now)
     annotate_metadata(state, probes, now)
+    annotate_auth_evidence(state, records, now)
     annotate_zdr(state, now)
     annotate_quota_capped(state, records, now)
     write_state(state)
@@ -233,13 +286,13 @@ def render_table(state: dict) -> str:
     # Header
     lines.append(f"{'VENDOR':<10} | {'STATE':<20} | {'PATH':<50} | {'VERSION':<15}")
     lines.append("-" * 105)
-    
+
     for name in vendors:
         vdata = state.get("vendors", {}).get(name, {})
         v_state = vdata.get("state", "not_installed")
         v_path = vdata.get("cli_path") or "None"
         v_ver = vdata.get("cli_version") or "None"
-        
+
         lines.append(f"{name:<10} | {v_state:<20} | {v_path:<50} | {v_ver:<15}")
         # Hint đúng theo state: chưa cài → hướng dẫn cài; cài rồi chưa auth → hint auth.
         if v_state == "not_installed":
@@ -248,6 +301,10 @@ def render_table(state: dict) -> str:
             hint = vdata.get("auth_hint")
             if hint:
                 lines.append(f"  -> {hint}")
+        elif v_state == "ready":
+            ts = vdata.get("auth_evidence_ts")
+            if ts:
+                lines.append(f"  -> Sẵn sàng — auth xác minh từ live dispatch lúc {ts}")
         elif v_state == "auth_unverified":
             lines.append("  -> Probe phụ không xác minh được auth; thử dispatch nhỏ khi cần")
         elif v_state == "quota_capped":
@@ -268,7 +325,7 @@ def main():
     parser = argparse.ArgumentParser(description="Kiểm tra trạng thái vendor (state machine)")
     parser.add_argument("--json", action="store_true", help="In trạng thái dưới dạng JSON")
     args = parser.parse_args()
-    
+
     state = run_doctor()
     if args.json:
         print(json.dumps(state, indent=2, ensure_ascii=False))

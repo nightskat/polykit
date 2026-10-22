@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from lib.states import VendorProbe
 from lib.quota_error import is_quota_error
@@ -248,7 +249,33 @@ def _run_auth_check(spec: VendorSpec, abs_path: str, runner):
                 raise _ProbeTimeout(tong, lan, limit) from None
 
 
-def detect(spec: VendorSpec, which=shutil.which, runner=subprocess.run) -> VendorProbe:
+# BUG-14: lane Go (opencode/hermes) là lane DUY NHẤT auth phải suy từ bằng chứng
+# dispatch — probe CLI ở lane này chỉ liệt kê catalog, không phải auth status.
+GO_QUOTA_GROUP = "opencode-go"
+
+
+def _is_go_lane(spec: VendorSpec) -> bool:
+    """Vendor thuộc lane Go (quota group dùng chung opencode-go)?"""
+    return spec.quota_group == GO_QUOTA_GROUP
+
+
+def _read_evidence_safe(limit: int = 200) -> list[dict]:
+    """Đọc evidence log, lỗi/thiếu file → [] (không được làm nổ detect)."""
+    try:
+        from lib.evidence import read_evidence
+        recs = read_evidence(limit=limit)
+    except Exception:
+        return []
+    return recs if isinstance(recs, list) else []
+
+
+def detect(
+    spec: VendorSpec,
+    which=shutil.which,
+    runner=subprocess.run,
+    records: list[dict] | None = None,
+    now: str | datetime | None = None,
+) -> VendorProbe:
     if spec.binary is None:
         return _detect_api_key_vendor(spec)
     path_str = which(spec.binary)
@@ -307,6 +334,43 @@ def detect(spec: VendorSpec, which=shutil.which, runner=subprocess.run) -> Vendo
             # assume_authed=None -> authed=None (auth_unverified: không có verified auth cmd, không dump credential, không inference)
             # assume_authed=False -> authed=False (installed_not_authed)
             authed = spec.assume_authed
+
+        # BUG-14: suy auth/quota từ live dispatch evidence — CHỈ lane Go và CHỈ khi có
+        # mốc thời gian để so TTL. Vendor khác giữ nguyên kết luận của probe mình
+        # (assume_authed / auth_check_cmd): bằng chứng lane Go không được đổi trạng thái
+        # claude/codex/agy/gemini, và evidence không có `ts` thì không phải bằng chứng.
+        # Regression BUG-14 lô 5a: dispatcher gọi detect(spec) KHÔNG truyền `now`; nhánh
+        # quota cap cũ gọi now.isoformat() trên None → AttributeError, CLI mất luôn JSON.
+        if _is_go_lane(spec):
+            from lib.doctor_quota import (
+                evaluate_auth_evidence,
+                normalize_now_iso,
+                quota_capped_since,
+            )
+            if records is None:
+                records = _read_evidence_safe()
+            now_iso = normalize_now_iso(now)
+            if now_iso and records:
+                if authed is None:
+                    auth_res = evaluate_auth_evidence(
+                        records,
+                        spec.name,
+                        now_iso,
+                        provider=spec.provider,
+                        quota_group=spec.quota_group,
+                    )
+                    if auth_res["authed"] is True:
+                        authed = True
+                        error = None
+                    elif auth_res["authed"] is False:
+                        authed = False
+                        error = auth_res.get("reason") or "explicit_auth_failure"
+
+                # Quota cap newest wins — chỉ hạ vendor vừa được xác minh là authed.
+                if authed is True and not quota_capped:
+                    capped_map = quota_capped_since(records, now_iso)
+                    if spec.name in capped_map:
+                        quota_capped = True
 
         # Catalog động: hỏi CLI, KHÔNG hardcode danh sách dự phòng.
         # Với vendor authed=True hoặc authed=None (như opencode: không suy ready từ catalog,
@@ -367,7 +431,19 @@ def detect(spec: VendorSpec, which=shutil.which, runner=subprocess.run) -> Vendo
         error=error
     )
 
-def detect_all(specs=None, which=shutil.which, runner=subprocess.run) -> list[VendorProbe]:
+def detect_all(
+    specs=None,
+    which=shutil.which,
+    runner=subprocess.run,
+    records: list[dict] | None = None,
+    now: str | datetime | None = None,
+) -> list[VendorProbe]:
     if specs is None:
         specs = list(REGISTRY.values())
-    return [detect(spec, which=which, runner=runner) for spec in specs]
+    # Chỉ đọc evidence khi có ít nhất một vendor lane Go — vendor khác không dùng
+    # bằng chứng dispatch, đọc log ở đây chỉ tốn I/O và dễ gây nhiễu test.
+    if records is None and any(_is_go_lane(spec) for spec in specs):
+        records = _read_evidence_safe()
+    if now is None:
+        now = datetime.now(timezone.utc).isoformat()
+    return [detect(spec, which=which, runner=runner, records=records, now=now) for spec in specs]

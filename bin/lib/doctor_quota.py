@@ -12,10 +12,14 @@ Quy tắc cốt lõi:
 - status=ok xuất hiện SAU quota_capped nghĩa là cap đã hết → không báo capped.
 """
 from __future__ import annotations
+from typing import Any
 from datetime import datetime, timedelta, timezone
 
 # Cap có RESET: bản ghi quota_capped quá hạn này không được đóng băng vendor mãi mãi.
 QUOTA_CAP_WINDOW = timedelta(hours=5)
+
+# TTL cho bằng chứng auth từ live dispatch thành công gần đây (BUG-14)
+AUTH_PROBE_TTL: timedelta = timedelta(hours=1)
 
 # MỘT cửa sổ cho mọi vendor là SAI — ba kiểu quota khác hẳn nhau (Codex review 20/08):
 #   • codex  : hẹn mốc tuyệt đối ("try again at Aug 20th 10:58") — thường trong ngày.
@@ -114,6 +118,24 @@ def parse_ts(value) -> datetime | None:
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc)
+
+
+def normalize_now_iso(now) -> str | None:
+    """Mốc `now` → ISO string UTC để so TTL evidence.
+
+    None = chưa ai truyền mốc thời gian (dispatcher gọi detect(spec) trực tiếp) →
+    lấy giờ hệ thống. Giá trị hỏng/không hiểu → None để caller BỎ QUA evidence thay
+    vì đoán bừa. Tuyệt đối không gọi .isoformat() trên None: BUG-14 lô 5a nổ
+    AttributeError ở đúng chỗ này và làm CLI mất cả result JSON.
+    """
+    if now is None:
+        return datetime.now(timezone.utc).isoformat()
+    if isinstance(now, str):
+        return now.strip() or None
+    if isinstance(now, datetime):
+        dt = now if now.tzinfo is not None else now.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc).isoformat()
+    return None
 
 
 def is_quota_capped_record(record) -> bool:
@@ -248,3 +270,152 @@ def quota_capped_since(
                     result["hermes"] = go_cap_iso
 
     return result
+
+
+def is_explicit_auth_failure_record(record: dict) -> bool:
+    """Kiểm tra bản ghi có phải lỗi auth tường minh hay không.
+
+    Bao gồm các dấu hiệu: unauthenticated, unauthorized, login required, not logged in.
+    """
+    if not isinstance(record, dict):
+        return False
+    status = str(record.get("status") or "").lower()
+    reason = str(record.get("reason") or "").lower()
+    explicit_markers = ("auth_failure", "unauthenticated", "unauthorized", "login_required", "not_logged_in")
+    if status in explicit_markers or reason in explicit_markers:
+        return True
+    for field in ("error", "stderr", "summary"):
+        val = str(record.get(field) or "").lower()
+        if val and any(m in val for m in ("unauthenticated", "unauthorized", "not logged in", "login required")):
+            return True
+    return False
+
+
+def matches_vendor_criteria(
+    record: dict,
+    vendor: str,
+    provider: str | None = None,
+    quota_group: str | None = None,
+    model: str | None = None,
+) -> bool:
+    """Kiểm tra bản ghi evidence có khớp đúng vendor/provider/model/quota group hay không.
+
+    Bản ghi sai vendor, sai provider, sai quota_group hoặc sai model họ provider
+    bị từ chối (không nhận vơ).
+    """
+    if not isinstance(record, dict):
+        return False
+    rec_vendor = record.get("vendor")
+    if not isinstance(rec_vendor, str) or rec_vendor.strip().lower() != vendor.strip().lower():
+        return False
+
+    # Kiểm tra provider nếu bản ghi có khai
+    rec_provider = record.get("provider")
+    if rec_provider is not None and provider is not None:
+        if rec_provider.strip().lower() != provider.strip().lower():
+            return False
+
+    # Kiểm tra quota_group nếu bản ghi có khai
+    rec_qgroup = record.get("quota_group")
+    if rec_qgroup is not None and quota_group is not None:
+        if rec_qgroup.strip().lower() != quota_group.strip().lower():
+            return False
+
+    # Kiểm tra model
+    rec_model = record.get("model")
+    if model is not None and rec_model is not None:
+        if str(rec_model).strip().lower() != str(model).strip().lower():
+            return False
+    elif rec_model is not None and provider:
+        rec_m_str = str(rec_model).strip().lower()
+        if "/" in rec_m_str:
+            prefix = rec_m_str.split("/")[0]
+            if prefix != provider.lower() and prefix in ("openai", "anthropic", "google", "mistral"):
+                return False
+
+    return True
+
+
+def evaluate_auth_evidence(
+    records: list[dict],
+    vendor: str,
+    now: str | datetime,
+    ttl: timedelta | None = AUTH_PROBE_TTL,
+    provider: str | None = None,
+    quota_group: str | None = None,
+    model: str | None = None,
+) -> dict[str, Any]:
+    """Hàm THUẦN đánh giá bằng chứng auth từ records cho một vendor tại mốc `now`.
+
+    Quy tắc cốt lõi:
+    1. Lọc các bản ghi khớp đúng vendor/provider/quota_group/model (không nhận vơ).
+    2. Bỏ qua bản ghi ts hỏng/thiếu hoặc ở tương lai (now < ts - clock drift).
+    3. Tín hiệu mới nhất thắng giữa {ok, explicit_auth_failure}.
+    4. Bản ghi 'ok' chỉ có hiệu lực trong cửa sổ TTL (mặc định AUTH_PROBE_TTL=1h).
+       Quá hạn -> unverified (stale).
+    5. Explicit auth failure mới nhất -> authed=False (không bị override bởi ok cũ).
+    6. Trả về dict:
+       {
+           "authed": bool | None,  # True (ready), False (not authed), None (unverified)
+           "evidence_ts": str | None,
+           "reason": str | None,
+           "record": dict | None,
+       }
+    """
+    now_dt = parse_ts(now) if isinstance(now, str) else now
+    if now_dt is None:
+        return {"authed": None, "evidence_ts": None, "reason": "invalid_now", "record": None}
+    if now_dt.tzinfo is None:
+        now_dt = now_dt.replace(tzinfo=timezone.utc)
+    else:
+        now_dt = now_dt.astimezone(timezone.utc)
+
+    valid_events: list[tuple[datetime, int, str, dict]] = []  # (ts_dt, priority, event_type, record)
+
+    for rec in records:
+        if not matches_vendor_criteria(rec, vendor, provider=provider, quota_group=quota_group, model=model):
+            continue
+        ts_dt = parse_ts(rec.get("ts"))
+        if ts_dt is None:
+            continue
+        # Bỏ qua bản ghi ở tương lai (clock drift)
+        if ts_dt > now_dt:
+            continue
+
+        if is_explicit_auth_failure_record(rec):
+            # Ưu tiên auth_failure hơn ok khi cùng timestamp
+            valid_events.append((ts_dt, 1, "auth_failure", rec))
+        elif is_ok_record(rec):
+            valid_events.append((ts_dt, 0, "ok", rec))
+
+    if not valid_events:
+        return {"authed": None, "evidence_ts": None, "reason": "no_evidence", "record": None}
+
+    # Sắp xếp theo thời gian tăng dần, tie-breaker priority (auth_failure=1 thắng ok=0)
+    valid_events.sort(key=lambda x: (x[0], x[1]))
+    latest_ts, _, latest_type, latest_rec = valid_events[-1]
+
+    if latest_type == "auth_failure":
+        return {
+            "authed": False,
+            "evidence_ts": latest_rec.get("ts"),
+            "reason": latest_rec.get("reason") or "explicit_auth_failure",
+            "record": latest_rec,
+        }
+
+    # latest_type == "ok"
+    age = now_dt - latest_ts
+    if ttl is not None and age > ttl:
+        return {
+            "authed": None,
+            "evidence_ts": latest_rec.get("ts"),
+            "reason": f"stale_evidence (quá TTL {ttl})",
+            "record": latest_rec,
+        }
+
+    return {
+        "authed": True,
+        "evidence_ts": latest_rec.get("ts"),
+        "reason": "recent_dispatch_success",
+        "record": latest_rec,
+    }
