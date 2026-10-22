@@ -204,13 +204,6 @@ def main():
 
     args = parser.parse_args()
 
-    # --doctor mode
-    if args.doctor:
-        ma = _run_doctor(args.vendor)
-        if args.result_json:
-            _doctor_ra_json(args.vendor, ma)
-        sys.exit(ma)
-
     # Model positional (tương thích cũ) vs --model alias: xung đột thì CHẶN,
     # không im lặng chọn một bên.
     if args.model is not None and args.model_flag is not None:
@@ -267,8 +260,11 @@ def main():
     if not provider_intent:
         provider_intent = vendor_provider(args.vendor, cfg)
         if not provider_intent and args.vendor == "openrouter":
-            # OpenRouter không có entry trong vendors.json (REGISTRY-only)
-            provider_intent = "openrouter"
+            # OpenRouter không có entry trong vendors.json (REGISTRY-only).
+            # Với --doctor vendor-only (raw_model auto), không gán provider=openrouter
+            # để không bị chặn bởi router unresolved destination (doctor không dispatch prompt).
+            if not (args.doctor and raw_model == "auto"):
+                provider_intent = "openrouter"
 
     # Resolver CHUNG với library — cùng một quyết định, không whitelist riêng.
     resolved_model: str = raw_model or "auto"
@@ -318,6 +314,15 @@ def main():
         )
         sys.stderr.write(advisory + "\n")
         res_warnings.append(advisory)
+
+    # --doctor mode: dời sau model/source/provider/vision gate nhưng vẫn trước đọc prompt-file/stdin.
+    # Valid doctor vendor-only giữ contract không cần prompt; banned model hoặc
+    # sensitive attachments đã bị chặn ở các cổng phía trên trước _run_doctor.
+    if args.doctor:
+        ma = _run_doctor(args.vendor)
+        if args.result_json:
+            _doctor_ra_json(args.vendor, ma)
+        sys.exit(ma)
 
     # --dump-config: in cấu hình đã resolve, thoát 0 token
     if args.dump_config:

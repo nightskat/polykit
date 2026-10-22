@@ -341,7 +341,8 @@ def test_run_vendor_sensitive_confirmation_no_retry_failover_inheritance():
 
 
 def test_run_vendor_gemini_auto_preserved_no_invented_model():
-    """Gemini auto must be preserved without inventing a default model slug."""
+    """Gemini auto must be preserved without inventing a default model slug.
+    served_model is None if response provides no proof (Grok finding 3)."""
     spy_run = SpyRunner(stdout="gemini response")
     env = os.environ.copy()
 
@@ -354,7 +355,29 @@ def test_run_vendor_gemini_auto_preserved_no_invented_model():
     )
     assert res.status == "ok"
     assert res.model == "auto"
-    assert res.served_model in ("agy:high", "gemini-3.5-flash")
+    assert res.served_model is None
+
+    # Case response provides proof:
+    spy_proven = SpyRunner(stdout='{"model": "gemini-3.5-flash"}')
+    res_proven = run_vendor(
+        vendor="gemini",
+        prompt="ping",
+        model="auto",
+        runner=spy_proven,
+    )
+    assert res_proven.status == "ok"
+    assert res_proven.model == "auto"
+    assert res_proven.served_model == "gemini-3.5-flash"
+
+    # Case explicit without proof:
+    res_explicit = run_vendor(
+        vendor="gemini",
+        prompt="ping",
+        model="gemini-3.5-flash",
+        runner=spy_run,
+    )
+    assert res_explicit.model == "gemini-3.5-flash"
+    assert res_explicit.served_model is None
 
 
 def test_run_vendor_agy_auto_does_not_pick_catalog_zero():
@@ -380,8 +403,10 @@ def test_run_vendor_agy_auto_does_not_pick_catalog_zero():
     )
 
     assert res.status == "ok"
-    # Should use AGY_DEFAULT_MODEL ("gemini-3.8-flash-high"), NOT catalog[0]!
-    assert res.served_model == "gemini-3.8-flash-high"
+    assert res.model == "auto"
+    # Response has no proof -> served_model is None (Grok finding 3)
+    assert res.served_model is None
+    # agy pin argv default ("gemini-3.8-flash-high") must be in cmd, NOT catalog[0]!
     assert spy_run.last_cmd is not None
     assert "some-random-unknown-model" not in spy_run.last_cmd
     assert "gemini-3.8-flash-high" in spy_run.last_cmd
@@ -738,7 +763,7 @@ def test_run_vendor_policy_warning_reaches_result_json():
 
 
 def test_run_vendor_agy_served_model_marked_as_intent():
-    """agy auto: served_model chỉ là slug ĐÃ GỬI và phải nói rõ đó là intent."""
+    """agy auto: served_model là None nếu response không có chứng minh, không tự gán slug intent."""
     from lib.dispatch_core import AGY_DEFAULT_MODEL
 
     spy_run = SpyRunner(stdout="agy output")
@@ -749,8 +774,22 @@ def test_run_vendor_agy_served_model_marked_as_intent():
                      detector=lambda spec: probe)
     assert res.status == "ok"
     assert res.model == "auto", "result.model là REQUESTED, không phải slug đã ghim"
-    assert res.served_model == AGY_DEFAULT_MODEL
-    assert any("intent" in w for w in res.warnings), res.warnings
+    assert res.served_model is None
+    assert any("chưa xác minh model thật" in w or "không xác nhận model thực" in w for w in res.warnings), res.warnings
+
+    # Case response provides proof:
+    spy_proof = SpyRunner(stdout='{"modelVersion": "gemini-3.8-flash-high"}')
+    res_proof = run_vendor(vendor="agy", prompt="ping", model="auto", runner=spy_proof,
+                           detector=lambda spec: probe)
+    assert res_proof.status == "ok"
+    assert res_proof.model == "auto"
+    assert res_proof.served_model == "gemini-3.8-flash-high"
+
+    # Case explicit without proof:
+    res_explicit = run_vendor(vendor="agy", prompt="ping", model=AGY_DEFAULT_MODEL,
+                              runner=spy_run, detector=lambda spec: probe)
+    assert res_explicit.model == AGY_DEFAULT_MODEL
+    assert res_explicit.served_model is None
 
 
 def test_run_vendor_go_never_spawns_even_if_confinement_flag_flipped():
@@ -879,6 +918,7 @@ class _CliSpy:
     def __init__(self, monkeypatch):
         self.spawned = []
         self.networked = []
+        self.doctor_called = []
         import bin.dispatch as cli
         self.cli = cli
         self.lib_called = []
@@ -891,10 +931,15 @@ class _CliSpy:
             self.networked.append((a, k))
             raise AssertionError("CLI hit the network on a blocked request")
 
+        def _doc(v):
+            self.doctor_called.append(v)
+            raise AssertionError(f"CLI called _run_doctor({v!r}) on a blocked request")
+
         import urllib.request as _urlreq
         monkeypatch.setattr(cli.subprocess, "run", _spawn)
         monkeypatch.setattr(_urlreq, "urlopen", _net)
         monkeypatch.setattr(cli, "run_vendor", lambda *a, **k: self.lib_called.append(k))
+        monkeypatch.setattr(cli, "_run_doctor", _doc)
 
     def run(self, argv):
         import sys as _sys
@@ -1012,6 +1057,118 @@ def test_cli_go_provider_conflict_blocked_without_lib_call(monkeypatch, capsys):
     assert spy.lib_called == []
     data = json.loads(out)
     assert data["reason"] == "unapproved_go_provider"
+
+
+def test_cli_spy_doctor_contributor_blocks_before_run_doctor(monkeypatch, capsys):
+    """codex gpt-6.1-sol-contributor --doctor --result-json phải bị chặn TRƯỚC _run_doctor."""
+    spy, code, out, _err = _run_cli_spy(
+        monkeypatch, capsys,
+        ["codex", "gpt-6.1-sol-contributor", "--doctor", "--result-json"],
+    )
+    assert code == 2
+    assert spy.doctor_called == [], "_run_doctor không được gọi khi model contributor bị cấm"
+    assert spy.spawned == [] and spy.networked == [] and spy.lib_called == []
+    data = json.loads(out)
+    assert data["status"] == "blocked"
+    assert data["reason"] == "contributor_model_blocked"
+    assert data["served_model"] is None
+
+
+def test_cli_spy_doctor_free_default_blocks_before_run_doctor(monkeypatch, capsys):
+    """Config default là model free ⇒ --doctor vendor-only bị chặn TRƯỚC _run_doctor."""
+    spy = _CliSpy(monkeypatch)
+
+    fake_cfg = {
+        "schema_version": 3,
+        "vendors": {
+            "codex": {
+                "default_model": "gpt-6.1-sol-free",
+                "default_effort": "low",
+                "models": None,
+            }
+        },
+    }
+    monkeypatch.setattr(spy.cli, "load_vendor_config", lambda *a, **k: fake_cfg)
+
+    code = spy.run(["codex", "--doctor", "--result-json"])
+    out, _err = capsys.readouterr()
+
+    assert code == 2
+    assert spy.doctor_called == [], "_run_doctor không được gọi khi default model là free"
+    assert spy.spawned == [] and spy.networked == [] and spy.lib_called == []
+    data = json.loads(out)
+    assert data["status"] == "blocked"
+    assert data["reason"] == "free_model_not_explicit"
+
+
+def test_cli_spy_doctor_real_vision_blocks_before_run_doctor(monkeypatch, capsys):
+    """--file thật/sensitive đi kèm --doctor phải bị chặn TRƯỚC _run_doctor và file I/O."""
+    spy = _CliSpy(monkeypatch)
+
+    read_calls = []
+    import pathlib as _pathlib
+    orig_read_text = _pathlib.Path.read_text
+    orig_stat = _pathlib.Path.stat
+
+    def _read(self, *a, **k):
+        read_calls.append(("read_text", str(self)))
+        return orig_read_text(self, *a, **k)
+
+    def _stat(self, *a, **k):
+        read_calls.append(("stat", str(self)))
+        return orig_stat(self, *a, **k)
+
+    monkeypatch.setattr(_pathlib.Path, "read_text", _read)
+    monkeypatch.setattr(_pathlib.Path, "stat", _stat)
+
+    code = spy.run([
+        "codex",
+        "--file", "/nonexistent/real_scan.png",
+        "--doctor",
+        "--result-json",
+    ])
+    out, _err = capsys.readouterr()
+
+    assert code == 2
+    assert spy.doctor_called == [], "_run_doctor không được gọi khi có attachment nhạy cảm"
+    assert spy.spawned == [] and spy.networked == [] and spy.lib_called == []
+    data = json.loads(out)
+    assert data["status"] == "blocked"
+    assert data["reason"] == "vision_blocked"
+    blocked_reads = [c for c in read_calls if c[1].startswith("/nonexistent")]
+    assert blocked_reads == [], f"attachments phải chưa bị đọc/stat: {blocked_reads}"
+
+
+def test_cli_spy_doctor_allow_unknown_still_blocks_contributor(monkeypatch, capsys):
+    """--allow-unknown-model KHÔNG được bypass policy khi chạy --doctor."""
+    spy, code, out, _err = _run_cli_spy(
+        monkeypatch, capsys,
+        ["codex", "gpt-6.1-sol-contributor", "--allow-unknown-model", "--doctor", "--result-json"],
+    )
+    assert code == 2
+    assert spy.doctor_called == [], "_run_doctor không được gọi kể cả khi có --allow-unknown-model"
+    assert spy.spawned == [] and spy.networked == []
+    data = json.loads(out)
+    assert data["status"] == "blocked"
+    assert data["reason"] == "contributor_model_blocked"
+
+
+def test_cli_spy_doctor_vendor_only_valid_contract_no_prompt_needed(monkeypatch, capsys):
+    """Valid doctor vendor-only giữ contract không cần prompt, gọi _run_doctor và xuất result-json."""
+    spy = _CliSpy(monkeypatch)
+    doctor_runs = []
+    monkeypatch.setattr(spy.cli, "_run_doctor", lambda v: doctor_runs.append(v) or 0)
+
+    code = spy.run(["codex", "--doctor", "--result-json"])
+    out, _err = capsys.readouterr()
+
+    assert code == 0
+    assert doctor_runs == ["codex"]
+    assert spy.spawned == [] and spy.networked == [] and spy.lib_called == []
+    data = json.loads(out)
+    assert data["status"] == "ok"
+    assert data["vendor"] == "codex"
+    assert "chi tiết doctor" in data["warnings"][0]
 
 
 def test_cli_openrouter_org_model_dump_config_keeps_namespace():
