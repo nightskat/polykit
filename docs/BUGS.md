@@ -27,6 +27,7 @@
 | BUG-14 | ✅ Go ĐÃ SỬA; lịch sử Agy/DSH giữ nguyên | doctor opencode/hermes dùng chung evidence probe với dispatch (vòng 3) |
 | BUG-17 | ✅ ĐÃ SỬA | `--timeout` KHÔNG xuống tới `--print-timeout` của `agy` → agy tự cắt ở mặc định 5m0s, mất trắng lượt |
 | BUG-18 | ✅ ĐÃ SỬA | `grok` bị trần chung `--timeout 120` giết oan (39% lượt timeout) + log không ghi `latency_ms` |
+| BUG-19 | 🔴 MỞ | `dispatch.py hermes --result-json`: stdout có dòng log/progress trước JSON → `json.load(stdout)` vỡ (22/10, Claude dogfood khi giao dọn docs/plans). Việc vẫn chạy đúng. Sửa: log ra stderr, stdout chỉ JSON |
 
 ---
 
