@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 import argparse
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from pathlib import Path
 from typing import Any
 
@@ -19,10 +19,31 @@ from lib.doctor_quota import quota_capped_since
 # Số bản ghi evidence đọc ngược lại khi suy trạng thái quota (xem run_doctor).
 EVIDENCE_LOOKBACK = 500
 
-def check_zdr_expiry(zdr: dict, now: str | datetime | None = None) -> dict[str, Any]:
+# Mốc thời hạn Zero Data Retention (ZDR) đã xác minh thực tế (Plan mục 74, 139)
+VERIFIED_ZDR_EXPIRY = "2026-10-31"
+VERIFIED_ZDR_DATE = datetime.strptime(VERIFIED_ZDR_EXPIRY, "%Y-%m-%d").date()
+
+def _failclosed_zdr_result(raw_expiry: Any) -> dict[str, Any]:
+    return {
+        "status": "unverified",
+        "expiry": None,
+        "days_left": 0,
+        "renewal_verified": False,
+        "warning": (
+            f"DeepSeek ZDR expiry không hợp lệ hoặc thiếu ({raw_expiry!r}) — "
+            "unverified failclosed (không có căn cứ gia hạn)"
+        ),
+    }
+
+def check_zdr_expiry(zdr: Any, now: str | datetime | date | None = None) -> dict[str, Any]:
     """Kiểm tra thời hạn Zero Data Retention (ZDR) của vendor dựa theo mốc `now`.
 
     Cảnh báo:
+    - Kẹp mốc min(config_expiry, verified_expiry 2026-10-31): không tin expiry config
+      sau 2026-10-31; caller renewal/permanent không được tự ý gia hạn qua mốc verified.
+    - Expiry sớm hơn (earlier expiry) được giữ nguyên.
+    - Expiry invalid / missing (None, bool, dict, bad str): trả warning unverified
+      failclosed, không crash doctor.
     - Trước ngày 2026-10-31: cảnh báo sắp hết hạn (còn N ngày).
     - Đúng ngày 2026-10-31: cảnh báo hết hạn hôm nay.
     - Sau ngày 2026-10-31: cảnh báo đã hết hạn (quá hạn N ngày).
@@ -34,14 +55,41 @@ def check_zdr_expiry(zdr: dict, now: str | datetime | None = None) -> dict[str, 
         now_date = datetime.now(timezone.utc).date()
     elif isinstance(now, datetime):
         now_date = now.date()
-    elif isinstance(now, str):
-        date_str = now[:10]
-        now_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-    else:
+    elif isinstance(now, date):
         now_date = now
+    elif isinstance(now, str):
+        try:
+            now_date = datetime.strptime(now[:10], "%Y-%m-%d").date()
+        except Exception:
+            now_date = datetime.now(timezone.utc).date()
+    else:
+        now_date = datetime.now(timezone.utc).date()
 
-    expiry_str = zdr.get("expiry", "2026-10-31")
-    expiry_date = datetime.strptime(expiry_str, "%Y-%m-%d").date()
+    if not isinstance(zdr, dict):
+        return _failclosed_zdr_result(zdr)
+
+    if "expiry" not in zdr:
+        return _failclosed_zdr_result(None)
+
+    raw_expiry = zdr.get("expiry")
+    if raw_expiry is None or isinstance(raw_expiry, bool) or isinstance(raw_expiry, (dict, list, set, tuple)):
+        return _failclosed_zdr_result(raw_expiry)
+
+    if isinstance(raw_expiry, (datetime, date)):
+        config_date = raw_expiry.date() if isinstance(raw_expiry, datetime) else raw_expiry
+    elif isinstance(raw_expiry, str):
+        clean_str = raw_expiry.strip()[:10]
+        try:
+            config_date = datetime.strptime(clean_str, "%Y-%m-%d").date()
+        except Exception:
+            return _failclosed_zdr_result(raw_expiry)
+    else:
+        return _failclosed_zdr_result(raw_expiry)
+
+    is_tampered_future = config_date > VERIFIED_ZDR_DATE
+    expiry_date = min(config_date, VERIFIED_ZDR_DATE)
+    expiry_str = expiry_date.strftime("%Y-%m-%d")
+
     days_left = (expiry_date - now_date).days
 
     if days_left > 0:
@@ -54,7 +102,13 @@ def check_zdr_expiry(zdr: dict, now: str | datetime | None = None) -> dict[str, 
         status = "expired"
         warn_text = f"DeepSeek ZDR đã hết hạn ({expiry_str}, quá hạn {abs(days_left)} ngày)"
 
-    renewal_verified = zdr.get("renewal_verified", False)
+    # Renewal / permanent caller không được tự gia hạn qua mốc verified.
+    # Nếu config cố tình vượt mốc verified hoặc hiện tại đã quá hạn, renewal không được coi là hợp lệ.
+    if is_tampered_future or days_left < 0:
+        renewal_verified = False
+    else:
+        renewal_verified = bool(zdr.get("renewal_verified", False))
+
     if not renewal_verified:
         warn_text += " — gia hạn chưa được xác minh (cần theo dõi gia hạn từng tháng, không tự động gia hạn)"
 
@@ -99,8 +153,20 @@ def annotate_metadata(state: dict, probes: list[VendorProbe], now: str) -> dict:
     return state
 
 def annotate_zdr(state: dict, now: str) -> dict:
-    """Cảnh báo ZDR trước/ngày/sau expiry 2026-10-31 và cảnh báo renewal chưa xác minh."""
+    """Cảnh báo ZDR trước/ngày/sau expiry 2026-10-31 và cảnh báo renewal chưa xác minh.
+
+    Metadata privacy nguồn Go chỉ áp dụng cho provider opencode-go (opencode, hermes);
+    KHÔNG gán ZDR Go/no-train cho DSH DeepSeek official chỉ vì tên họ model
+    (doctor fallback cũ cho dsh không có source evidence).
+    Giữ warnings Go cho cả hermes và opencode.
+    """
     for name, vdata in state.get("vendors", {}).items():
+        # DSH DeepSeek official không có source evidence cho ZDR Go / no-train;
+        # metadata privacy nguồn Go chỉ áp dụng cho provider opencode-go.
+        provider = vdata.get("provider")
+        if name == "dsh" or (provider != "opencode-go" and name not in ("opencode", "hermes")):
+            continue
+
         zdr_info = None
         try:
             from lib.vendor_config import vendor_zdr
@@ -108,7 +174,7 @@ def annotate_zdr(state: dict, now: str) -> dict:
         except Exception:
             pass
 
-        if zdr_info is None and name in ("dsh", "opencode", "hermes"):
+        if zdr_info is None and (name in ("opencode", "hermes") or provider == "opencode-go"):
             zdr_info = {
                 "supported": True,
                 "expiry": "2026-10-31",

@@ -368,6 +368,75 @@ def test_zdr_config_expiry_khong_am_tham_gia_han():
     assert res["status"] == "expired"
 
 
+def test_zdr_tampered2027_date11_01_van_expired():
+    """Grok finding 6: config tamper ngày expiry 2027 và claim renewal/permanent
+    thì vẫn bị kẹp về min(config, 2026-10-31), date 2026-11-01 vẫn expired."""
+    zdr = {
+        "supported": True,
+        "expiry": "2027-12-31",
+        "renewal_verified": True,
+        "permanent": True,
+    }
+    res = check_zdr_expiry(zdr, now="2026-11-01")
+    assert res["status"] == "expired"
+    assert res["expiry"] == "2026-10-31"
+    assert res["days_left"] == -1
+    assert "đã hết hạn" in res["warning"]
+    assert "quá hạn 1 ngày" in res["warning"]
+    assert "2026-10-31" in res["warning"]
+    # Renewal claim vượt mốc verified không được công nhận
+    assert res["renewal_verified"] is False
+
+
+def test_zdr_earlier_expiry_giu():
+    """Earlier expiry (< 2026-10-31) được giữ nguyên qua min(config, 2026-10-31)."""
+    zdr = {
+        "supported": True,
+        "expiry": "2026-10-15",
+        "permanent": False,
+    }
+    res = check_zdr_expiry(zdr, now="2026-10-10")
+    assert res["expiry"] == "2026-10-15"
+    assert res["days_left"] == 5
+    assert res["status"] == "expiring_soon"
+    assert "2026-10-15" in res["warning"]
+    assert "còn 5 ngày" in res["warning"]
+
+
+def test_zdr_invalid_bool_dict_missing_khong_crash_tra_unverified_failclosed():
+    """Expiry invalid, bool, dict, bad string hoặc missing trả warning unverified failclosed
+    không làm crash doctor."""
+    # 1. bool
+    res_bool = check_zdr_expiry({"expiry": True}, now="2026-10-25")
+    assert res_bool["status"] == "unverified"
+    assert "unverified" in res_bool["warning"]
+    assert "failclosed" in res_bool["warning"]
+
+    # 2. dict
+    res_dict = check_zdr_expiry({"expiry": {"date": "2026-10-31"}}, now="2026-10-25")
+    assert res_dict["status"] == "unverified"
+    assert "unverified" in res_dict["warning"]
+    assert "failclosed" in res_dict["warning"]
+
+    # 3. bad string
+    res_bad = check_zdr_expiry({"expiry": "not-a-date"}, now="2026-10-25")
+    assert res_bad["status"] == "unverified"
+    assert "unverified" in res_bad["warning"]
+    assert "failclosed" in res_bad["warning"]
+
+    # 4. missing expiry key
+    res_missing = check_zdr_expiry({}, now="2026-10-25")
+    assert res_missing["status"] == "unverified"
+    assert "unverified" in res_missing["warning"]
+    assert "failclosed" in res_missing["warning"]
+
+    # 5. non-dict input
+    res_non_dict = check_zdr_expiry(None, now="2026-10-25")
+    assert res_non_dict["status"] == "unverified"
+    assert "unverified" in res_non_dict["warning"]
+    assert "failclosed" in res_non_dict["warning"]
+
+
 # ==============================================================================
 # 7. Doctor additive state metadata sau build_state
 # ==============================================================================
@@ -416,10 +485,71 @@ def test_doctor_additive_metadata_and_adapter_meta(monkeypatch):
     assert state["vendors"]["opencode"]["catalog_source"] == "models_cmd"
     assert state["vendors"]["hermes"]["catalog_source"] == "none"
 
-    # 3. ZDR warning được gắn vào state
+    # 3. ZDR warning được gắn vào state (cả opencode và hermes)
     assert state["vendors"]["opencode"]["zdr_status"] == "expiring_soon"
     assert "zdr_warning" in state["vendors"]["opencode"]
+    assert state["vendors"]["hermes"]["zdr_status"] == "expiring_soon"
+    assert "zdr_warning" in state["vendors"]["hermes"]
     assert any("DeepSeek ZDR" in w for w in state.get("warnings", []))
+
+
+def test_doctor_zdr_chi_ap_dung_provider_opencode_go_khong_gan_dsh(monkeypatch):
+    """Metadata privacy nguồn Go chỉ áp dụng provider opencode-go (opencode, hermes);
+    KHÔNG gán ZDR Go/no-train cho DSH DeepSeek official chỉ vì tên họ model
+    (doctor fallback cũ cho dsh không có source evidence).
+    Giữ warnings Go cho cả hermes và opencode."""
+    probes = [
+        VendorProbe(
+            name="opencode",
+            path="/fake/.opencode/bin/opencode",
+            authed=None,
+            quota_capped=False,
+            version="1.0.0",
+            models=["opencode-go/deepseek-v4.1-flash"],
+            error=None,
+        ),
+        VendorProbe(
+            name="hermes",
+            path="/usr/local/bin/hermes",
+            authed=None,
+            quota_capped=False,
+            version="0.5.0",
+            models=["opencode-go/deepseek-v4.1-flash"],
+            error=None,
+        ),
+        VendorProbe(
+            name="dsh",
+            path="/usr/local/bin/dsh",
+            authed=True,
+            quota_capped=False,
+            version="1.0.0",
+            models=["deepseek-v4-pro"],
+            error=None,
+        ),
+    ]
+
+    monkeypatch.setattr("doctor.write_state", lambda s, path=None: path)
+    monkeypatch.setattr("doctor.read_evidence", lambda limit=20, path=None: [])
+
+    now_iso = "2026-10-25T10:00:00+00:00"
+    state = run_doctor(probes=probes, now=now_iso)
+
+    # 1. opencode và hermes (provider opencode-go) đều có ZDR warning
+    assert state["vendors"]["opencode"]["zdr_status"] == "expiring_soon"
+    assert "zdr_warning" in state["vendors"]["opencode"]
+
+    assert state["vendors"]["hermes"]["zdr_status"] == "expiring_soon"
+    assert "zdr_warning" in state["vendors"]["hermes"]
+
+    # Warnings tổng của state chứa cả [opencode] và [hermes]
+    assert any("[opencode] DeepSeek ZDR" in w for w in state.get("warnings", []))
+    assert any("[hermes] DeepSeek ZDR" in w for w in state.get("warnings", []))
+
+    # 2. dsh (DeepSeek official) KHÔNG bị gán ZDR Go / no-train
+    assert "zdr_status" not in state["vendors"]["dsh"]
+    assert "zdr_warning" not in state["vendors"]["dsh"]
+    assert "zdr" not in state["vendors"]["dsh"]
+    assert not any("[dsh]" in w and "DeepSeek ZDR" in w for w in state.get("warnings", []))
 
 
 def test_doctor_render_table_contains_zdr_and_auth_unverified():
