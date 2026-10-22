@@ -16,4 +16,4 @@
 - Bổ sung điều phối: PDF caller output_dir chứa stale/symlink có thể lẫn vào attachment; đã reject output_dir public, fresh private conversion + trần/page sequencing/regular PNG tests. Live hardened DeepSeek PDF 8/9, status ok.
 - Bổ sung điều phối: table label cross-field leak; prompt bảng chỉ tọa độ, đã chạy lại cả hai model. Model output không được bịa/điền từ GT.
 - Unit tiền hậu tố VND/VNĐ/đ là tương đương giá trị số theo brief; whitelist test thay vì strip mọi chữ. Các vòng điểm cũ và rescore đều giữ nguyên nguồn và nhãn.
-- Điều phối tự chạy acceptance: 1046 passed in 21.42s; git diff --check sạch. Không claim Grok đã tái-review toàn bộ code cuối sau từng fix; regression + live evidence là bằng chứng nghiệm thu sửa lỗi.
+- Điều phối tự chạy acceptance: 1046 passed in 21.42s; git diff --check cho bin/tests/bench sạch. Raw logs/prompts/diff giữ nguyên whitespace nguồn nên full diff check có cảnh báo; không sửa evidence để làm đẹp. Không claim Grok đã tái-review toàn bộ code cuối sau từng fix; regression + live evidence là bằng chứng nghiệm thu sửa lỗi.

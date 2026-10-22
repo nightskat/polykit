@@ -5,7 +5,7 @@
 - Commit gate: 64f5fb9 (hash pin, synthetic-only, PDF private, delimiter); maker agy/Hermes.
 - Commit runner/scorer: 0c390b6 (typed, JSONL contamination, prompt sạch); maker agy/Hermes.
 - Commit báo cáo/evidence: xem git log -1 -- docs/plans/BAO-CAO-VONG3.md.
-- Test điều phối: baseline 793 passed/16.51s; acceptance cuối 1046 passed/21.42s; git diff --check sạch.
+- Test điều phối: baseline 793 passed/16.51s; acceptance cuối 1046 passed/21.42s; diff --check cho bin/tests/bench sạch. Raw evidence giữ nguyên whitespace (full diff check có cảnh báo).
 - Dataset: 6 PNG + PDF ảnh 2 trang, seed42, 142 trường, manifest schema1 + SHA256; chỉ dữ liệu tổng hợp.
 - Dispatch chỉ nhận ảnh/PDF synthetic nằm đúng root bench, manifest/registry/hash khớp; dữ liệu thật vẫn chặn. Hermes attachment chưa mở.
 - Bench chính đã loại gợi nhãn hàng khỏi prompt; chỉ row/column. Hai model ×6 PNG đều inference thành công, không thấy tool-event.
