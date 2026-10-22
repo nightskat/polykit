@@ -231,7 +231,8 @@ def test_run_vendor_go_adapters_failclosed_sandbox_unsupported_before_detector()
 
         assert res.status == "blocked"
         assert res.reason == "sandbox_unsupported"
-        assert "no proven sandbox isolation" in res.warnings[0]
+        assert "data-class code-nopii" in res.warnings[0]
+        assert res.unsandboxed is False and res.data_class is None
         assert not spy_det.called, f"Detector was invoked for Go adapter {go_vendor}"
         assert not spy_run.called, f"Runner was invoked for Go adapter {go_vendor}"
 

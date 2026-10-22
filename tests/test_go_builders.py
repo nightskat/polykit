@@ -68,9 +68,14 @@ from lib.model_policy import (
 
 @pytest.fixture
 def confined_go(monkeypatch):
-    """Mô phỏng môi trường sau khi có bằng chứng cách ly (GO_SANDBOX_CONFINED=True)."""
-    import lib.dispatch_core as dc
-    monkeypatch.setattr(dc, "GO_SANDBOX_CONFINED", True)
+    """Đường opt-in hợp lệ: data_class='code-nopii' + checker vắng mặt (chỉ warning).
+
+    GO_SANDBOX_CONFINED KHÔNG còn là bypass (lô 11) — fixture chỉ tắt checker
+    để test hình dạng argv không spawn pg-redact thật.
+    """
+    import lib.go_data_gate as gate_mod
+
+    monkeypatch.setattr(gate_mod, "_which", lambda name: None)
 
 
 class TestOpenCodeBuilder:
@@ -127,17 +132,17 @@ class TestOpenCodeBuilder:
     def test_opencode_normalize_slug_and_variant(self, confined_go):
         """Chuẩn hoá slug và effort thật đưa vào argv thay vì truyền raw."""
         # 1. Truyền có provider prefix -> không bị lặp opencode-go/opencode-go/
-        cmd1 = _build_opencode_argv("opencode-go/deepseek-v4.1-flash", "Prompt")
+        cmd1 = _build_opencode_argv("opencode-go/deepseek-v4.1-flash", "Prompt", data_class="code-nopii")
         assert cmd1[3] == "opencode-go/deepseek-v4.1-flash"
         assert cmd1[4:6] == ["--variant", "high"]
 
         # 2. Truyền selector kèm variant :high -> tách slug chuẩn và variant
-        cmd2 = _build_opencode_argv("deepseek-v4.1-flash:high", "Prompt")
+        cmd2 = _build_opencode_argv("deepseek-v4.1-flash:high", "Prompt", data_class="code-nopii")
         assert cmd2[3] == "opencode-go/deepseek-v4.1-flash"
         assert cmd2[4:6] == ["--variant", "high"]
 
         # 3. Truyền variant :low -> override variant đúng
-        cmd3 = _build_opencode_argv("deepseek-v4.1-flash:low", "Prompt")
+        cmd3 = _build_opencode_argv("deepseek-v4.1-flash:low", "Prompt", data_class="code-nopii")
         assert cmd3[3] == "opencode-go/deepseek-v4.1-flash"
         assert cmd3[4:6] == ["--variant", "low"]
 
@@ -151,7 +156,7 @@ class TestOpenCodeBuilder:
 
     def test_opencode_default_model_and_effort(self, confined_go):
         """Model auto resolve thành deepseek-v4.1-flash với variant high."""
-        cmd = _build_opencode_argv("auto", "Prompt")
+        cmd = _build_opencode_argv("auto", "Prompt", data_class="code-nopii")
         assert cmd[0] == get_opencode_bin()
         assert cmd[1:4] == ["run", "--model", "opencode-go/deepseek-v4.1-flash"]
         assert cmd[4:6] == ["--variant", "high"]
@@ -159,13 +164,13 @@ class TestOpenCodeBuilder:
 
     def test_opencode_glm_defaults_to_effort_max(self, confined_go):
         """GLM-5.3-flash mặc định nhận effort max theo hồ sơ duyệt."""
-        cmd = _build_opencode_argv("glm-5.3-flash", "Prompt")
+        cmd = _build_opencode_argv("glm-5.3-flash", "Prompt", data_class="code-nopii")
         assert cmd[3] == "opencode-go/glm-5.3-flash"
         assert cmd[4:6] == ["--variant", "max"]
 
     def test_opencode_explicit_effort_override(self, confined_go):
         """Caller truyền effort tường minh phải được tôn trọng."""
-        cmd = _build_opencode_argv("deepseek-v4.1-flash", "Prompt", effort="medium")
+        cmd = _build_opencode_argv("deepseek-v4.1-flash", "Prompt", effort="medium", data_class="code-nopii")
         assert cmd[4:6] == ["--variant", "medium"]
 
     def test_opencode_prompt_unicode_quotes_multiline_intact(self, confined_go):
@@ -175,19 +180,16 @@ class TestOpenCodeBuilder:
             "Dòng 2: Ký tự đặc biệt: $PATH `whoami` \\n \t /dev/null\n"
             "Dòng 3: Emoji 🚀 & Đặng Xuân Khu\n"
         )
-        cmd = _build_opencode_argv("deepseek-v4.1-flash", complex_prompt)
+        cmd = _build_opencode_argv("deepseek-v4.1-flash", complex_prompt, data_class="code-nopii")
         assert cmd[-1] == complex_prompt
 
-    def test_opencode_attachments_flag_f(self, confined_go):
-        """Cờ -f chỉ chèn cho attachments phục vụ validation vision sau."""
+    def test_opencode_attachments_blocked_on_unsandboxed_lane(self, confined_go):
+        """Lane data_class=code-nopii KHÔNG nhận attachment — không có -f, chặn trước argv."""
         files = ["/tmp/img1.png", "/tmp/doc.pdf"]
-        cmd = _build_opencode_argv("deepseek-v4.1-flash", "Prompt", attachments=files)
-        assert "-f" in cmd
-        idx1 = cmd.index("-f")
-        assert cmd[idx1 + 1] == "/tmp/img1.png"
-        idx2 = cmd.index("-f", idx1 + 2)
-        assert cmd[idx2 + 1] == "/tmp/doc.pdf"
-        assert cmd[-1] == "Prompt"
+        with pytest.raises(DispatchError) as exc_info:
+            _build_opencode_argv("deepseek-v4.1-flash", "Prompt",
+                                 attachments=files, data_class="code-nopii")
+        assert exc_info.value.reason == "vision_blocked"
 
     def test_opencode_pure_argv_helper_enforces_policy(self):
         """Helper pure argv _build_opencode_argv cũng không cho phép bypass policy."""
@@ -252,12 +254,12 @@ class TestHermesBuilder:
     def test_hermes_normalize_slug_and_reasoning(self, confined_go):
         """Chuẩn hoá slug và reasoning effort thật đưa vào argv thay vì truyền raw."""
         # 1. Truyền có provider prefix -> tách slug sạch vào -m
-        cmd1 = _build_hermes_argv("opencode-go/deepseek-v4.1-flash", "Prompt")
+        cmd1 = _build_hermes_argv("opencode-go/deepseek-v4.1-flash", "Prompt", data_class="code-nopii")
         assert cmd1[5:7] == ["-m", "deepseek-v4.1-flash"]
         assert cmd1[7:9] == ["--reasoning", "high"]
 
         # 2. Truyền kèm variant :low trong selector -> reasoning low
-        cmd2 = _build_hermes_argv("opencode-go/deepseek-v4.1-flash:low", "Prompt")
+        cmd2 = _build_hermes_argv("opencode-go/deepseek-v4.1-flash:low", "Prompt", data_class="code-nopii")
         assert cmd2[5:7] == ["-m", "deepseek-v4.1-flash"]
         assert cmd2[7:9] == ["--reasoning", "low"]
 
@@ -274,7 +276,7 @@ class TestHermesBuilder:
 
     def test_hermes_default_model_and_effort(self, confined_go):
         """Model auto resolve thành deepseek-v4.1-flash với reasoning high."""
-        cmd = _build_hermes_argv("auto", "Prompt")
+        cmd = _build_hermes_argv("auto", "Prompt", data_class="code-nopii")
         assert cmd[0] == get_hermes_bin()
         assert cmd[1:3] == ["-z", "Prompt"]
         assert cmd[3:5] == ["--provider", "opencode-go"]
@@ -283,13 +285,13 @@ class TestHermesBuilder:
 
     def test_hermes_glm_defaults_to_effort_max(self, confined_go):
         """GLM-5.3-flash mặc định nhận reasoning max theo hồ sơ duyệt."""
-        cmd = _build_hermes_argv("glm-5.3-flash", "Prompt")
+        cmd = _build_hermes_argv("glm-5.3-flash", "Prompt", data_class="code-nopii")
         assert cmd[5:7] == ["-m", "glm-5.3-flash"]
         assert cmd[7:9] == ["--reasoning", "max"]
 
     def test_hermes_explicit_effort_override(self, confined_go):
         """Caller truyền effort tường minh phải được tôn trọng."""
-        cmd = _build_hermes_argv("deepseek-v4.1-flash", "Prompt", effort="low")
+        cmd = _build_hermes_argv("deepseek-v4.1-flash", "Prompt", effort="low", data_class="code-nopii")
         assert cmd[7:9] == ["--reasoning", "low"]
 
     def test_hermes_prompt_unicode_quotes_multiline_intact(self, confined_go):
@@ -299,7 +301,7 @@ class TestHermesBuilder:
             "Dòng 2: Ký tự đặc biệt: $PATH `whoami` \\n \t /dev/null\n"
             "Dòng 3: Emoji 🚀 & Đặng Xuân Khu\n"
         )
-        cmd = _build_hermes_argv("deepseek-v4.1-flash", complex_prompt)
+        cmd = _build_hermes_argv("deepseek-v4.1-flash", complex_prompt, data_class="code-nopii")
         assert cmd[1] == "-z"
         assert cmd[2] == complex_prompt
 
@@ -367,10 +369,10 @@ class TestBuilderPolicyEnforcement:
 
     def test_free_model_allowed_when_selected_explicitly_on_go(self, confined_go):
         """Model free được phép chọn TƯỜNG MINH (source=explicit) trên Go adapter (Tuan chốt 22/10)."""
-        cmd_oc = _build_opencode_argv("deepseek-v4.1-flash-free", "Prompt", source="explicit")
+        cmd_oc = _build_opencode_argv("deepseek-v4.1-flash-free", "Prompt", source="explicit", data_class="code-nopii")
         assert "opencode-go/deepseek-v4.1-flash-free" in cmd_oc
 
-        cmd_he = _build_hermes_argv("glm-5.3-flash-free", "Prompt", source="explicit")
+        cmd_he = _build_hermes_argv("glm-5.3-flash-free", "Prompt", source="explicit", data_class="code-nopii")
         assert "-m" in cmd_he
         idx = cmd_he.index("-m")
         assert cmd_he[idx + 1] == "glm-5.3-flash-free"
@@ -423,12 +425,12 @@ class TestAutoBuildersResolver:
     def test_auto_builders_resolve_configured_defaults(self, confined_go, tmp_path):
         """Auto builders cho opencode, hermes, agy, dsh, codex, claude, grok giải quyết qua resolver chung."""
         # OpenCode auto
-        oc_cmd = _build_opencode_argv("auto", "Prompt")
+        oc_cmd = _build_opencode_argv("auto", "Prompt", data_class="code-nopii")
         assert oc_cmd[3] == "opencode-go/deepseek-v4.1-flash"
         assert oc_cmd[4:6] == ["--variant", "high"]
 
         # Hermes auto
-        he_cmd = _build_hermes_argv("auto", "Prompt")
+        he_cmd = _build_hermes_argv("auto", "Prompt", data_class="code-nopii")
         assert he_cmd[5:7] == ["-m", "deepseek-v4.1-flash"]
         assert he_cmd[7:9] == ["--reasoning", "high"]
 

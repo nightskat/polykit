@@ -31,7 +31,7 @@ def test_model_sai_stdout_parse_duoc_va_co_du_field():
     # stdout, exit_code, reason, served_model).
     assert set(ket_qua.keys()) == {
         "status", "vendor", "model", "summary", "warnings", "stdout",
-        "exit_code", "reason", "served_model",
+        "exit_code", "reason", "served_model", "unsandboxed", "data_class",
     }
     assert ket_qua["status"] == "blocked"
     assert ket_qua["exit_code"] == 2

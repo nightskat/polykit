@@ -20,6 +20,11 @@ try:
     )
     from lib.vendor_config import resolve_vendor_model, load_vendor_config, ResolvedTarget
     from lib.vision import check_vision_gate, VisionBlockedError, VisionError
+    from lib.go_data_gate import (
+        DATA_CLASS_CODE_NOPII,
+        GoDataGateBlocked,
+        evaluate_go_data_gate,
+    )
 except ImportError:
     from bin.lib.model_policy import (
         GO_PROVIDER,
@@ -29,6 +34,11 @@ except ImportError:
     )
     from bin.lib.vendor_config import resolve_vendor_model, load_vendor_config, ResolvedTarget
     from bin.lib.vision import check_vision_gate, VisionBlockedError, VisionError
+    from bin.lib.go_data_gate import (
+        DATA_CLASS_CODE_NOPII,
+        GoDataGateBlocked,
+        evaluate_go_data_gate,
+    )
 from lib.dispatch_core import (
     DispatchError,
     DispatchResult,
@@ -73,10 +83,10 @@ _STREAM_UNSUPPORTED_REASON = {
 # ---------------------------------------------------------------------------
 # Sandbox confinement của Go adapters
 # ---------------------------------------------------------------------------
-# opencode/hermes chưa có bằng chứng cách ly filesystem/process trong repo này.
-# Đây là HẰNG SỐ NỘI BỘ, KHÔNG phải cờ caller/CLI/API bật được: chỉ đổi thành
-# True khi evidence confinement thật được commit kèm (test biên giới ghi file,
-# biến môi trường, mạng). Caller không có tham số nào để lách.
+# opencode/hermes không có confinement đã chứng minh. Lane unsandboxed CHỈ mở
+# qua cổng dữ liệu (bin/lib/go_data_gate.py): caller khai báo tường minh
+# data_class='code-nopii', không attachment/vision, pg-redact pass.
+# Hằng số dưới đây KHÔNG còn là bypass — lật nó lên cũng không mở gì.
 GO_SANDBOX_CONFINED = False
 
 
@@ -421,6 +431,7 @@ def run_vendor(
     is_retry: bool = False,
     is_failover: bool = False,
     allow_unknown: bool = False,
+    data_class: str | None = None,
 ) -> DispatchResult:
     """Cổng dispatch công khai. `stream=True` = --stream-diagnose: chạy vendor ở
     chế độ stream để khi timeout còn đọc được vendor đã đi tới đâu (BUG-6).
@@ -431,8 +442,11 @@ def run_vendor(
     `SingleTurnConfirmation` (không nhận cờ/string), và `is_retry`/`is_failover`
     KHÔNG kế thừa consent.
 
-    Sandbox Go: KHÔNG có tham số `sandbox_verified`/bypass nào. opencode/hermes
-    fail-closed `sandbox_unsupported` cho tới khi có confinement chứng minh.
+    Sandbox Go (Lô 11): KHÔNG có tham số `sandbox_verified`/bypass nào.
+    opencode/hermes chỉ chạy unsandboxed khi caller khai báo tường minh
+    `data_class='code-nopii'` và cổng dữ liệu qua (không attachment/vision,
+    pg-redact check prompt pass nếu có checker). Thiếu cờ ⇒ vẫn
+    `sandbox_unsupported` như trước.
 
     Hậu xử lý stream áp cho MỌI kết quả nên tách ra lớp mỏng này, không đổi
     hành vi khi stream=False (mọi thứ y như cũ)."""
@@ -466,6 +480,7 @@ def run_vendor(
         is_retry=is_retry,
         is_failover=is_failover,
         allow_unknown=allow_unknown,
+        data_class=data_class,
     )
     extra = [w for w in (policy_warnings + probe_warnings) if w]
     if extra:
@@ -497,12 +512,14 @@ def _run_vendor(
     is_retry: bool = False,
     is_failover: bool = False,
     allow_unknown: bool = False,
+    data_class: str | None = None,
 ) -> DispatchResult:
     if probe_warnings is None:
         probe_warnings = []
     if policy_warnings is None:
         policy_warnings = []
     probe = None
+    go_optin = False
     # 1. Chạy guards
     try:
         validated_timeout = validate_timeout(timeout)
@@ -582,7 +599,63 @@ def _run_vendor(
     resolved_source = resolved_target.source
     policy_warnings.extend(w for w in resolved_target.warnings if w)
 
-    # 4. Vision Gate Check (TRƯỚC detector/probe/spawn/network!)
+    # 4. CỔNG DỮ LIỆU GO (opencode/hermes) — TRƯỚC vision gate/detector/probe/
+    #    spawn/network. Lane unsandboxed chỉ mở khi caller khai báo tường minh
+    #    data_class='code-nopii' (không có bool override), không attachment/
+    #    vision, và pg-redact check prompt pass (nếu có checker trên máy).
+    if vendor in GO_VENDORS:
+        try:
+            gate_warnings = evaluate_go_data_gate(
+                data_class=data_class,
+                prompt=prompt,
+                attachments=attachments,
+                synthetic_vision=synthetic_vision,
+                allow_sensitive_vision=allow_sensitive_vision,
+                sensitive_confirmation=sensitive_confirmation,
+                vendor=vendor,
+            )
+        except GoDataGateBlocked as e:
+            if e.reason == "sandbox_unsupported":
+                return DispatchResult(
+                    status="blocked",
+                    vendor=vendor,
+                    model=resolved_model,
+                    summary=f"vendor {vendor} blocked: sandbox_unsupported (no data_class opt-in)",
+                    warnings=[
+                        f"Go adapter '{vendor}' chỉ được chạy unsandboxed khi khai báo "
+                        f"tường minh --data-class {DATA_CLASS_CODE_NOPII} (code/dữ liệu "
+                        f"không PII). Không có cờ ⇒ chặn (sandbox_unsupported, Plan mục 83).",
+                        f"[polykit] reason=sandbox_unsupported; requested={resolved_model!r} "
+                        f"provider={(resolved_provider or GO_PROVIDER)!r} effort={resolved_effort!r} "
+                        f"source={resolved_source!r} — KHÔNG probe, KHÔNG spawn, KHÔNG network.",
+                        f"[polykit] cờ hợp lệ duy nhất: --data-class {DATA_CLASS_CODE_NOPII}; "
+                        f"không có tham số bool/evidence_sandbox nào để bật.",
+                    ],
+                    reason="sandbox_unsupported",
+                    exit_code=1,
+                    served_model=None,
+                    data_class=data_class,
+                )
+            # Các nhánh chặn còn lại (attachment/vision, PII, checker lỗi).
+            return DispatchResult(
+                status="blocked",
+                vendor=vendor,
+                model=resolved_model,
+                summary=f"vendor {vendor} blocked: {e.reason}",
+                warnings=[
+                    str(e),
+                    f"[polykit] reason={e.reason}; unsandboxed=false; "
+                    f"data_class={data_class!r} — KHÔNG probe, KHÔNG spawn, KHÔNG network.",
+                ],
+                reason=e.reason,
+                exit_code=1,
+                served_model=None,
+                data_class=data_class,
+            )
+        go_optin = True
+        policy_warnings.extend(gate_warnings)
+
+    # 5. Vision Gate Check (TRƯỚC detector/probe/spawn/network!)
     if attachments:
         try:
             check_vision_gate(
@@ -619,29 +692,6 @@ def _run_vendor(
                 exit_code=1,
                 served_model=None,
             )
-
-    # 5. Go adapters (opencode/hermes): fail-closed TRƯỚC detector/probe/spawn.
-    #    Chưa có bằng chứng confinement trong repo ⇒ không có đường chạy nào,
-    #    kể cả khi caller truyền sandbox=read-only. Không có cờ bật tắt.
-    if vendor in GO_VENDORS and not GO_SANDBOX_CONFINED:
-        return DispatchResult(
-            status="blocked",
-            vendor=vendor,
-            model=resolved_model,
-            summary=f"vendor {vendor} blocked: sandbox_unsupported (no proven confinement)",
-            warnings=[
-                f"Go adapter '{vendor}' has no proven sandbox isolation (sandbox_unsupported). "
-                "Execution blocked for safety (Plan mục 83).",
-                f"[polykit] reason=sandbox_unsupported; requested={resolved_model!r} "
-                f"provider={(resolved_provider or GO_PROVIDER)!r} effort={resolved_effort!r} "
-                f"source={resolved_source!r} — KHÔNG probe, KHÔNG spawn, KHÔNG network.",
-                "[polykit] mở khoá chỉ khi evidence confinement được commit (GO_SANDBOX_CONFINED); "
-                "CLI/API không có tham số nào để bật.",
-            ],
-            reason="sandbox_unsupported",
-            exit_code=1,
-            served_model=None,
-        )
 
     # 6. Probe detector
     # EXCEPTION: gemini có nhiều lane không phụ thuộc chỉ 1 binary
@@ -696,6 +746,14 @@ def _run_vendor(
     env["XCLI_DISPATCH_DEPTH"] = str(depth + 1)
 
     # 8. Dispatch theo vendor
+    def _mark_go(res: DispatchResult) -> DispatchResult:
+        """Đường opt-in: result JSON phải nói rõ unsandboxed/data_class, kể cả
+        khi lỗi/timeout SAU cổng. Blocked trước cổng thì không gọi hàm này."""
+        if go_optin:
+            res.unsandboxed = True
+            res.data_class = DATA_CLASS_CODE_NOPII
+        return res
+
     try:
         if vendor == "codex":
             cmd = build_codex_cmd(resolved_model, validated_sandbox, workdir, fmt, stream=stream, effort=resolved_effort, source=resolved_source)
@@ -866,9 +924,9 @@ def _run_vendor(
         elif vendor in GO_VENDORS:
             # Nhánh RIÊNG cho Go adapters (opencode, hermes): argv list,
             # stdin=DEVNULL, cwd=workdir, effort truyền xuống builder.
-            # Chỉ tới được đây khi GO_SANDBOX_CONFINED=True; còn hiện tại đã
-            # fail-closed ở bước 5 nên KHÔNG có lượt chạy giả nào.
-            return _dispatch_go_adapter(
+            # Chỉ tới được đây khi cổng data_class=code-nopii đã qua (bước 4);
+            # builder kiểm lại cổng + policy trước khi dựng argv.
+            return _mark_go(_dispatch_go_adapter(
                 vendor=vendor,
                 prompt=prompt,
                 model=resolved_model,
@@ -880,7 +938,8 @@ def _run_vendor(
                 timeout=validated_timeout,
                 env=env,
                 runner=runner,
-            )
+                data_class=data_class,
+            ))
 
         else:
             # Handle dynamic vendors from JSON
@@ -1010,7 +1069,7 @@ def _run_vendor(
         # trích từ JSONL — bằng chứng vendor đang NGHĨ, không treo.
         stdout = _decode_partial(e.stdout)
         stderr = _decode_partial(e.stderr)
-        return DispatchResult(
+        return _mark_go(DispatchResult(
             status="timeout",
             vendor=vendor,
             model=resolved_model,
@@ -1022,16 +1081,16 @@ def _run_vendor(
             # Phần dang dở đã nằm trong warnings, đã qua tail_lines.
             stdout="",
             reason="timeout",
-        )
+        ))
     except Exception as e:
-        return DispatchResult(
+        return _mark_go(DispatchResult(
             status="error",
             vendor=vendor,
             model=resolved_model,
             summary=f"dispatch execution error: {str(e)}",
             warnings=[str(e)],
             reason="exec_error",
-        )
+        ))
 
 def _dispatch_go_adapter(
     vendor: str,
@@ -1045,6 +1104,7 @@ def _dispatch_go_adapter(
     timeout: int,
     env: dict,
     runner,
+    data_class: str | None = None,
 ) -> DispatchResult:
     """Nhánh RIÊNG cho Go adapters (opencode/hermes).
 
@@ -1053,8 +1113,10 @@ def _dispatch_go_adapter(
       nguyên vẹn, không bao giờ rơi xuống template dynamic.
     - stdin=DEVNULL (không đọc stdin của PolyKit), cwd=workdir, effort truyền
       xuống builder (variant của Go profile).
-    - Builder còn fail-closed `sandbox_unsupported` ⇒ trả `blocked` THẬT,
-      không giả lập một lượt chạy đã xảy ra.
+    - Builder kiểm lại cổng data_class=code-nopii; thiếu cờ ⇒ `blocked`
+      reason sandbox_unsupported, không giả lập một lượt chạy đã xảy ra.
+    - Mọi result ở đây mang unsandboxed/data_class của đường opt-in (kể cả
+      lỗi sau cổng), vì đã qua cổng ở _run_vendor.
     """
     try:
         if vendor == "opencode":
@@ -1066,6 +1128,7 @@ def _dispatch_go_adapter(
                 sandbox=sandbox,
                 workdir=workdir,
                 source=source,
+                data_class=data_class,
             )
         else:
             cmd = build_hermes_cmd(
@@ -1075,6 +1138,7 @@ def _dispatch_go_adapter(
                 sandbox=sandbox,
                 workdir=workdir,
                 source=source,
+                data_class=data_class,
             )
     except DispatchError as e:
         reason = getattr(e, "reason", None) or "sandbox_unsupported"
@@ -1087,6 +1151,8 @@ def _dispatch_go_adapter(
             reason=reason,
             exit_code=1,
             served_model=None,
+            unsandboxed=bool(data_class == DATA_CLASS_CODE_NOPII),
+            data_class=data_class,
         )
 
     if not isinstance(cmd, (list, tuple)) or not cmd:
@@ -1099,6 +1165,8 @@ def _dispatch_go_adapter(
             reason="invalid_argv",
             exit_code=1,
             served_model=None,
+            unsandboxed=bool(data_class == DATA_CLASS_CODE_NOPII),
+            data_class=data_class,
         )
 
     res = runner(
@@ -1110,7 +1178,11 @@ def _dispatch_go_adapter(
         env=env,
         cwd=workdir,
     )
-    return _classify_completed(vendor, model, res, served_model=None, prompt=prompt)
+    out = _classify_completed(vendor, model, res, served_model=None, prompt=prompt)
+    if data_class == DATA_CLASS_CODE_NOPII:
+        out.unsandboxed = True
+        out.data_class = DATA_CLASS_CODE_NOPII
+    return out
 
 
 def _dispatch_gemini(

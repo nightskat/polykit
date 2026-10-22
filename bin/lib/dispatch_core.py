@@ -51,6 +51,19 @@ try:
 except ImportError:
     from bin.lib.vendor_config import resolve_vendor_model
 
+try:
+    from lib.go_data_gate import (
+        DATA_CLASS_CODE_NOPII,
+        GoDataGateBlocked,
+        evaluate_go_data_gate,
+    )
+except ImportError:
+    from bin.lib.go_data_gate import (
+        DATA_CLASS_CODE_NOPII,
+        GoDataGateBlocked,
+        evaluate_go_data_gate,
+    )
+
 
 
 class DispatchError(Exception):
@@ -146,6 +159,11 @@ class DispatchResult:
     # hoặc router OR thì hai giá trị này khác nhau, và chênh lệch chi phí có thể
     # gấp trăm lần. None = vendor không cho biết (vd codex auto).
     served_model: str | None = None
+    # Lane Go unsandboxed (opencode/hermes): CHỈ true khi cổng data_class đã
+    # qua (data_class == code-nopii + không attachment/vision + pg-redact pass).
+    # Mọi đường blocked trước cổng đều để false — không tự nhận đã chạy.
+    unsandboxed: bool = False
+    data_class: str | None = None
 
     def __post_init__(self):
         # P4: mọi trạng thái non-ok phải có exit_code + reason cụ thể, không null.
@@ -202,9 +220,8 @@ OPENCODE_DEFAULT_EFFORT = "high"
 HERMES_DEFAULT_MODEL = "deepseek-v4.1-flash"
 HERMES_DEFAULT_EFFORT = "high"
 
-# opencode/hermes chưa có bằng chứng cách ly filesystem/process trong repo này.
-# Fail-closed tuyệt đối ở cả builder public lẫn helper private cho tới khi
-# GO_SANDBOX_CONFINED có evidence được commit. Không có tham số caller bool override.
+# Ghi chú lịch sử: KHÔNG còn là bypass. Lane Go unsandboxed chỉ mở qua cổng
+# data_class=code-nopii (bin/lib/go_data_gate.py). Lật hằng số này không mở gì.
 GO_SANDBOX_CONFINED: bool = False
 
 
@@ -496,14 +513,15 @@ def _build_opencode_argv(
     effort: str | None = None,
     attachments: list[str] | None = None,
     source: str = "explicit",
+    data_class: str | None = None,
 ) -> list[str]:
     """Helper nội bộ xây dựng danh sách argv cho opencode run.
 
     KHÔNG gọi shell. Giữ prompt nguyên vẹn vị trí cuối (positional).
     -f dùng cho danh sách attachment (synthetic validation lô vision sau).
     Dùng selector chuẩn hoá từ policy/resolver thay vì chuỗi thô.
-    Failclosed khi chưa có evidence confinement trong repo (GO_SANDBOX_CONFINED=False).
-    Không có tham số caller bool override.
+    Lane unsandboxed chỉ mở khi caller khai báo data_class='code-nopii' và
+    cổng dữ liệu (PII + attachment/vision) qua. Không có tham số bool override.
     """
     selector = _enforce_builder_policy(
         vendor="opencode",
@@ -512,14 +530,20 @@ def _build_opencode_argv(
         source=source,
     )
 
-    if not GO_SANDBOX_CONFINED:
+    try:
+        evaluate_go_data_gate(
+            data_class=data_class,
+            prompt=prompt,
+            attachments=attachments,
+            vendor="opencode",
+        )
+    except GoDataGateBlocked as e:
         raise DispatchError(
-            "Go adapter opencode has no proven sandbox isolation (sandbox_unsupported). "
-            "Execution is blocked for safety (Plan mục 83).",
-            reason="sandbox_unsupported",
+            str(e),
+            reason=e.reason,
             model=selector.model,
             provider=selector.provider or GO_PROVIDER,
-        )
+        ) from e
 
     bin_path = get_opencode_bin()
     norm_model = selector.model
@@ -546,13 +570,14 @@ def _build_hermes_argv(
     prompt: str,
     effort: str | None = None,
     source: str = "explicit",
+    data_class: str | None = None,
 ) -> list[str]:
     """Helper nội bộ xây dựng danh sách argv cho hermes.
 
     KHÔNG gọi shell. Giữ prompt Unicode/quote/multiline nguyên vẹn sau cờ -z.
     Dùng selector chuẩn hoá từ policy/resolver thay vì chuỗi thô.
-    Failclosed khi chưa có evidence confinement trong repo (GO_SANDBOX_CONFINED=False).
-    Không có tham số caller bool override.
+    Lane unsandboxed chỉ mở khi caller khai báo data_class='code-nopii' và
+    cổng dữ liệu (PII + attachment/vision) qua. Không có tham số bool override.
     """
     selector = _enforce_builder_policy(
         vendor="hermes",
@@ -561,14 +586,19 @@ def _build_hermes_argv(
         source=source,
     )
 
-    if not GO_SANDBOX_CONFINED:
+    try:
+        evaluate_go_data_gate(
+            data_class=data_class,
+            prompt=prompt,
+            vendor="hermes",
+        )
+    except GoDataGateBlocked as e:
         raise DispatchError(
-            "Go adapter hermes has no proven sandbox isolation (sandbox_unsupported). "
-            "Execution is blocked for safety (Plan mục 83).",
-            reason="sandbox_unsupported",
+            str(e),
+            reason=e.reason,
             model=selector.model,
             provider=selector.provider or GO_PROVIDER,
-        )
+        ) from e
 
     bin_path = get_hermes_bin()
     norm_model = selector.model
@@ -597,13 +627,15 @@ def build_opencode_cmd(
     sandbox: str = "read-only",
     workdir: str | None = None,
     source: str = "explicit",
+    *,
+    data_class: str | None = None,
 ) -> list[str]:
     """Builder cho OpenCode Go adapter.
 
-    QUAN TRỌNG: Chưa chứng minh sandbox cách ly trên adapter này.
-    Bị BLOCKED tuyệt đối với DispatchError reason 'sandbox_unsupported'
-    thay vì giả lập read-only an toàn giả tạo (Plan mục 83).
-    Caller KHÔNG được bật bypass (xoá evidence_sandbox theo chốt an toàn).
+    Chưa chứng minh sandbox cách ly trên adapter này. Chỉ mở unsandboxed khi
+    caller khai báo tường minh data_class='code-nopii' (keyword-only) và cổng
+    dữ liệu qua; thiếu cờ ⇒ DispatchError reason 'sandbox_unsupported'.
+    Không có tham số bool nào bỏ được cổng.
     """
     validate_sandbox(sandbox)
     return _build_opencode_argv(
@@ -612,6 +644,7 @@ def build_opencode_cmd(
         effort=effort,
         attachments=attachments,
         source=source,
+        data_class=data_class,
     )
 
 
@@ -622,14 +655,15 @@ def build_hermes_cmd(
     sandbox: str = "read-only",
     workdir: str | None = None,
     source: str = "explicit",
+    *,
+    data_class: str | None = None,
 ) -> list[str]:
     """Builder cho Hermes Go adapter.
 
-    QUAN TRỌNG: Chưa chứng minh sandbox cách ly trên adapter này (Hermes oneshot
-    tự bypass approval và vẫn tải tools/memory/rules).
-    Bị BLOCKED tuyệt đối với DispatchError reason 'sandbox_unsupported'
-    thay vì giả lập read-only an toàn giả tạo (Plan mục 83).
-    Caller KHÔNG được bật bypass (xoá evidence_sandbox theo chốt an toàn).
+    Hermes oneshot tự bypass approval và vẫn tải tools/memory/rules, nên chỉ
+    mở unsandboxed khi caller khai báo tường minh data_class='code-nopii'
+    (keyword-only) và cổng dữ liệu qua; thiếu cờ ⇒ 'sandbox_unsupported'.
+    Không có tham số bool nào bỏ được cổng.
     """
     validate_sandbox(sandbox)
     return _build_hermes_argv(
@@ -637,6 +671,7 @@ def build_hermes_cmd(
         prompt=prompt,
         effort=effort,
         source=source,
+        data_class=data_class,
     )
 
 

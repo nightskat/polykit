@@ -173,6 +173,10 @@ def main():
                         help="Attachment file for vision (repeatable: -f a.png -f b.png)")
     parser.add_argument("--synthetic-vision", action="store_true",
                         help="Explicitly declare synthetic vision attachments")
+    parser.add_argument("--data-class", dest="data_class", default=None,
+                        help="Khai báo loại dữ liệu cho lane Go unsandboxed. Chỉ chấp nhận "
+                             "'code-nopii' (việc code/dữ liệu không PII). Thiếu cờ ⇒ "
+                             "opencode/hermes vẫn bị chặn sandbox_unsupported.")
     parser.add_argument("--allow-sensitive-vision", action="store_true",
                         help="Opt-in flag for sensitive vision input")
     parser.add_argument("--timeout", type=int, default=None,
@@ -426,6 +430,7 @@ def main():
             synthetic_vision=args.synthetic_vision,
             allow_sensitive_vision=args.allow_sensitive_vision,
             allow_unknown=args.allow_unknown_model,
+            data_class=args.data_class,
         )
     except Exception as e:
         # BUG-18 (Codex review): lỗi bất ngờ vẫn phải để lại dấu vết + thời gian đã chạy.
