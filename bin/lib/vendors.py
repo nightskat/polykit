@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 import os
 import re
 import shutil
@@ -24,16 +25,16 @@ class VendorSpec:
     # chịu ảnh hưởng của tải máy, không phải hằng số. Đo thật trên M1 8GB:
     # load ~4 → 2,2-3,1s · load ~84 → tới 8,2s · load ~93 → vượt 10s.
     auth_check_timeout: int = 10
-    # Khi không có auth_check_cmd: True = coi như đã auth (policy tường minh,
-    # chỉ dùng cho host `claude` chạy bên trong Claude Code); False = chưa rõ auth
-    # → installed_not_authed (không mark ready chỉ vì binary tồn tại).
-    assume_authed: bool = False
+    # Khi không có auth_check_cmd: True = coi như đã auth (host claude);
+    # None = không có verified auth cmd (auth_unverified);
+    # False = chưa rõ auth → installed_not_authed.
+    assume_authed: bool | None = False
     # Vendor API-key: env chứa key. binary=None → detect theo key, không theo which().
     api_key_env: list[str] | None = None
-    # Vendor có catalog ĐỘNG (agy): lệnh liệt kê model. Chọn mở rộng schema thay vì
-    # viết detector riêng — giữ MỘT đường detect() để fixture-hoá đồng nhất
-    # (Grok red-team chê cả 2 phương án; đây là cái ít fork control-flow hơn).
+    # Vendor có catalog ĐỘNG (agy, codex, opencode): lệnh liệt kê model.
     models_cmd: list[str] | None = None
+    provider: str | None = None
+    quota_group: str | None = None
 
 REGISTRY: dict[str, VendorSpec] = {
     "codex": VendorSpec(
@@ -42,6 +43,7 @@ REGISTRY: dict[str, VendorSpec] = {
         auth_hint="chạy `codex login`",
         version_cmd=["codex", "--version"],
         auth_check_cmd=["codex", "login", "status"],
+        models_cmd=["codex", "debug", "models"],
     ),
     "gemini": VendorSpec(
         name="gemini",
@@ -97,6 +99,30 @@ REGISTRY: dict[str, VendorSpec] = {
         auth_check_cmd=["dsh", "--profile", "headless", "--dump-config"],
         auth_check_authoritative=False,
     ),
+    "opencode": VendorSpec(
+        name="opencode",
+        binary=str(Path.home() / ".opencode" / "bin" / "opencode"),
+        auth_hint="kiểm tra credentials Go tại ~/.opencode",
+        version_cmd=["opencode", "--version"],
+        auth_check_cmd=None,
+        auth_check_authoritative=False,
+        assume_authed=None,
+        models_cmd=["opencode", "models", "opencode-go"],
+        provider="opencode-go",
+        quota_group="opencode-go",
+    ),
+    "hermes": VendorSpec(
+        name="hermes",
+        binary="hermes",
+        auth_hint="kiểm tra ~/.hermes hoặc hermes config",
+        version_cmd=["hermes", "--version"],
+        auth_check_cmd=None,
+        auth_check_authoritative=False,
+        assume_authed=None,
+        models_cmd=None,
+        provider="opencode-go",
+        quota_group="opencode-go",
+    ),
 }
 
 def _detect_api_key_vendor(spec: VendorSpec) -> VendorProbe:
@@ -127,6 +153,45 @@ def _detect_api_key_vendor(spec: VendorSpec) -> VendorProbe:
 _SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9._/-]{0,63}$")
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 _AUTH_FAILURE_RE = re.compile(r"\b(?:not logged in|login required|unauthenticated|unauthorized)\b", re.I)
+
+
+def parse_codex_models(stdout: str) -> list[str]:
+    """Parse catalog JSON từ `codex debug models`.
+
+    Dùng json, KHÔNG dùng parse_models token thô.
+    Shape biết được: {"models": [{"slug": "<model-slug>", ...}, ...]}.
+    Chưa biết shape thì fail explicit (ValueError/KeyError), không tự bịa / invent.
+    """
+    if not stdout or not stdout.strip():
+        raise ValueError("codex models output is empty")
+    try:
+        data = json.loads(stdout)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"codex models output is not valid JSON: {e}") from e
+
+    if not isinstance(data, dict):
+        raise ValueError(f"codex models expected JSON object, got {type(data).__name__}")
+
+    if "models" not in data:
+        raise KeyError("codex models JSON missing 'models' key")
+
+    models_list = data["models"]
+    if not isinstance(models_list, list):
+        raise ValueError(f"codex models 'models' field must be a list, got {type(models_list).__name__}")
+
+    slugs: list[str] = []
+    for idx, item in enumerate(models_list):
+        if not isinstance(item, dict):
+            raise ValueError(f"codex models item #{idx} must be a dict, got {type(item).__name__}")
+        if "slug" not in item:
+            raise KeyError(f"codex models item #{idx} missing required key 'slug'")
+        slug = item["slug"]
+        if not isinstance(slug, str) or not slug.strip():
+            raise ValueError(f"codex models item #{idx} has invalid slug: {slug!r}")
+        clean_slug = slug.strip()
+        if clean_slug not in slugs:
+            slugs.append(clean_slug)
+    return slugs
 
 
 def parse_models(stdout: str) -> list[str]:
@@ -187,6 +252,9 @@ def detect(spec: VendorSpec, which=shutil.which, runner=subprocess.run) -> Vendo
     if spec.binary is None:
         return _detect_api_key_vendor(spec)
     path_str = which(spec.binary)
+    if path_str is None and spec.binary and "/" in spec.binary:
+        # Hỗ trợ mock which chỉ so khớp basename thay vì đường dẫn tuyệt đối
+        path_str = which(Path(spec.binary).name)
     if path_str is None:
         return VendorProbe(
             name=spec.name,
@@ -234,24 +302,38 @@ def detect(spec: VendorSpec, which=shutil.which, runner=subprocess.run) -> Vendo
                 if chi_tiet:
                     error += f" — stderr: {chi_tiet}"
         else:
-            # Không có cách kiểm auth: chỉ ready nếu policy assume_authed (host claude).
+            # Không có cách kiểm auth (auth_check_cmd=None):
+            # assume_authed=True -> authed=True (host claude)
+            # assume_authed=None -> authed=None (auth_unverified: không có verified auth cmd, không dump credential, không inference)
+            # assume_authed=False -> authed=False (installed_not_authed)
             authed = spec.assume_authed
 
-        # Catalog động (agy): hỏi CLI, KHÔNG hardcode danh sách dự phòng — model
-        # Antigravity đổi theo mùa, list cứng sẽ nói dối và làm watcher mù
-        # (Grok P0). Catalog rỗng mà vẫn auth = ready + error='catalog_empty':
-        # giữ tín hiệu sự cố thay vì im lặng khoe khoẻ.
-        if authed and spec.models_cmd:
+        # Catalog động: hỏi CLI, KHÔNG hardcode danh sách dự phòng.
+        # Với vendor authed=True hoặc authed=None (như opencode: không suy ready từ catalog,
+        # nhưng vẫn lấy danh mục model nếu lệnh models_cmd có sẵn).
+        if (authed is True or authed is None) and spec.models_cmd:
             same_cmd = spec.models_cmd == spec.auth_check_cmd
             if same_cmd:
                 models = parse_models(res.stdout or "") or parse_models(res.stderr or "")
             else:
                 mres = runner([abs_path] + spec.models_cmd[1:],
                               capture_output=True, text=True, timeout=10)
-                models = (parse_models(mres.stdout or "") or parse_models(mres.stderr or "")
-                          ) if mres.returncode == 0 else []
-            if not models:
-                error = error or "catalog_empty"
+                if mres.returncode == 0:
+                    if spec.name == "codex":
+                        try:
+                            models = parse_codex_models(mres.stdout or "")
+                        except Exception as e:
+                            models = []
+                            error = error or f"catalog_parse_error: {e}"
+                    else:
+                        models = (parse_models(mres.stdout or "") or parse_models(mres.stderr or ""))
+                else:
+                    models = []
+                    chi_tiet = " | ".join((mres.stderr or "").strip().splitlines()[-3:])[:300]
+                    if chi_tiet:
+                        error = error or f"models_cmd_failed (exit {mres.returncode}) — stderr: {chi_tiet}"
+            if not models and not error:
+                error = "catalog_empty"
     except _ProbeTimeout as e:
         # BUG-15: nói RÕ hết giờ bao lâu, ngưỡng bao nhiêu, thử mấy lần — đọc là
         # biết ngay do timeout chứ không phải credential chết. Timeout không có
@@ -264,7 +346,9 @@ def detect(spec: VendorSpec, which=shutil.which, runner=subprocess.run) -> Vendo
             error, authed = f"auth_probe_unverified — {chi_tiet}", None
     except subprocess.TimeoutExpired:
         # Timeout của version_cmd hoặc models_cmd — KHÔNG phải probe auth.
-        if spec.auth_check_authoritative:
+        if spec.assume_authed is None:
+            error, authed = "auth_probe_unverified (timeout)", None
+        elif spec.auth_check_authoritative:
             error, authed = "timeout", False
         else:
             error, authed = "auth_probe_unverified (timeout)", None
