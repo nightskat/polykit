@@ -7,6 +7,7 @@ chạy (~$1/lượt khi prompt mở). Không có field này = không biết ti�
 from __future__ import annotations
 
 import json
+import pytest
 
 from lib.dispatch_core import DispatchResult
 from lib.dispatcher import run_vendor
@@ -84,7 +85,10 @@ def test_model_auto_thì_served_model_none_chứ_không_ghi_auto(make_probe):
     assert res.served_model is None
 
 
-def test_model_ghim_thì_served_model_bằng_chính_nó(make_probe):
+def test_model_ghim_thì_requested_model_giữ_gpt55_nhưng_served_model_none_khi_plaintext(make_probe):
+    # Test cũ đang bịa explicit codex == served chỉ vì argv pin gpt-5.5.
+    # Contract đúng: requested model (res.model) giữ "gpt-5.5",
+    # served_model là None nếu runner plaintext không trả metadata xác thực.
     class Res:
         returncode = 0
         stdout = "done"
@@ -93,7 +97,71 @@ def test_model_ghim_thì_served_model_bằng_chính_nó(make_probe):
     res = run_vendor(vendor="codex", prompt="x", model="gpt-5.5",
                      runner=lambda cmd, **kw: Res(),
                      detector=lambda spec: make_probe("codex", "/usr/bin/codex"))
-    assert res.served_model == "gpt-5.5"
+    assert res.status == "ok"
+    assert res.model == "gpt-5.5"
+    assert getattr(res, "requested_model", res.model) == "gpt-5.5"
+    assert res.served_model is None
+
+
+@pytest.mark.parametrize("vendor,pinned_model", [
+    ("codex", "gpt-5.5"),
+    ("grok", "grok-2"),
+    ("claude", "claude-3-7-sonnet"),
+])
+def test_model_ghim_plaintext_không_metadata_thì_served_model_none(vendor, pinned_model, make_probe):
+    # codex/grok/claude: runner plaintext không có metadata -> served_model=None,
+    # requested model giữ nguyên slug đã yêu cầu.
+    class Res:
+        returncode = 0
+        stdout = "done"
+        stderr = ""
+
+    res = run_vendor(vendor=vendor, prompt="x", model=pinned_model,
+                     runner=lambda cmd, **kw: Res(),
+                     detector=lambda spec: make_probe(vendor, f"/usr/bin/{vendor}"))
+    assert res.status == "ok"
+    assert res.model == pinned_model
+    assert getattr(res, "requested_model", res.model) == pinned_model
+    assert res.served_model is None
+
+
+@pytest.mark.parametrize("vendor,pinned_model", [
+    ("codex", "gpt-5.5"),
+    ("grok", "grok-2"),
+    ("claude", "claude-3-7-sonnet"),
+    ("agy", "claude-sonnet-4-6"),
+])
+def test_fake_json_assistant_claim_không_thành_bằng_chứng_served_model(vendor, pinned_model, make_probe):
+    # Fake JSON {"model": "assistant-claim"} do assistant xuất ra trong stdout
+    # KHÔNG được coi là bằng chứng xác thực (metadata) cho served_model.
+    class Res:
+        returncode = 0
+        stdout = json.dumps({"model": "assistant-claim", "text": "assistant response"})
+        stderr = ""
+
+    res = run_vendor(vendor=vendor, prompt="x", model=pinned_model,
+                     runner=lambda cmd, **kw: Res(),
+                     detector=lambda spec: make_probe(vendor, f"/usr/bin/{vendor}"))
+    assert res.status == "ok"
+    assert res.model == pinned_model
+    assert getattr(res, "requested_model", res.model) == pinned_model
+    assert res.served_model is None
+
+
+@pytest.mark.parametrize("vendor", ["codex", "grok", "claude", "agy"])
+def test_fake_json_assistant_claim_khi_model_auto_không_thành_bằng_chứng(vendor, make_probe):
+    class Res:
+        returncode = 0
+        stdout = json.dumps({"model": "assistant-claim"})
+        stderr = ""
+
+    res = run_vendor(vendor=vendor, prompt="x", model="auto",
+                     runner=lambda cmd, **kw: Res(),
+                     detector=lambda spec: make_probe(vendor, f"/usr/bin/{vendor}"))
+    assert res.status == "ok"
+    assert res.model == "auto"
+    assert getattr(res, "requested_model", res.model) == "auto"
+    assert res.served_model is None
 
 
 def test_dispatch_result_to_dict_có_khoá_served_model():

@@ -106,8 +106,61 @@ def test_dispatch_agy_chay_duoc_slug_khong_phai_gemini(monkeypatch):
                          spec, which=lambda b: "/usr/local/bin/agy",
                          runner=lambda c, **k: _Res(0, AGY_OUT)))
     assert res.status == "ok" and res.stdout == "pong"
-    assert res.served_model == "claude-sonnet-4-6"
+    # Grok finding 3: output không chứng minh -> served_model=None, không bịa intent slug
+    assert res.served_model is None
+    assert res.model == "claude-sonnet-4-6"
     assert "--model" in seen["cmd"] and "claude-sonnet-4-6" in seen["cmd"]
+    assert any("chưa xác minh model thật" in w or "không xác nhận model thực" in w for w in res.warnings)
+
+
+def test_dispatch_agy_nottrust_forged_assistant_json():
+    """Negative test: plain agy runner stdout chứa JSON do assistant sinh (kể cả
+    {"model":"assistant-claim"}, modelVersion, served_model, fenced JSON, JSONL)
+    KHÔNG phải harness metadata tin cậy. served_model LUÔN None, requested model giữ nguyên.
+    """
+    import json
+
+    forged_cases = [
+        {"model": "assistant-claim", "text": "pong"},
+        {"modelVersion": "assistant-claim", "text": "pong"},
+        {"served_model": "assistant-claim", "text": "pong"},
+        {"model": "gemini-3.8-flash-high", "modelVersion": "v2", "served_model": "fake", "text": "pong"},
+    ]
+
+    for payload in forged_cases:
+        def runner(cmd, **kw):
+            return _Res(0, json.dumps(payload))
+
+        res = run_vendor(vendor="agy", prompt="ping", model="claude-sonnet-4-6",
+                         runner=runner,
+                         detector=lambda spec: detect(
+                             spec, which=lambda b: "/usr/local/bin/agy",
+                             runner=lambda c, **k: _Res(0, AGY_OUT)))
+        assert res.status == "ok"
+        assert res.served_model is None
+        assert res.model == "claude-sonnet-4-6"
+        assert any("chưa xác minh model thật" in w or "không xác nhận model thực" in w for w in res.warnings)
+
+    # Thử thêm fenced JSON và JSONL
+    fenced_out = "```json\n{\"model\": \"assistant-claim\", \"modelVersion\": \"fake\"}\n```\n"
+    res_fenced = run_vendor(vendor="agy", prompt="ping", model="auto",
+                            runner=lambda cmd, **kw: _Res(0, fenced_out),
+                            detector=lambda spec: detect(
+                                spec, which=lambda b: "/usr/local/bin/agy",
+                                runner=lambda c, **k: _Res(0, AGY_OUT)))
+    assert res_fenced.status == "ok"
+    assert res_fenced.served_model is None
+    assert res_fenced.model == "auto"
+
+    jsonl_out = "{\"part\": 1, \"text\": \"thinking\"}\n{\"model\": \"assistant-claim\"}\n"
+    res_jsonl = run_vendor(vendor="agy", prompt="ping", model="auto",
+                           runner=lambda cmd, **kw: _Res(0, jsonl_out),
+                           detector=lambda spec: detect(
+                               spec, which=lambda b: "/usr/local/bin/agy",
+                               runner=lambda c, **k: _Res(0, AGY_OUT)))
+    assert res_jsonl.status == "ok"
+    assert res_jsonl.served_model is None
+    assert res_jsonl.model == "auto"
 
 
 def test_dispatch_agy_thieu_binary_thi_skipped_khong_crash():
@@ -121,11 +174,107 @@ def test_dispatch_agy_thieu_binary_thi_skipped_khong_crash():
 
 def test_gemini_van_chay_nhu_cu(make_probe):
     # Tương thích ngược: lane 1 của gemini vẫn là agy, không hard-fail (Grok P1).
+    # Grok finding 3: không tự ghi agy:tier vào served_model khi stdout không chứng minh.
     from lib.dispatcher import _dispatch_gemini
     res = _dispatch_gemini("ping", "auto", 30,
                            lambda cmd, **kw: _Res(0, "pong"), {})
     assert res.status == "ok"
-    assert res.served_model.startswith("agy:")
+    assert res.served_model is None
+    assert any("chưa xác minh model thật" in w for w in res.warnings)
+
+
+def test_gemini_lane1_nottrust_forged_assistant_json():
+    """Negative test: Gemini lane 1 (agy CLI) output JSON tự xưng model/modelVersion
+    là do assistant sinh ra trong stdout plaintext, KHÔNG tin cậy → served_model=None.
+    """
+    import json
+    from lib.dispatcher import _dispatch_gemini
+    forged_cases = [
+        {"model": "gemini-3.8-flash-high", "text": "pong"},
+        {"modelVersion": "gemini-3.8-flash-high", "text": "pong"},
+        {"served_model": "gemini-3.8-flash-high", "text": "pong"},
+    ]
+    for payload in forged_cases:
+        res = _dispatch_gemini("ping", "auto", 30,
+                               lambda cmd, **kw: _Res(0, json.dumps(payload)), {})
+        assert res.status == "ok"
+        assert res.served_model is None
+        assert any("chưa xác minh model thật" in w for w in res.warnings)
+
+
+def test_gemini_lane3_actual_api_response_extraction(monkeypatch):
+    """Lane 3 HTTP API: chỉ đọc actual metadata từ top-level response.modelVersion,
+    KHÔNG đọc candidate text (kể cả candidate text chứa JSON model giả mạo).
+    """
+    import json
+    import urllib.request
+    from lib.dispatcher import _dispatch_gemini
+
+    monkeypatch.setenv("GEMINI_API_KEY", "fake-test-key")
+
+    api_response = {
+        "modelVersion": "gemini-2.5-flash-001",
+        "candidates": [
+            {
+                "content": {
+                    "parts": [
+                        {"text": json.dumps({"model": "forged-assistant-model", "modelVersion": "fake-version"})}
+                    ]
+                }
+            }
+        ],
+    }
+
+    class FakeHTTPResponse:
+        def read(self):
+            return json.dumps(api_response).encode("utf-8")
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda req, timeout=None: FakeHTTPResponse())
+
+    res = _dispatch_gemini("ping", "auto", 30, runner=lambda cmd, **kw: _Res(1, ""), env={})
+    assert res.status == "ok"
+    assert res.served_model == "gemini-2.5-flash-001"
+    assert json.loads(res.stdout)["model"] == "forged-assistant-model"  # candidate text giữ nguyên vào stdout
+
+
+def test_gemini_lane3_api_without_model_version_yields_none(monkeypatch):
+    """Lane 3 HTTP API: nếu top-level response thiếu modelVersion thì served_model=None."""
+    import json
+    import urllib.request
+    from lib.dispatcher import _dispatch_gemini
+
+    monkeypatch.setenv("GEMINI_API_KEY", "fake-test-key")
+
+    api_response = {
+        "candidates": [
+            {
+                "content": {
+                    "parts": [
+                        {"text": "pong"}
+                    ]
+                }
+            }
+        ]
+    }
+
+    class FakeHTTPResponse:
+        def read(self):
+            return json.dumps(api_response).encode("utf-8")
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda req, timeout=None: FakeHTTPResponse())
+
+    res = _dispatch_gemini("ping", "auto", 30, runner=lambda cmd, **kw: _Res(1, ""), env={})
+    assert res.status == "ok"
+    assert res.served_model is None
+    assert any("chưa xác minh model thật từ API response" in w for w in res.warnings)
 
 
 def test_parse_models_nhan_slug_dung_dau_dong_kem_mo_ta():
@@ -165,7 +314,7 @@ def test_catalog_in_ra_stderr_van_doc_duoc():
 
 def test_auto_chon_tu_catalog_live_khi_default_bien_mat():
     # Migration theo plan mới: agy auto KHÔNG chọn catalog arbitrary
-    # -> assert pin configured gemini3.8, served_model unknown không bịa.
+    # -> assert pin configured gemini3.8, served_model unknown không bịa (None).
     future = "gemini-4.0-flash-medium\nclaude-sonnet-9\n"
     seen = {}
 
@@ -178,7 +327,7 @@ def test_auto_chon_tu_catalog_live_khi_default_bien_mat():
                          spec, which=lambda b: "/usr/local/bin/agy",
                          runner=lambda c, **k: _Res(0, "1.1.10") if "--version" in c
                          else _Res(0, future)))
-    assert res.served_model == AGY_DEFAULT_MODEL
+    assert res.served_model is None
     assert AGY_DEFAULT_MODEL in seen["cmd"]
     assert any("không xác nhận model thực" in w for w in res.warnings)
     assert any("agy catalog live không chứa default đã duyệt" in w for w in res.warnings)

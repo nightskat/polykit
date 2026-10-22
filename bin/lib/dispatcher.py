@@ -350,17 +350,14 @@ def _apply_stream_diagnose(result: DispatchResult, vendor: str, stream: bool,
     return result
 
 
-def _classify_completed(vendor: str, model: str, res, served_model: str | None = False,
+def _classify_completed(vendor: str, model: str, res, served_model: str | None = None,
                         prompt: str | None = None) -> DispatchResult:
     """M2: map kết quả subprocess → DispatchResult. returncode!=0 kèm dấu hiệu
     quota (402/insufficient credit/exhausted) → skipped/quota_capped, KHÔNG crash,
     KHÔNG coi là lỗi generic. Dùng chung cho codex/claude/grok."""
     stdout = res.stdout or ""
-    # `auto` = để CLI tự chọn → không suy ra được model thật, để None thay vì bịa.
-    if served_model is False:
-        served = None if model == "auto" else model
-    else:
-        served = served_model
+    # Chưa có verified metadata envelope thì không suy đoán served=model ở default.
+    served = served_model
     # Bỏ phần vendor echo lại prompt TRƯỚC khi dò lẫn khi hiển thị — nếu không,
     # PolyKit đọc chính chữ của mình rồi tưởng là lỗi của vendor.
     stderr = strip_echoed_prompt(res.stderr or "", prompt)
@@ -758,12 +755,11 @@ def _run_vendor(
             res = runner([shutil.which("agy") or "agy"] + cmd[1:],
                          capture_output=True, text=True,
                          timeout=validated_timeout, env=env)
-            out = _classify_completed(vendor, model, res, prompt=prompt)
-            # served_model = slug ĐÃ GỬI (intent), CLI không báo lại model thực.
-            out.served_model = resolved
+            # CLI plaintext: LUÔN served=None, không tin stdout assistant JSON.
+            out = _classify_completed(vendor, model, res, served_model=None, prompt=prompt)
             out.warnings.append(
-                f"[polykit] served_model={resolved!r} là slug ĐÃ GỬI (intent); agy không "
-                "xác nhận model thực đã phục vụ."
+                f"[polykit] agy không xác nhận model thực đã phục vụ "
+                f"(chưa xác minh model thật); requested_model={resolved!r}."
             )
             return out
 
@@ -807,11 +803,11 @@ def _run_vendor(
                     timeout=validated_timeout,
                     env=env,
                 )
-                out = _classify_completed(vendor, model, res, prompt=prompt)
-                out.served_model = resolved
+                # CLI plaintext: LUÔN served=None, không tin stdout assistant JSON.
+                out = _classify_completed(vendor, model, res, served_model=None, prompt=prompt)
                 out.warnings.append(
-                    f"[polykit] served_model={resolved!r} là model ghi trong patch (intent); "
-                    "dsh không báo lại model thực."
+                    f"[polykit] dsh không xác nhận model thực đã phục vụ "
+                    f"(chưa xác minh model thật); requested_model={resolved!r}."
                 )
                 return out
             finally:
@@ -1097,7 +1093,7 @@ def _dispatch_go_adapter(
         env=env,
         cwd=workdir,
     )
-    return _classify_completed(vendor, model, res, prompt=prompt)
+    return _classify_completed(vendor, model, res, served_model=None, prompt=prompt)
 
 
 def _dispatch_gemini(
@@ -1154,9 +1150,11 @@ def _dispatch_gemini(
                 env=env,
             )
             if res.returncode == 0 and res.stdout and res.stdout.strip():
-                # Slug thật do agy.sh quyết (tier→model), không hard-code lại ở đây
-                # để khỏi lệch khi wrapper đổi — ghi lane+tier là thứ chắc chắn đúng.
-                served = f"agy:{tier}" if agy_bin else "agy:default"
+                # CLI plaintext: LUÔN served=None, không tin stdout assistant JSON.
+                lane_warnings = list(warnings)
+                lane_warnings.append(
+                    f"[polykit] gemini lane 1 (agy) chưa xác minh model thật từ output; requested={model!r}."
+                )
                 return DispatchResult(
                     status="ok",
                     vendor="gemini",
@@ -1165,10 +1163,10 @@ def _dispatch_gemini(
                     # `warnings=[]` cứng là cùng họ lỗi BUG-9(2): thành công KHÔNG
                     # có nghĩa là không có gì để nói. Cảnh báo "lane 1 không stream"
                     # bị nuốt sạch ở đây, để ghi chú chung nói hộ là đã stream.
-                    warnings=list(warnings),
+                    warnings=lane_warnings,
                     stdout=res.stdout,
                     exit_code=0,
-                    served_model=served,
+                    served_model=None,
                 )
             else:
                 reason = "exit code nonzero" if res.returncode != 0 else "empty output"
@@ -1194,12 +1192,16 @@ def _dispatch_gemini(
     # --- Lane 2: gemini CLI ---
     gemini_bin = shutil.which("gemini")
     if gemini_bin:
-        cli_model = "gemini-3.5-flash" if model == "auto" else model
         try:
-            cmd = [gemini_bin, "-m", cli_model, "-p", prompt]
-            if stream:
-                # -o/--output-format stream-json là cờ stream của gemini CLI.
-                cmd = [gemini_bin, "-m", cli_model, "-o", "stream-json", "-p", prompt]
+            if model == "auto":
+                # Grok finding 3: không bịa default gemini-3.5-flash khi model auto.
+                cmd = [gemini_bin, "-p", prompt]
+                if stream:
+                    cmd = [gemini_bin, "-o", "stream-json", "-p", prompt]
+            else:
+                cmd = [gemini_bin, "-m", model, "-p", prompt]
+                if stream:
+                    cmd = [gemini_bin, "-m", model, "-o", "stream-json", "-p", prompt]
             res = runner(
                 cmd,
                 capture_output=True,
@@ -1210,6 +1212,10 @@ def _dispatch_gemini(
             if res.returncode == 0 and res.stdout and res.stdout.strip():
                 deg_warnings = warnings.copy()
                 deg_warnings.append("degraded: succeeded on lane 2")
+                # CLI plaintext: LUÔN served=None, không tin stdout assistant JSON.
+                deg_warnings.append(
+                    f"[polykit] gemini lane 2 (cli) chưa xác minh model thật từ output; requested={model!r}."
+                )
                 return DispatchResult(
                     status="ok",
                     vendor="gemini",
@@ -1218,7 +1224,7 @@ def _dispatch_gemini(
                     warnings=deg_warnings,
                     stdout=res.stdout,
                     exit_code=0,
-                    served_model=cli_model,
+                    served_model=None,
                 )
             else:
                 reason = "exit code nonzero" if res.returncode != 0 else "empty output"
@@ -1271,6 +1277,13 @@ def _dispatch_gemini(
             if stdout and stdout.strip():
                 deg_warnings = warnings.copy()
                 deg_warnings.append("degraded: succeeded on lane 3")
+                # Chỉ đọc actual metadata từ HTTP Gemini API top-level response.modelVersion (không đọc candidate text)
+                raw_model = resp_data.get("modelVersion")
+                proven_model = raw_model.strip() if (isinstance(raw_model, str) and raw_model.strip()) else None
+                if proven_model is None:
+                    deg_warnings.append(
+                        f"[polykit] gemini lane 3 (api) chưa xác minh model thật từ API response; requested={model!r}."
+                    )
                 return DispatchResult(
                     status="ok",
                     vendor="gemini",
@@ -1279,7 +1292,7 @@ def _dispatch_gemini(
                     warnings=deg_warnings,
                     stdout=stdout,
                     exit_code=0,
-                    served_model=api_model,
+                    served_model=proven_model,
                 )
             else:
                 warnings.append("lane 3 failed: empty text response")
