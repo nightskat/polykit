@@ -87,7 +87,7 @@ def snapshot_from_state(state: dict) -> dict:
         if not isinstance(vdata, dict):
             continue
         models = sorted(list(vdata.get("models") or []))
-        
+
         # Additive metadata
         source = (
             vdata.get("catalog_source")
@@ -532,7 +532,7 @@ def format_zdr_alert_part(zdr_info: dict) -> str:
     days_left = zdr_info.get("days_left")
     verified = zdr_info.get("renewal_verified", False)
     unv_str = "" if verified else " (chưa xác minh gia hạn)"
-    
+
     if state == "soon":
         days_str = f", còn {days_left} ngày" if days_left is not None else ""
         return f"DeepSeek ZDR sắp hết hạn {expiry}{days_str}{unv_str}"

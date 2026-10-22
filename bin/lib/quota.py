@@ -51,7 +51,7 @@ UNKNOWN_STATUSES = frozenset({"unknown", "missing", "none", ""})
 
 def normalize_window_status(val: Any) -> tuple[str, str | None]:
     """Chuẩn hóa trạng thái cửa sổ: ('capped' | 'ok' | 'unknown', reset_at | None).
-    
+
     Dữ liệu thiếu hoặc không hợp lệ -> 'unknown' (không bịa healthy hay reset TTL).
     """
     if val is None:
@@ -115,7 +115,7 @@ def normalize_window_status(val: Any) -> tuple[str, str | None]:
 
 def evaluate_quota_windows(windows: dict | list | None) -> dict[str, Any]:
     """Hàm thuần đánh giá 3 cửa sổ: 5h, weekly, monthly.
-    
+
     Quy tắc:
     - Bất kỳ cửa sổ nào bị capped -> chặn group (status='capped', is_capped=True, blocked=True).
     - Dữ liệu thiếu/sai định dạng -> 'unknown' (không bịa healthy, không bịa reset TTL).

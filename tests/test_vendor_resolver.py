@@ -708,4 +708,3 @@ class TestGoAdaptersDeterministicResolution:
         assert res.model == "glm-5.3-flash"
         assert res.effort == "max"
         assert res.provider == "opencode-go"
-

@@ -176,7 +176,7 @@ def test_watcher_does_not_modify_vendor_config():
     config_path = Path(__file__).resolve().parents[1] / "config" / "vendors.json"
     if config_path.exists():
         original_content = config_path.read_text(encoding="utf-8")
-        
+
         # Chạy watcher với dry-run
         state = {
             "vendors": {
@@ -242,7 +242,7 @@ def test_catalog_preserves_banned_with_advisory():
     advisories = watcher.get_catalog_with_advisories(models)
 
     assert len(advisories) == 3
-    
+
     contrib_adv = next(a for a in advisories if a["model"] == "deepseek-v4.1-contributor")
     assert contrib_adv["banned"] is True
     assert "banned: contributor" in contrib_adv["advisory"]
@@ -444,7 +444,7 @@ def test_notify_failure_retries():
 
 def test_watch_lock_preserved_and_stale_reclaimed(tmp_path):
     lock_dir = tmp_path / "custom_lock.d"
-    
+
     # 1. Chiếm lock
     lock1 = watcher.WatchLock(path=lock_dir, stale_sec=2)
     with lock1:
