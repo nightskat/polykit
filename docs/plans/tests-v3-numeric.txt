@@ -1,0 +1,478 @@
+........................................................................ [  6%]
+........................................................................ [ 13%]
+........................................................................ [ 20%]
+........................................................................ [ 27%]
+........................................................................ [ 34%]
+........................................................................ [ 41%]
+........................................................................ [ 48%]
+........................................................................ [ 55%]
+........................................................................ [ 62%]
+........................................................................ [ 69%]
+........................................................................ [ 75%]
+........................................................................ [ 82%]
+........................................................................ [ 89%]
+........................................................................ [ 96%]
+.........FF..FFFF.F................                                      [100%]
+=================================== FAILURES ===================================
+___________ test_vendor_chua_biet_danh_sach_model_dump_config_exit_0 ___________
+
+    def test_vendor_chua_biet_danh_sach_model_dump_config_exit_0():
+        """Vendor chưa biết danh sách model (`claude`, `gemini`, `opencode`…) -> `--dump-config` exit 0 (catalog null advisory không ép warning unknown list)."""
+        for vendor in ["claude", "gemini"]:
+            res = subprocess.run(
+                [sys.executable, "bin/dispatch.py", vendor, "fake-model", "--dump-config"],
+                capture_output=True, text=True, cwd=str(Path(__file__).parent.parent)
+            )
+            assert res.returncode == 0, f"Expected 0 for {vendor}, got {res.returncode}. Stderr: {res.stderr}"
+>           info = json.loads(res.stdout)
+                   ^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_vong5.py:72: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+s = <MagicMock name='mock.stdout' id='4466143888'>, cls = None
+object_hook = None, parse_float = None, parse_int = None, parse_constant = None
+object_pairs_hook = None, kw = {}
+
+    def loads(s, *, cls=None, object_hook=None, parse_float=None,
+            parse_int=None, parse_constant=None, object_pairs_hook=None, **kw):
+        """Deserialize ``s`` (a ``str``, ``bytes`` or ``bytearray`` instance
+        containing a JSON document) to a Python object.
+    
+        ``object_hook`` is an optional function that will be called with the
+        result of any object literal decode (a ``dict``). The return value of
+        ``object_hook`` will be used instead of the ``dict``. This feature
+        can be used to implement custom decoders (e.g. JSON-RPC class hinting).
+    
+        ``object_pairs_hook`` is an optional function that will be called with the
+        result of any object literal decoded with an ordered list of pairs.  The
+        return value of ``object_pairs_hook`` will be used instead of the ``dict``.
+        This feature can be used to implement custom decoders.  If ``object_hook``
+        is also defined, the ``object_pairs_hook`` takes priority.
+    
+        ``parse_float``, if specified, will be called with the string
+        of every JSON float to be decoded. By default this is equivalent to
+        float(num_str). This can be used to use another datatype or parser
+        for JSON floats (e.g. decimal.Decimal).
+    
+        ``parse_int``, if specified, will be called with the string
+        of every JSON int to be decoded. By default this is equivalent to
+        int(num_str). This can be used to use another datatype or parser
+        for JSON integers (e.g. float).
+    
+        ``parse_constant``, if specified, will be called with one of the
+        following strings: -Infinity, Infinity, NaN.
+        This can be used to raise an exception if invalid JSON numbers
+        are encountered.
+    
+        To use a custom ``JSONDecoder`` subclass, specify it with the ``cls``
+        kwarg; otherwise ``JSONDecoder`` is used.
+        """
+        if isinstance(s, str):
+            if s.startswith('\ufeff'):
+                raise JSONDecodeError("Unexpected UTF-8 BOM (decode using utf-8-sig)",
+                                      s, 0)
+        else:
+            if not isinstance(s, (bytes, bytearray)):
+>               raise TypeError(f'the JSON object must be str, bytes or bytearray, '
+                                f'not {s.__class__.__name__}')
+E               TypeError: the JSON object must be str, bytes or bytearray, not MagicMock
+
+../../.pyenv/versions/3.11.8/lib/python3.11/json/__init__.py:339: TypeError
+________________ test_vendor_da_biet_danh_sach_slug_sai_exit_2 _________________
+
+    def test_vendor_da_biet_danh_sach_slug_sai_exit_2():
+        """Catalog advisory: model unknown hợp grammar được phép trong dump-config (catalog null không ép warning unknown list; injected catalog thật missing cần warning ở policy tests)."""
+        for vendor in ["dsh", "agy", "codex", "grok"]:
+            res = subprocess.run(
+                [sys.executable, "bin/dispatch.py", vendor, "fake-model", "--dump-config"],
+                capture_output=True, text=True, cwd=str(Path(__file__).parent.parent)
+            )
+            assert res.returncode == 0, f"Expected 0 for {vendor}, got {res.returncode}. Stderr: {res.stderr}"
+>           info = json.loads(res.stdout)
+                   ^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_vong5.py:83: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+s = <MagicMock name='mock.stdout' id='4465943824'>, cls = None
+object_hook = None, parse_float = None, parse_int = None, parse_constant = None
+object_pairs_hook = None, kw = {}
+
+    def loads(s, *, cls=None, object_hook=None, parse_float=None,
+            parse_int=None, parse_constant=None, object_pairs_hook=None, **kw):
+        """Deserialize ``s`` (a ``str``, ``bytes`` or ``bytearray`` instance
+        containing a JSON document) to a Python object.
+    
+        ``object_hook`` is an optional function that will be called with the
+        result of any object literal decode (a ``dict``). The return value of
+        ``object_hook`` will be used instead of the ``dict``. This feature
+        can be used to implement custom decoders (e.g. JSON-RPC class hinting).
+    
+        ``object_pairs_hook`` is an optional function that will be called with the
+        result of any object literal decoded with an ordered list of pairs.  The
+        return value of ``object_pairs_hook`` will be used instead of the ``dict``.
+        This feature can be used to implement custom decoders.  If ``object_hook``
+        is also defined, the ``object_pairs_hook`` takes priority.
+    
+        ``parse_float``, if specified, will be called with the string
+        of every JSON float to be decoded. By default this is equivalent to
+        float(num_str). This can be used to use another datatype or parser
+        for JSON floats (e.g. decimal.Decimal).
+    
+        ``parse_int``, if specified, will be called with the string
+        of every JSON int to be decoded. By default this is equivalent to
+        int(num_str). This can be used to use another datatype or parser
+        for JSON integers (e.g. float).
+    
+        ``parse_constant``, if specified, will be called with one of the
+        following strings: -Infinity, Infinity, NaN.
+        This can be used to raise an exception if invalid JSON numbers
+        are encountered.
+    
+        To use a custom ``JSONDecoder`` subclass, specify it with the ``cls``
+        kwarg; otherwise ``JSONDecoder`` is used.
+        """
+        if isinstance(s, str):
+            if s.startswith('\ufeff'):
+                raise JSONDecodeError("Unexpected UTF-8 BOM (decode using utf-8-sig)",
+                                      s, 0)
+        else:
+            if not isinstance(s, (bytes, bytearray)):
+>               raise TypeError(f'the JSON object must be str, bytes or bytearray, '
+                                f'not {s.__class__.__name__}')
+E               TypeError: the JSON object must be str, bytes or bytearray, not MagicMock
+
+../../.pyenv/versions/3.11.8/lib/python3.11/json/__init__.py:339: TypeError
+_________ test_ca_11_ten_vendor_dump_config_voi_model_mac_dinh_exit_0 __________
+
+    def test_ca_11_ten_vendor_dump_config_voi_model_mac_dinh_exit_0():
+        """Kiểm dump-config các vendor: OR auto blocked expected, Gemini chưa default có thể auto, Go default an toàn effort đúng."""
+        from lib.vendor_config import load_vendor_config, vendor_names
+        from lib.vendors import REGISTRY
+        cfg = load_vendor_config()
+        vendors = vendor_names(cfg)
+        for k in REGISTRY:
+            if k not in vendors:
+                vendors.append(k)
+    
+        for vendor in vendors:
+            res = subprocess.run(
+                [sys.executable, "bin/dispatch.py", vendor, "--dump-config"],
+                capture_output=True, text=True, cwd=str(Path(__file__).parent.parent)
+            )
+            if vendor == "openrouter":
+                # OR auto blocked expected (không cho phép router auto chưa phân giải đích đến)
+                assert res.returncode == 2, f"Expected 2 for openrouter, got {res.returncode}. Stderr: {res.stderr}"
+                assert "unresolved destination" in res.stderr
+            else:
+                assert res.returncode == 0, f"Expected exit 0 for {vendor}, got {res.returncode}. Stderr: {res.stderr}"
+>               info = json.loads(res.stdout)
+                       ^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_vong5.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+s = <MagicMock name='mock.stdout' id='4448837840'>, cls = None
+object_hook = None, parse_float = None, parse_int = None, parse_constant = None
+object_pairs_hook = None, kw = {}
+
+    def loads(s, *, cls=None, object_hook=None, parse_float=None,
+            parse_int=None, parse_constant=None, object_pairs_hook=None, **kw):
+        """Deserialize ``s`` (a ``str``, ``bytes`` or ``bytearray`` instance
+        containing a JSON document) to a Python object.
+    
+        ``object_hook`` is an optional function that will be called with the
+        result of any object literal decode (a ``dict``). The return value of
+        ``object_hook`` will be used instead of the ``dict``. This feature
+        can be used to implement custom decoders (e.g. JSON-RPC class hinting).
+    
+        ``object_pairs_hook`` is an optional function that will be called with the
+        result of any object literal decoded with an ordered list of pairs.  The
+        return value of ``object_pairs_hook`` will be used instead of the ``dict``.
+        This feature can be used to implement custom decoders.  If ``object_hook``
+        is also defined, the ``object_pairs_hook`` takes priority.
+    
+        ``parse_float``, if specified, will be called with the string
+        of every JSON float to be decoded. By default this is equivalent to
+        float(num_str). This can be used to use another datatype or parser
+        for JSON floats (e.g. decimal.Decimal).
+    
+        ``parse_int``, if specified, will be called with the string
+        of every JSON int to be decoded. By default this is equivalent to
+        int(num_str). This can be used to use another datatype or parser
+        for JSON integers (e.g. float).
+    
+        ``parse_constant``, if specified, will be called with one of the
+        following strings: -Infinity, Infinity, NaN.
+        This can be used to raise an exception if invalid JSON numbers
+        are encountered.
+    
+        To use a custom ``JSONDecoder`` subclass, specify it with the ``cls``
+        kwarg; otherwise ``JSONDecoder`` is used.
+        """
+        if isinstance(s, str):
+            if s.startswith('\ufeff'):
+                raise JSONDecodeError("Unexpected UTF-8 BOM (decode using utf-8-sig)",
+                                      s, 0)
+        else:
+            if not isinstance(s, (bytes, bytearray)):
+>               raise TypeError(f'the JSON object must be str, bytes or bytearray, '
+                                f'not {s.__class__.__name__}')
+E               TypeError: the JSON object must be str, bytes or bytearray, not MagicMock
+
+../../.pyenv/versions/3.11.8/lib/python3.11/json/__init__.py:339: TypeError
+___________________________ test_vong6_error_branch ____________________________
+
+fake_claude = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-258/test_vong6_error_branch0/bin/claude')
+
+    def test_vong6_error_branch(fake_claude):
+        res = run_cli(["claude", "--no-traps", "--result-json", "--allow-unknown-model"], env={"FAKE_OC_FAIL": "1"})
+>       data = json.loads(res.stdout)
+               ^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_vong6.py:41: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+s = <MagicMock name='mock.stdout' id='4466017808'>, cls = None
+object_hook = None, parse_float = None, parse_int = None, parse_constant = None
+object_pairs_hook = None, kw = {}
+
+    def loads(s, *, cls=None, object_hook=None, parse_float=None,
+            parse_int=None, parse_constant=None, object_pairs_hook=None, **kw):
+        """Deserialize ``s`` (a ``str``, ``bytes`` or ``bytearray`` instance
+        containing a JSON document) to a Python object.
+    
+        ``object_hook`` is an optional function that will be called with the
+        result of any object literal decode (a ``dict``). The return value of
+        ``object_hook`` will be used instead of the ``dict``. This feature
+        can be used to implement custom decoders (e.g. JSON-RPC class hinting).
+    
+        ``object_pairs_hook`` is an optional function that will be called with the
+        result of any object literal decoded with an ordered list of pairs.  The
+        return value of ``object_pairs_hook`` will be used instead of the ``dict``.
+        This feature can be used to implement custom decoders.  If ``object_hook``
+        is also defined, the ``object_pairs_hook`` takes priority.
+    
+        ``parse_float``, if specified, will be called with the string
+        of every JSON float to be decoded. By default this is equivalent to
+        float(num_str). This can be used to use another datatype or parser
+        for JSON floats (e.g. decimal.Decimal).
+    
+        ``parse_int``, if specified, will be called with the string
+        of every JSON int to be decoded. By default this is equivalent to
+        int(num_str). This can be used to use another datatype or parser
+        for JSON integers (e.g. float).
+    
+        ``parse_constant``, if specified, will be called with one of the
+        following strings: -Infinity, Infinity, NaN.
+        This can be used to raise an exception if invalid JSON numbers
+        are encountered.
+    
+        To use a custom ``JSONDecoder`` subclass, specify it with the ``cls``
+        kwarg; otherwise ``JSONDecoder`` is used.
+        """
+        if isinstance(s, str):
+            if s.startswith('\ufeff'):
+                raise JSONDecodeError("Unexpected UTF-8 BOM (decode using utf-8-sig)",
+                                      s, 0)
+        else:
+            if not isinstance(s, (bytes, bytearray)):
+>               raise TypeError(f'the JSON object must be str, bytes or bytearray, '
+                                f'not {s.__class__.__name__}')
+E               TypeError: the JSON object must be str, bytes or bytearray, not MagicMock
+
+../../.pyenv/versions/3.11.8/lib/python3.11/json/__init__.py:339: TypeError
+___________________________ test_vong6_quota_branch ____________________________
+
+fake_claude = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-258/test_vong6_quota_branch0/bin/claude')
+
+    def test_vong6_quota_branch(fake_claude):
+        res = run_cli(["claude", "--no-traps", "--result-json", "--allow-unknown-model"], env={"FAKE_OC_QUOTA": "1"})
+>       data = json.loads(res.stdout)
+               ^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_vong6.py:52: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+s = <MagicMock name='mock.stdout' id='4465947728'>, cls = None
+object_hook = None, parse_float = None, parse_int = None, parse_constant = None
+object_pairs_hook = None, kw = {}
+
+    def loads(s, *, cls=None, object_hook=None, parse_float=None,
+            parse_int=None, parse_constant=None, object_pairs_hook=None, **kw):
+        """Deserialize ``s`` (a ``str``, ``bytes`` or ``bytearray`` instance
+        containing a JSON document) to a Python object.
+    
+        ``object_hook`` is an optional function that will be called with the
+        result of any object literal decode (a ``dict``). The return value of
+        ``object_hook`` will be used instead of the ``dict``. This feature
+        can be used to implement custom decoders (e.g. JSON-RPC class hinting).
+    
+        ``object_pairs_hook`` is an optional function that will be called with the
+        result of any object literal decoded with an ordered list of pairs.  The
+        return value of ``object_pairs_hook`` will be used instead of the ``dict``.
+        This feature can be used to implement custom decoders.  If ``object_hook``
+        is also defined, the ``object_pairs_hook`` takes priority.
+    
+        ``parse_float``, if specified, will be called with the string
+        of every JSON float to be decoded. By default this is equivalent to
+        float(num_str). This can be used to use another datatype or parser
+        for JSON floats (e.g. decimal.Decimal).
+    
+        ``parse_int``, if specified, will be called with the string
+        of every JSON int to be decoded. By default this is equivalent to
+        int(num_str). This can be used to use another datatype or parser
+        for JSON integers (e.g. float).
+    
+        ``parse_constant``, if specified, will be called with one of the
+        following strings: -Infinity, Infinity, NaN.
+        This can be used to raise an exception if invalid JSON numbers
+        are encountered.
+    
+        To use a custom ``JSONDecoder`` subclass, specify it with the ``cls``
+        kwarg; otherwise ``JSONDecoder`` is used.
+        """
+        if isinstance(s, str):
+            if s.startswith('\ufeff'):
+                raise JSONDecodeError("Unexpected UTF-8 BOM (decode using utf-8-sig)",
+                                      s, 0)
+        else:
+            if not isinstance(s, (bytes, bytearray)):
+>               raise TypeError(f'the JSON object must be str, bytes or bytearray, '
+                                f'not {s.__class__.__name__}')
+E               TypeError: the JSON object must be str, bytes or bytearray, not MagicMock
+
+../../.pyenv/versions/3.11.8/lib/python3.11/json/__init__.py:339: TypeError
+_____________________________ test_vong6_ok_branch _____________________________
+
+fake_claude = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-258/test_vong6_ok_branch0/bin/claude')
+
+    def test_vong6_ok_branch(fake_claude):
+        res = run_cli(["claude", "--no-traps", "--result-json", "--allow-unknown-model"])
+>       data = json.loads(res.stdout)
+               ^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_vong6.py:64: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+s = <MagicMock name='mock.stdout' id='4449686160'>, cls = None
+object_hook = None, parse_float = None, parse_int = None, parse_constant = None
+object_pairs_hook = None, kw = {}
+
+    def loads(s, *, cls=None, object_hook=None, parse_float=None,
+            parse_int=None, parse_constant=None, object_pairs_hook=None, **kw):
+        """Deserialize ``s`` (a ``str``, ``bytes`` or ``bytearray`` instance
+        containing a JSON document) to a Python object.
+    
+        ``object_hook`` is an optional function that will be called with the
+        result of any object literal decode (a ``dict``). The return value of
+        ``object_hook`` will be used instead of the ``dict``. This feature
+        can be used to implement custom decoders (e.g. JSON-RPC class hinting).
+    
+        ``object_pairs_hook`` is an optional function that will be called with the
+        result of any object literal decoded with an ordered list of pairs.  The
+        return value of ``object_pairs_hook`` will be used instead of the ``dict``.
+        This feature can be used to implement custom decoders.  If ``object_hook``
+        is also defined, the ``object_pairs_hook`` takes priority.
+    
+        ``parse_float``, if specified, will be called with the string
+        of every JSON float to be decoded. By default this is equivalent to
+        float(num_str). This can be used to use another datatype or parser
+        for JSON floats (e.g. decimal.Decimal).
+    
+        ``parse_int``, if specified, will be called with the string
+        of every JSON int to be decoded. By default this is equivalent to
+        int(num_str). This can be used to use another datatype or parser
+        for JSON integers (e.g. float).
+    
+        ``parse_constant``, if specified, will be called with one of the
+        following strings: -Infinity, Infinity, NaN.
+        This can be used to raise an exception if invalid JSON numbers
+        are encountered.
+    
+        To use a custom ``JSONDecoder`` subclass, specify it with the ``cls``
+        kwarg; otherwise ``JSONDecoder`` is used.
+        """
+        if isinstance(s, str):
+            if s.startswith('\ufeff'):
+                raise JSONDecodeError("Unexpected UTF-8 BOM (decode using utf-8-sig)",
+                                      s, 0)
+        else:
+            if not isinstance(s, (bytes, bytearray)):
+>               raise TypeError(f'the JSON object must be str, bytes or bytearray, '
+                                f'not {s.__class__.__name__}')
+E               TypeError: the JSON object must be str, bytes or bytearray, not MagicMock
+
+../../.pyenv/versions/3.11.8/lib/python3.11/json/__init__.py:339: TypeError
+_______________________ test_vong6_not_installed_branch ________________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a318b50>
+
+    def test_vong6_not_installed_branch(monkeypatch):
+        monkeypatch.setenv("PATH", "/usr/bin:/bin")
+        res = run_cli(["claude", "--no-traps", "--result-json", "--allow-unknown-model"])
+>       data = json.loads(res.stdout)
+               ^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_vong6.py:96: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+s = <MagicMock name='mock.stdout' id='4466078352'>, cls = None
+object_hook = None, parse_float = None, parse_int = None, parse_constant = None
+object_pairs_hook = None, kw = {}
+
+    def loads(s, *, cls=None, object_hook=None, parse_float=None,
+            parse_int=None, parse_constant=None, object_pairs_hook=None, **kw):
+        """Deserialize ``s`` (a ``str``, ``bytes`` or ``bytearray`` instance
+        containing a JSON document) to a Python object.
+    
+        ``object_hook`` is an optional function that will be called with the
+        result of any object literal decode (a ``dict``). The return value of
+        ``object_hook`` will be used instead of the ``dict``. This feature
+        can be used to implement custom decoders (e.g. JSON-RPC class hinting).
+    
+        ``object_pairs_hook`` is an optional function that will be called with the
+        result of any object literal decoded with an ordered list of pairs.  The
+        return value of ``object_pairs_hook`` will be used instead of the ``dict``.
+        This feature can be used to implement custom decoders.  If ``object_hook``
+        is also defined, the ``object_pairs_hook`` takes priority.
+    
+        ``parse_float``, if specified, will be called with the string
+        of every JSON float to be decoded. By default this is equivalent to
+        float(num_str). This can be used to use another datatype or parser
+        for JSON floats (e.g. decimal.Decimal).
+    
+        ``parse_int``, if specified, will be called with the string
+        of every JSON int to be decoded. By default this is equivalent to
+        int(num_str). This can be used to use another datatype or parser
+        for JSON integers (e.g. float).
+    
+        ``parse_constant``, if specified, will be called with one of the
+        following strings: -Infinity, Infinity, NaN.
+        This can be used to raise an exception if invalid JSON numbers
+        are encountered.
+    
+        To use a custom ``JSONDecoder`` subclass, specify it with the ``cls``
+        kwarg; otherwise ``JSONDecoder`` is used.
+        """
+        if isinstance(s, str):
+            if s.startswith('\ufeff'):
+                raise JSONDecodeError("Unexpected UTF-8 BOM (decode using utf-8-sig)",
+                                      s, 0)
+        else:
+            if not isinstance(s, (bytes, bytearray)):
+>               raise TypeError(f'the JSON object must be str, bytes or bytearray, '
+                                f'not {s.__class__.__name__}')
+E               TypeError: the JSON object must be str, bytes or bytearray, not MagicMock
+
+../../.pyenv/versions/3.11.8/lib/python3.11/json/__init__.py:339: TypeError
+=========================== short test summary info ============================
+FAILED tests/test_vong5.py::test_vendor_chua_biet_danh_sach_model_dump_config_exit_0
+FAILED tests/test_vong5.py::test_vendor_da_biet_danh_sach_slug_sai_exit_2 - T...
+FAILED tests/test_vong5.py::test_ca_11_ten_vendor_dump_config_voi_model_mac_dinh_exit_0
+FAILED tests/test_vong6.py::test_vong6_error_branch - TypeError: the JSON obj...
+FAILED tests/test_vong6.py::test_vong6_quota_branch - TypeError: the JSON obj...
+FAILED tests/test_vong6.py::test_vong6_ok_branch - TypeError: the JSON object...
+FAILED tests/test_vong6.py::test_vong6_not_installed_branch - TypeError: the ...
+7 failed, 1036 passed in 18.27s

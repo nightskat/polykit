@@ -1,0 +1,153 @@
+{
+  "call_index": 6,
+  "task_id": "page_06_multipage_p2",
+  "document": "page_06_multipage_p2.png",
+  "scope": "images",
+  "file_path": "/Users/nightskat/Developer/polykit-wt-bench/bench/vision/synthetic/page_06_multipage_p2.png",
+  "workdir": "docs/plans/bench-v3-deepseek/scratch/page_06_multipage_p2",
+  "command": [
+    "/Users/nightskat/.pyenv/versions/3.11.8/bin/python",
+    "/Users/nightskat/Developer/polykit-wt-bench/bin/dispatch.py",
+    "opencode",
+    "--model",
+    "deepseek-v4.1-flash",
+    "--effort",
+    "high",
+    "--data-class",
+    "code-nopii",
+    "--synthetic-vision",
+    "--file",
+    "/Users/nightskat/Developer/polykit-wt-bench/bench/vision/synthetic/page_06_multipage_p2.png",
+    "--timeout",
+    "600",
+    "--format",
+    "json",
+    "--cd",
+    "docs/plans/bench-v3-deepseek/scratch/page_06_multipage_p2",
+    "--result-json",
+    "--prompt-file",
+    "docs/plans/bench-v3-deepseek/prompts/prompt_page_06_multipage_p2.txt"
+  ],
+  "latency_seconds": 4.852,
+  "returncode": 1,
+  "status": "exit_1",
+  "contaminated": false,
+  "contamination_status": null,
+  "dispatch_status": null,
+  "field_ids": [
+    "p6_clause_title",
+    "p6_effective_date",
+    "p6_subtotal_amount",
+    "p6_total_amount",
+    "p6_vat_amount"
+  ],
+  "score": {
+    "evaluation_type": "deterministic_typed_accuracy",
+    "scope_field_ids": [
+      "p6_clause_title",
+      "p6_effective_date",
+      "p6_subtotal_amount",
+      "p6_total_amount",
+      "p6_vat_amount"
+    ],
+    "total_fields": 5,
+    "correct_fields": 0,
+    "accuracy_percent": 0.0,
+    "by_document": {
+      "page_06_multipage_p2.png": {
+        "correct": 0,
+        "total": 5,
+        "percent": 0.0
+      }
+    },
+    "by_type": {
+      "amount": {
+        "correct": 0,
+        "total": 3,
+        "percent": 0.0
+      },
+      "date": {
+        "correct": 0,
+        "total": 1,
+        "percent": 0.0
+      },
+      "text": {
+        "correct": 0,
+        "total": 1,
+        "percent": 0.0
+      }
+    },
+    "fields": [
+      {
+        "id": "p6_subtotal_amount",
+        "document": "page_06_multipage_p2.png",
+        "page": 6,
+        "name": "Giá trị hợp đồng trước thuế",
+        "type": "amount",
+        "ground_truth_raw": "450.000.000",
+        "prediction_raw": null,
+        "parsed_gt": "450.000.000",
+        "parsed_pred": null,
+        "correct": false,
+        "error_reason": "missing"
+      },
+      {
+        "id": "p6_vat_amount",
+        "document": "page_06_multipage_p2.png",
+        "page": 6,
+        "name": "Tiền thuế GTGT 10%",
+        "type": "amount",
+        "ground_truth_raw": "45.000.000",
+        "prediction_raw": null,
+        "parsed_gt": "45.000.000",
+        "parsed_pred": null,
+        "correct": false,
+        "error_reason": "missing"
+      },
+      {
+        "id": "p6_total_amount",
+        "document": "page_06_multipage_p2.png",
+        "page": 6,
+        "name": "Tổng giá trị thanh toán hợp đồng sau thuế",
+        "type": "amount",
+        "ground_truth_raw": "495.000.000",
+        "prediction_raw": null,
+        "parsed_gt": "495.000.000",
+        "parsed_pred": null,
+        "correct": false,
+        "error_reason": "missing"
+      },
+      {
+        "id": "p6_effective_date",
+        "document": "page_06_multipage_p2.png",
+        "page": 6,
+        "name": "Ngày hiệu lực hợp đồng",
+        "type": "date",
+        "ground_truth_raw": "2026-05-01",
+        "prediction_raw": null,
+        "parsed_gt": "2026-05-01",
+        "parsed_pred": null,
+        "correct": false,
+        "error_reason": "missing"
+      },
+      {
+        "id": "p6_clause_title",
+        "document": "page_06_multipage_p2.png",
+        "page": 6,
+        "name": "Tiêu đề điều khoản thanh toán",
+        "type": "text",
+        "ground_truth_raw": "GIÁ TRỊ VÀ PHƯƠNG THỨC THANH TOÁN",
+        "prediction_raw": null,
+        "parsed_gt": "GIÁ TRỊ VÀ PHƯƠNG THỨC THANH TOÁN",
+        "parsed_pred": null,
+        "correct": false,
+        "error_reason": "missing"
+      }
+    ]
+  },
+  "raw_stdout": "{\n  \"status\": \"error\",\n  \"vendor\": \"opencode\",\n  \"model\": \"deepseek-v4.1-flash\",\n  \"summary\": \"opencode failed with exit code 1\",\n  \"warnings\": [\n    \"[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'deepseek-v4.1-flash'\",\n    \"auth ch\\u01b0a x\\u00e1c minh \\u0111\\u01b0\\u1ee3c cho opencode (kh\\u00f4ng r\\u00f5 l\\u00fd do) \\u2014 v\\u1eabn dispatch, l\\u1ed7i th\\u1eadt (n\\u1ebfu c\\u00f3) s\\u1ebd do vendor t\\u1ef1 b\\u00e1o\",\n    \"\\u001b[91m\\u001b[1mError: \\u001b[0mFile not found: B\\u1ea1n l\\u00e0 tr\\u1ee3 l\\u00fd tr\\u00edch xu\\u1ea5t d\\u1eef li\\u1ec7u h\\u00ecnh \\u1ea3nh v\\u00e0 t\\u00e0i li\\u1ec7u quang h\\u1ecdc chuy\\u00ean nghi\\u1ec7p.\",\n    \"H\\u00e3y quan s\\u00e1t k\\u1ef9 t\\u00e0i li\\u1ec7u \\u0111\\u00ednh k\\u00e8m (page_06_multipage_p2.png) v\\u00e0 tr\\u00edch xu\\u1ea5t ch\\u00ednh x\\u00e1c c\\u00e1c tr\\u01b0\\u1eddng sau:\",\n    \"\",\n    \"[polykit] \\u2026b\\u1ecf 17 d\\u00f2ng gi\\u1eefa c\\u1ee7a stderr, gi\\u1eef 3 d\\u00f2ng \\u0111\\u1ea7u + 20 d\\u00f2ng CU\\u1ed0I (n\\u01a1i l\\u1ed7i n\\u1eb1m)\",\n    \"  {\",\n    \"    \\\"id\\\": \\\"p6_effective_date\\\",\",\n    \"    \\\"type\\\": \\\"date\\\",\",\n    \"    \\\"name\\\": \\\"Ng\\u00e0y hi\\u1ec7u l\\u1ef1c h\\u1ee3p \\u0111\\u1ed3ng\\\"\",\n    \"  },\",\n    \"  {\",\n    \"    \\\"id\\\": \\\"p6_clause_title\\\",\",\n    \"    \\\"type\\\": \\\"text\\\",\",\n    \"    \\\"name\\\": \\\"Ti\\u00eau \\u0111\\u1ec1 \\u0111i\\u1ec1u kho\\u1ea3n thanh to\\u00e1n\\\"\",\n    \"  }\",\n    \"]\",\n    \"\",\n    \"QUY T\\u1eaeC B\\u1eaeT BU\\u1ed8C:\",\n    \"1. CH\\u1ec8 tr\\u00edch xu\\u1ea5t th\\u00f4ng tin nh\\u00ecn th\\u1ea5y \\u0111\\u01b0\\u1ee3c tr\\u00ean \\u1ea3nh/t\\u00e0i li\\u1ec7u \\u0111\\u00ednh k\\u00e8m.\",\n    \"2. TUY\\u1ec6T \\u0110\\u1ed0I KH\\u00d4NG s\\u1eed d\\u1ee5ng c\\u00f4ng c\\u1ee5 (tool), kh\\u00f4ng duy\\u1ec7t workspace, kh\\u00f4ng \\u0111\\u1ecdc file m\\u00e3 ngu\\u1ed3n hay file ground truth.\",\n    \"3. Tr\\u1ea3 v\\u1ec1 DUY NH\\u1ea4T m\\u1ed9t JSON object h\\u1ee3p l\\u1ec7 \\u00e1nh x\\u1ea1 t\\u1eebng tr\\u01b0\\u1eddng 'id' sang gi\\u00e1 tr\\u1ecb t\\u01b0\\u01a1ng \\u1ee9ng ('id': 'gi\\u00e1 tr\\u1ecb').\",\n    \"4. Kh\\u00f4ng gi\\u1ea3i th\\u00edch, kh\\u00f4ng th\\u00eam ghi ch\\u00fa, kh\\u00f4ng d\\u00f9ng \\u0111\\u1ecbnh d\\u1ea1ng ngo\\u00e0i JSON object.\",\n    \"\",\n    \"V\\u00ed d\\u1ee5 c\\u1ea5u tr\\u00fac tr\\u1ea3 v\\u1ec1:\",\n    \"{\\\"tr\\u01b0\\u1eddng_id_1\\\": \\\"gi\\u00e1 tr\\u1ecb 1\\\", \\\"tr\\u01b0\\u1eddng_id_2\\\": \\\"gi\\u00e1 tr\\u1ecb 2\\\"}\"\n  ],\n  \"stdout\": \"\",\n  \"exit_code\": 1,\n  \"reason\": \"vendor_exit_nonzero\",\n  \"served_model\": null,\n  \"unsandboxed\": true,\n  \"data_class\": \"code-nopii\"\n}\n",
+  "raw_stderr": "[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'deepseek-v4.1-flash'\n[polykit] ⚠ traps for opencode:\n  1. opencode run --model opencode-go/<m> --variant <effort>: cờ đổi ở bản mới; stdin DEVNULL; không shell\nWARNING: auth chưa xác minh được cho opencode (không rõ lý do) — vẫn dispatch, lỗi thật (nếu có) sẽ do vendor tự báo\n",
+  "model_stdout": "",
+  "parsed_predictions": null,
+  "timestamp": "2026-10-22T09:41:12.780881+00:00"
+}

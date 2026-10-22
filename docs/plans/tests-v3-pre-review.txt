@@ -1,0 +1,1605 @@
+........................................................................ [  7%]
+........................................................................ [ 15%]
+........................................................................ [ 23%]
+........................................................................ [ 30%]
+........................................................................ [ 38%]
+........................................................................ [ 46%]
+........................................................................ [ 53%]
+........................................................................ [ 61%]
+........................................................................ [ 69%]
+.....................F.......FFFFFFFFFFFFFFFFFFFFFFFFFFFF............... [ 76%]
+..........FF............................................................ [ 84%]
+........................................................................ [ 92%]
+........................................................................ [ 99%]
+.                                                                        [100%]
+=================================== FAILURES ===================================
+_ TestFixtureRegistryIntegrity.test_arbitrary_file_in_synthetic_dir_not_trusted _
+
+self = <test_synthetic_vision_gate.TestFixtureRegistryIntegrity object at 0x10b67be50>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+
+    def test_arbitrary_file_in_synthetic_dir_not_trusted(self, repo: dict):
+        """File tự tạo cùng thư mục nhưng không khai registry/manifest vẫn bị chặn."""
+        rogue = repo["synth"] / "rogue.png"
+        rogue.write_bytes(PNG_MAGIC + b"rogue content")
+>       assert_no_runner(
+            lambda: validate_synthetic_gate([rogue]),
+            VisionBlockedError,
+        )
+
+tests/test_synthetic_vision_gate.py:162: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:163: in <lambda>
+    lambda: validate_synthetic_gate([rogue]),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_arbitrary_file_in_synthet0/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+______________ TestManifestValidation.test_malformed_json_blocked ______________
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b638390>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+
+    def test_malformed_json_blocked(self, repo: dict):
+        (repo["synth"] / "manifest.json").write_text("{not json", encoding="utf-8")
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:250: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:250: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_malformed_json_blocked0/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+_________ TestManifestValidation.test_manifest_root_not_object_blocked _________
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b63a6d0>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+
+    def test_manifest_root_not_object_blocked(self, repo: dict):
+        (repo["synth"] / "manifest.json").write_text("[1, 2, 3]", encoding="utf-8")
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:254: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:254: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_manifest_root_not_object_0/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+___ TestManifestValidation.test_bad_header_or_files_shape_blocked[<lambda>0] ___
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b639d90>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+mutator = <function TestManifestValidation.<lambda> at 0x10b0f1940>
+
+    @pytest.mark.parametrize(
+        "mutator",
+        [
+            lambda m: m.__setitem__("schema_version", 2),
+            lambda m: m.__setitem__("schema_version", True),  # bool: True == 1 nếu chỉ so ==
+            lambda m: m.__setitem__("schema_version", "1"),
+            lambda m: m.__setitem__("schema_version", None),
+            lambda m: m.__setitem__("generator", "bench/vision/other_generate.py"),
+            lambda m: m.pop("generator"),
+            lambda m: m.__setitem__("files", []),
+            lambda m: m.__setitem__("files", "page_a.png"),
+            lambda m: m.__setitem__("files", ["page_a.png"]),
+        ],
+    )
+    def test_bad_header_or_files_shape_blocked(self, repo: dict, mutator):
+        write_manifest(repo, _mutate(load_manifest(repo), mutator))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:272: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:272: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_bad_header_or_files_shape0/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+___ TestManifestValidation.test_bad_header_or_files_shape_blocked[<lambda>1] ___
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b639fd0>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+mutator = <function TestManifestValidation.<lambda> at 0x10b0f19e0>
+
+    @pytest.mark.parametrize(
+        "mutator",
+        [
+            lambda m: m.__setitem__("schema_version", 2),
+            lambda m: m.__setitem__("schema_version", True),  # bool: True == 1 nếu chỉ so ==
+            lambda m: m.__setitem__("schema_version", "1"),
+            lambda m: m.__setitem__("schema_version", None),
+            lambda m: m.__setitem__("generator", "bench/vision/other_generate.py"),
+            lambda m: m.pop("generator"),
+            lambda m: m.__setitem__("files", []),
+            lambda m: m.__setitem__("files", "page_a.png"),
+            lambda m: m.__setitem__("files", ["page_a.png"]),
+        ],
+    )
+    def test_bad_header_or_files_shape_blocked(self, repo: dict, mutator):
+        write_manifest(repo, _mutate(load_manifest(repo), mutator))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:272: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:272: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_bad_header_or_files_shape1/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+___ TestManifestValidation.test_bad_header_or_files_shape_blocked[<lambda>2] ___
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b4b85d0>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+mutator = <function TestManifestValidation.<lambda> at 0x10b0f1a80>
+
+    @pytest.mark.parametrize(
+        "mutator",
+        [
+            lambda m: m.__setitem__("schema_version", 2),
+            lambda m: m.__setitem__("schema_version", True),  # bool: True == 1 nếu chỉ so ==
+            lambda m: m.__setitem__("schema_version", "1"),
+            lambda m: m.__setitem__("schema_version", None),
+            lambda m: m.__setitem__("generator", "bench/vision/other_generate.py"),
+            lambda m: m.pop("generator"),
+            lambda m: m.__setitem__("files", []),
+            lambda m: m.__setitem__("files", "page_a.png"),
+            lambda m: m.__setitem__("files", ["page_a.png"]),
+        ],
+    )
+    def test_bad_header_or_files_shape_blocked(self, repo: dict, mutator):
+        write_manifest(repo, _mutate(load_manifest(repo), mutator))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:272: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:272: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_bad_header_or_files_shape2/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+___ TestManifestValidation.test_bad_header_or_files_shape_blocked[<lambda>3] ___
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b4b9fd0>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+mutator = <function TestManifestValidation.<lambda> at 0x10b0f1b20>
+
+    @pytest.mark.parametrize(
+        "mutator",
+        [
+            lambda m: m.__setitem__("schema_version", 2),
+            lambda m: m.__setitem__("schema_version", True),  # bool: True == 1 nếu chỉ so ==
+            lambda m: m.__setitem__("schema_version", "1"),
+            lambda m: m.__setitem__("schema_version", None),
+            lambda m: m.__setitem__("generator", "bench/vision/other_generate.py"),
+            lambda m: m.pop("generator"),
+            lambda m: m.__setitem__("files", []),
+            lambda m: m.__setitem__("files", "page_a.png"),
+            lambda m: m.__setitem__("files", ["page_a.png"]),
+        ],
+    )
+    def test_bad_header_or_files_shape_blocked(self, repo: dict, mutator):
+        write_manifest(repo, _mutate(load_manifest(repo), mutator))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:272: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:272: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_bad_header_or_files_shape3/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+___ TestManifestValidation.test_bad_header_or_files_shape_blocked[<lambda>4] ___
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b4b8f90>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+mutator = <function TestManifestValidation.<lambda> at 0x10b0f1bc0>
+
+    @pytest.mark.parametrize(
+        "mutator",
+        [
+            lambda m: m.__setitem__("schema_version", 2),
+            lambda m: m.__setitem__("schema_version", True),  # bool: True == 1 nếu chỉ so ==
+            lambda m: m.__setitem__("schema_version", "1"),
+            lambda m: m.__setitem__("schema_version", None),
+            lambda m: m.__setitem__("generator", "bench/vision/other_generate.py"),
+            lambda m: m.pop("generator"),
+            lambda m: m.__setitem__("files", []),
+            lambda m: m.__setitem__("files", "page_a.png"),
+            lambda m: m.__setitem__("files", ["page_a.png"]),
+        ],
+    )
+    def test_bad_header_or_files_shape_blocked(self, repo: dict, mutator):
+        write_manifest(repo, _mutate(load_manifest(repo), mutator))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:272: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:272: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_bad_header_or_files_shape4/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+___ TestManifestValidation.test_bad_header_or_files_shape_blocked[<lambda>5] ___
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b4bbe90>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+mutator = <function TestManifestValidation.<lambda> at 0x10b0f1c60>
+
+    @pytest.mark.parametrize(
+        "mutator",
+        [
+            lambda m: m.__setitem__("schema_version", 2),
+            lambda m: m.__setitem__("schema_version", True),  # bool: True == 1 nếu chỉ so ==
+            lambda m: m.__setitem__("schema_version", "1"),
+            lambda m: m.__setitem__("schema_version", None),
+            lambda m: m.__setitem__("generator", "bench/vision/other_generate.py"),
+            lambda m: m.pop("generator"),
+            lambda m: m.__setitem__("files", []),
+            lambda m: m.__setitem__("files", "page_a.png"),
+            lambda m: m.__setitem__("files", ["page_a.png"]),
+        ],
+    )
+    def test_bad_header_or_files_shape_blocked(self, repo: dict, mutator):
+        write_manifest(repo, _mutate(load_manifest(repo), mutator))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:272: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:272: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_bad_header_or_files_shape5/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+___ TestManifestValidation.test_bad_header_or_files_shape_blocked[<lambda>6] ___
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b4b8150>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+mutator = <function TestManifestValidation.<lambda> at 0x10b0f1d00>
+
+    @pytest.mark.parametrize(
+        "mutator",
+        [
+            lambda m: m.__setitem__("schema_version", 2),
+            lambda m: m.__setitem__("schema_version", True),  # bool: True == 1 nếu chỉ so ==
+            lambda m: m.__setitem__("schema_version", "1"),
+            lambda m: m.__setitem__("schema_version", None),
+            lambda m: m.__setitem__("generator", "bench/vision/other_generate.py"),
+            lambda m: m.pop("generator"),
+            lambda m: m.__setitem__("files", []),
+            lambda m: m.__setitem__("files", "page_a.png"),
+            lambda m: m.__setitem__("files", ["page_a.png"]),
+        ],
+    )
+    def test_bad_header_or_files_shape_blocked(self, repo: dict, mutator):
+        write_manifest(repo, _mutate(load_manifest(repo), mutator))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:272: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:272: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_bad_header_or_files_shape6/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+___ TestManifestValidation.test_bad_header_or_files_shape_blocked[<lambda>7] ___
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b4bb250>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+mutator = <function TestManifestValidation.<lambda> at 0x10b0f1da0>
+
+    @pytest.mark.parametrize(
+        "mutator",
+        [
+            lambda m: m.__setitem__("schema_version", 2),
+            lambda m: m.__setitem__("schema_version", True),  # bool: True == 1 nếu chỉ so ==
+            lambda m: m.__setitem__("schema_version", "1"),
+            lambda m: m.__setitem__("schema_version", None),
+            lambda m: m.__setitem__("generator", "bench/vision/other_generate.py"),
+            lambda m: m.pop("generator"),
+            lambda m: m.__setitem__("files", []),
+            lambda m: m.__setitem__("files", "page_a.png"),
+            lambda m: m.__setitem__("files", ["page_a.png"]),
+        ],
+    )
+    def test_bad_header_or_files_shape_blocked(self, repo: dict, mutator):
+        write_manifest(repo, _mutate(load_manifest(repo), mutator))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:272: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:272: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_bad_header_or_files_shape7/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+___ TestManifestValidation.test_bad_header_or_files_shape_blocked[<lambda>8] ___
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b4bb210>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+mutator = <function TestManifestValidation.<lambda> at 0x10b0f1e40>
+
+    @pytest.mark.parametrize(
+        "mutator",
+        [
+            lambda m: m.__setitem__("schema_version", 2),
+            lambda m: m.__setitem__("schema_version", True),  # bool: True == 1 nếu chỉ so ==
+            lambda m: m.__setitem__("schema_version", "1"),
+            lambda m: m.__setitem__("schema_version", None),
+            lambda m: m.__setitem__("generator", "bench/vision/other_generate.py"),
+            lambda m: m.pop("generator"),
+            lambda m: m.__setitem__("files", []),
+            lambda m: m.__setitem__("files", "page_a.png"),
+            lambda m: m.__setitem__("files", ["page_a.png"]),
+        ],
+    )
+    def test_bad_header_or_files_shape_blocked(self, repo: dict, mutator):
+        write_manifest(repo, _mutate(load_manifest(repo), mutator))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:272: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:272: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_bad_header_or_files_shape8/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+_____ TestManifestValidation.test_tampered_entry_fields_blocked[<lambda>0] _____
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b4bbbd0>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+mutator = <function TestManifestValidation.<lambda> at 0x10b0f1f80>
+
+    @pytest.mark.parametrize(
+        "mutator",
+        [
+            # path không phải tên file trần
+            lambda m: m["files"][0].__setitem__("path", "sub/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "../page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "/abs/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", 123),
+            # thiếu/khai man hash
+            lambda m: m["files"][0].pop("sha256"),
+            lambda m: m["files"][0].__setitem__("sha256", "zz"),
+            lambda m: m["files"][0].__setitem__("sha256", "0" * 64),
+            lambda m: m["files"][0].__setitem__("sha256", PNG_SHA.upper()),
+            # bytes sai kiểu hoặc sai giá trị
+            lambda m: m["files"][0].__setitem__("bytes", True),
+            lambda m: m["files"][0].__setitem__("bytes", len(PNG_PAYLOAD) + 1),
+            lambda m: m["files"][0].pop("bytes"),
+            # format / rel_path lệch
+            lambda m: m["files"][0].__setitem__("format", "PDF"),
+            lambda m: m["files"][0].__setitem__("rel_path", "bench/vision/synthetic/other.png"),
+        ],
+    )
+    def test_tampered_entry_fields_blocked(self, repo: dict, mutator):
+        write_manifest(repo, _mutate(load_manifest(repo), mutator))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:298: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:298: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_tampered_entry_fields_blo0/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+_____ TestManifestValidation.test_tampered_entry_fields_blocked[<lambda>1] _____
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b4b88d0>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+mutator = <function TestManifestValidation.<lambda> at 0x10b0f2020>
+
+    @pytest.mark.parametrize(
+        "mutator",
+        [
+            # path không phải tên file trần
+            lambda m: m["files"][0].__setitem__("path", "sub/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "../page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "/abs/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", 123),
+            # thiếu/khai man hash
+            lambda m: m["files"][0].pop("sha256"),
+            lambda m: m["files"][0].__setitem__("sha256", "zz"),
+            lambda m: m["files"][0].__setitem__("sha256", "0" * 64),
+            lambda m: m["files"][0].__setitem__("sha256", PNG_SHA.upper()),
+            # bytes sai kiểu hoặc sai giá trị
+            lambda m: m["files"][0].__setitem__("bytes", True),
+            lambda m: m["files"][0].__setitem__("bytes", len(PNG_PAYLOAD) + 1),
+            lambda m: m["files"][0].pop("bytes"),
+            # format / rel_path lệch
+            lambda m: m["files"][0].__setitem__("format", "PDF"),
+            lambda m: m["files"][0].__setitem__("rel_path", "bench/vision/synthetic/other.png"),
+        ],
+    )
+    def test_tampered_entry_fields_blocked(self, repo: dict, mutator):
+        write_manifest(repo, _mutate(load_manifest(repo), mutator))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:298: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:298: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_tampered_entry_fields_blo1/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+_____ TestManifestValidation.test_tampered_entry_fields_blocked[<lambda>2] _____
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b4ba4d0>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+mutator = <function TestManifestValidation.<lambda> at 0x10b0f20c0>
+
+    @pytest.mark.parametrize(
+        "mutator",
+        [
+            # path không phải tên file trần
+            lambda m: m["files"][0].__setitem__("path", "sub/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "../page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "/abs/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", 123),
+            # thiếu/khai man hash
+            lambda m: m["files"][0].pop("sha256"),
+            lambda m: m["files"][0].__setitem__("sha256", "zz"),
+            lambda m: m["files"][0].__setitem__("sha256", "0" * 64),
+            lambda m: m["files"][0].__setitem__("sha256", PNG_SHA.upper()),
+            # bytes sai kiểu hoặc sai giá trị
+            lambda m: m["files"][0].__setitem__("bytes", True),
+            lambda m: m["files"][0].__setitem__("bytes", len(PNG_PAYLOAD) + 1),
+            lambda m: m["files"][0].pop("bytes"),
+            # format / rel_path lệch
+            lambda m: m["files"][0].__setitem__("format", "PDF"),
+            lambda m: m["files"][0].__setitem__("rel_path", "bench/vision/synthetic/other.png"),
+        ],
+    )
+    def test_tampered_entry_fields_blocked(self, repo: dict, mutator):
+        write_manifest(repo, _mutate(load_manifest(repo), mutator))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:298: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:298: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_tampered_entry_fields_blo2/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+_____ TestManifestValidation.test_tampered_entry_fields_blocked[<lambda>3] _____
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b4bbad0>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+mutator = <function TestManifestValidation.<lambda> at 0x10b0f2160>
+
+    @pytest.mark.parametrize(
+        "mutator",
+        [
+            # path không phải tên file trần
+            lambda m: m["files"][0].__setitem__("path", "sub/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "../page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "/abs/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", 123),
+            # thiếu/khai man hash
+            lambda m: m["files"][0].pop("sha256"),
+            lambda m: m["files"][0].__setitem__("sha256", "zz"),
+            lambda m: m["files"][0].__setitem__("sha256", "0" * 64),
+            lambda m: m["files"][0].__setitem__("sha256", PNG_SHA.upper()),
+            # bytes sai kiểu hoặc sai giá trị
+            lambda m: m["files"][0].__setitem__("bytes", True),
+            lambda m: m["files"][0].__setitem__("bytes", len(PNG_PAYLOAD) + 1),
+            lambda m: m["files"][0].pop("bytes"),
+            # format / rel_path lệch
+            lambda m: m["files"][0].__setitem__("format", "PDF"),
+            lambda m: m["files"][0].__setitem__("rel_path", "bench/vision/synthetic/other.png"),
+        ],
+    )
+    def test_tampered_entry_fields_blocked(self, repo: dict, mutator):
+        write_manifest(repo, _mutate(load_manifest(repo), mutator))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:298: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:298: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_tampered_entry_fields_blo3/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+_____ TestManifestValidation.test_tampered_entry_fields_blocked[<lambda>4] _____
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b4bb590>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+mutator = <function TestManifestValidation.<lambda> at 0x10b0f2200>
+
+    @pytest.mark.parametrize(
+        "mutator",
+        [
+            # path không phải tên file trần
+            lambda m: m["files"][0].__setitem__("path", "sub/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "../page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "/abs/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", 123),
+            # thiếu/khai man hash
+            lambda m: m["files"][0].pop("sha256"),
+            lambda m: m["files"][0].__setitem__("sha256", "zz"),
+            lambda m: m["files"][0].__setitem__("sha256", "0" * 64),
+            lambda m: m["files"][0].__setitem__("sha256", PNG_SHA.upper()),
+            # bytes sai kiểu hoặc sai giá trị
+            lambda m: m["files"][0].__setitem__("bytes", True),
+            lambda m: m["files"][0].__setitem__("bytes", len(PNG_PAYLOAD) + 1),
+            lambda m: m["files"][0].pop("bytes"),
+            # format / rel_path lệch
+            lambda m: m["files"][0].__setitem__("format", "PDF"),
+            lambda m: m["files"][0].__setitem__("rel_path", "bench/vision/synthetic/other.png"),
+        ],
+    )
+    def test_tampered_entry_fields_blocked(self, repo: dict, mutator):
+        write_manifest(repo, _mutate(load_manifest(repo), mutator))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:298: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:298: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_tampered_entry_fields_blo4/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+_____ TestManifestValidation.test_tampered_entry_fields_blocked[<lambda>5] _____
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b4bbfd0>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+mutator = <function TestManifestValidation.<lambda> at 0x10b0f22a0>
+
+    @pytest.mark.parametrize(
+        "mutator",
+        [
+            # path không phải tên file trần
+            lambda m: m["files"][0].__setitem__("path", "sub/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "../page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "/abs/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", 123),
+            # thiếu/khai man hash
+            lambda m: m["files"][0].pop("sha256"),
+            lambda m: m["files"][0].__setitem__("sha256", "zz"),
+            lambda m: m["files"][0].__setitem__("sha256", "0" * 64),
+            lambda m: m["files"][0].__setitem__("sha256", PNG_SHA.upper()),
+            # bytes sai kiểu hoặc sai giá trị
+            lambda m: m["files"][0].__setitem__("bytes", True),
+            lambda m: m["files"][0].__setitem__("bytes", len(PNG_PAYLOAD) + 1),
+            lambda m: m["files"][0].pop("bytes"),
+            # format / rel_path lệch
+            lambda m: m["files"][0].__setitem__("format", "PDF"),
+            lambda m: m["files"][0].__setitem__("rel_path", "bench/vision/synthetic/other.png"),
+        ],
+    )
+    def test_tampered_entry_fields_blocked(self, repo: dict, mutator):
+        write_manifest(repo, _mutate(load_manifest(repo), mutator))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:298: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:298: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_tampered_entry_fields_blo5/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+_____ TestManifestValidation.test_tampered_entry_fields_blocked[<lambda>6] _____
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b6479d0>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+mutator = <function TestManifestValidation.<lambda> at 0x10b0f2340>
+
+    @pytest.mark.parametrize(
+        "mutator",
+        [
+            # path không phải tên file trần
+            lambda m: m["files"][0].__setitem__("path", "sub/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "../page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "/abs/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", 123),
+            # thiếu/khai man hash
+            lambda m: m["files"][0].pop("sha256"),
+            lambda m: m["files"][0].__setitem__("sha256", "zz"),
+            lambda m: m["files"][0].__setitem__("sha256", "0" * 64),
+            lambda m: m["files"][0].__setitem__("sha256", PNG_SHA.upper()),
+            # bytes sai kiểu hoặc sai giá trị
+            lambda m: m["files"][0].__setitem__("bytes", True),
+            lambda m: m["files"][0].__setitem__("bytes", len(PNG_PAYLOAD) + 1),
+            lambda m: m["files"][0].pop("bytes"),
+            # format / rel_path lệch
+            lambda m: m["files"][0].__setitem__("format", "PDF"),
+            lambda m: m["files"][0].__setitem__("rel_path", "bench/vision/synthetic/other.png"),
+        ],
+    )
+    def test_tampered_entry_fields_blocked(self, repo: dict, mutator):
+        write_manifest(repo, _mutate(load_manifest(repo), mutator))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:298: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:298: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_tampered_entry_fields_blo6/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+_____ TestManifestValidation.test_tampered_entry_fields_blocked[<lambda>7] _____
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b645350>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+mutator = <function TestManifestValidation.<lambda> at 0x10b0f23e0>
+
+    @pytest.mark.parametrize(
+        "mutator",
+        [
+            # path không phải tên file trần
+            lambda m: m["files"][0].__setitem__("path", "sub/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "../page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "/abs/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", 123),
+            # thiếu/khai man hash
+            lambda m: m["files"][0].pop("sha256"),
+            lambda m: m["files"][0].__setitem__("sha256", "zz"),
+            lambda m: m["files"][0].__setitem__("sha256", "0" * 64),
+            lambda m: m["files"][0].__setitem__("sha256", PNG_SHA.upper()),
+            # bytes sai kiểu hoặc sai giá trị
+            lambda m: m["files"][0].__setitem__("bytes", True),
+            lambda m: m["files"][0].__setitem__("bytes", len(PNG_PAYLOAD) + 1),
+            lambda m: m["files"][0].pop("bytes"),
+            # format / rel_path lệch
+            lambda m: m["files"][0].__setitem__("format", "PDF"),
+            lambda m: m["files"][0].__setitem__("rel_path", "bench/vision/synthetic/other.png"),
+        ],
+    )
+    def test_tampered_entry_fields_blocked(self, repo: dict, mutator):
+        write_manifest(repo, _mutate(load_manifest(repo), mutator))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:298: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:298: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_tampered_entry_fields_blo7/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+_____ TestManifestValidation.test_tampered_entry_fields_blocked[<lambda>8] _____
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b645c90>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+mutator = <function TestManifestValidation.<lambda> at 0x10b0f2480>
+
+    @pytest.mark.parametrize(
+        "mutator",
+        [
+            # path không phải tên file trần
+            lambda m: m["files"][0].__setitem__("path", "sub/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "../page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "/abs/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", 123),
+            # thiếu/khai man hash
+            lambda m: m["files"][0].pop("sha256"),
+            lambda m: m["files"][0].__setitem__("sha256", "zz"),
+            lambda m: m["files"][0].__setitem__("sha256", "0" * 64),
+            lambda m: m["files"][0].__setitem__("sha256", PNG_SHA.upper()),
+            # bytes sai kiểu hoặc sai giá trị
+            lambda m: m["files"][0].__setitem__("bytes", True),
+            lambda m: m["files"][0].__setitem__("bytes", len(PNG_PAYLOAD) + 1),
+            lambda m: m["files"][0].pop("bytes"),
+            # format / rel_path lệch
+            lambda m: m["files"][0].__setitem__("format", "PDF"),
+            lambda m: m["files"][0].__setitem__("rel_path", "bench/vision/synthetic/other.png"),
+        ],
+    )
+    def test_tampered_entry_fields_blocked(self, repo: dict, mutator):
+        write_manifest(repo, _mutate(load_manifest(repo), mutator))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:298: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:298: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_tampered_entry_fields_blo8/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+_____ TestManifestValidation.test_tampered_entry_fields_blocked[<lambda>9] _____
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b646390>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+mutator = <function TestManifestValidation.<lambda> at 0x10b0f2520>
+
+    @pytest.mark.parametrize(
+        "mutator",
+        [
+            # path không phải tên file trần
+            lambda m: m["files"][0].__setitem__("path", "sub/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "../page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "/abs/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", 123),
+            # thiếu/khai man hash
+            lambda m: m["files"][0].pop("sha256"),
+            lambda m: m["files"][0].__setitem__("sha256", "zz"),
+            lambda m: m["files"][0].__setitem__("sha256", "0" * 64),
+            lambda m: m["files"][0].__setitem__("sha256", PNG_SHA.upper()),
+            # bytes sai kiểu hoặc sai giá trị
+            lambda m: m["files"][0].__setitem__("bytes", True),
+            lambda m: m["files"][0].__setitem__("bytes", len(PNG_PAYLOAD) + 1),
+            lambda m: m["files"][0].pop("bytes"),
+            # format / rel_path lệch
+            lambda m: m["files"][0].__setitem__("format", "PDF"),
+            lambda m: m["files"][0].__setitem__("rel_path", "bench/vision/synthetic/other.png"),
+        ],
+    )
+    def test_tampered_entry_fields_blocked(self, repo: dict, mutator):
+        write_manifest(repo, _mutate(load_manifest(repo), mutator))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:298: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:298: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_tampered_entry_fields_blo9/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+____ TestManifestValidation.test_tampered_entry_fields_blocked[<lambda>10] _____
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b645590>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+mutator = <function TestManifestValidation.<lambda> at 0x10b0f25c0>
+
+    @pytest.mark.parametrize(
+        "mutator",
+        [
+            # path không phải tên file trần
+            lambda m: m["files"][0].__setitem__("path", "sub/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "../page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "/abs/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", 123),
+            # thiếu/khai man hash
+            lambda m: m["files"][0].pop("sha256"),
+            lambda m: m["files"][0].__setitem__("sha256", "zz"),
+            lambda m: m["files"][0].__setitem__("sha256", "0" * 64),
+            lambda m: m["files"][0].__setitem__("sha256", PNG_SHA.upper()),
+            # bytes sai kiểu hoặc sai giá trị
+            lambda m: m["files"][0].__setitem__("bytes", True),
+            lambda m: m["files"][0].__setitem__("bytes", len(PNG_PAYLOAD) + 1),
+            lambda m: m["files"][0].pop("bytes"),
+            # format / rel_path lệch
+            lambda m: m["files"][0].__setitem__("format", "PDF"),
+            lambda m: m["files"][0].__setitem__("rel_path", "bench/vision/synthetic/other.png"),
+        ],
+    )
+    def test_tampered_entry_fields_blocked(self, repo: dict, mutator):
+        write_manifest(repo, _mutate(load_manifest(repo), mutator))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:298: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:298: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_tampered_entry_fields_blo10/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+____ TestManifestValidation.test_tampered_entry_fields_blocked[<lambda>11] _____
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b647990>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+mutator = <function TestManifestValidation.<lambda> at 0x10b0f2660>
+
+    @pytest.mark.parametrize(
+        "mutator",
+        [
+            # path không phải tên file trần
+            lambda m: m["files"][0].__setitem__("path", "sub/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "../page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "/abs/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", 123),
+            # thiếu/khai man hash
+            lambda m: m["files"][0].pop("sha256"),
+            lambda m: m["files"][0].__setitem__("sha256", "zz"),
+            lambda m: m["files"][0].__setitem__("sha256", "0" * 64),
+            lambda m: m["files"][0].__setitem__("sha256", PNG_SHA.upper()),
+            # bytes sai kiểu hoặc sai giá trị
+            lambda m: m["files"][0].__setitem__("bytes", True),
+            lambda m: m["files"][0].__setitem__("bytes", len(PNG_PAYLOAD) + 1),
+            lambda m: m["files"][0].pop("bytes"),
+            # format / rel_path lệch
+            lambda m: m["files"][0].__setitem__("format", "PDF"),
+            lambda m: m["files"][0].__setitem__("rel_path", "bench/vision/synthetic/other.png"),
+        ],
+    )
+    def test_tampered_entry_fields_blocked(self, repo: dict, mutator):
+        write_manifest(repo, _mutate(load_manifest(repo), mutator))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:298: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:298: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_tampered_entry_fields_blo11/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+____ TestManifestValidation.test_tampered_entry_fields_blocked[<lambda>12] _____
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b644e50>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+mutator = <function TestManifestValidation.<lambda> at 0x10b0f2700>
+
+    @pytest.mark.parametrize(
+        "mutator",
+        [
+            # path không phải tên file trần
+            lambda m: m["files"][0].__setitem__("path", "sub/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "../page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", "/abs/page_a.png"),
+            lambda m: m["files"][0].__setitem__("path", 123),
+            # thiếu/khai man hash
+            lambda m: m["files"][0].pop("sha256"),
+            lambda m: m["files"][0].__setitem__("sha256", "zz"),
+            lambda m: m["files"][0].__setitem__("sha256", "0" * 64),
+            lambda m: m["files"][0].__setitem__("sha256", PNG_SHA.upper()),
+            # bytes sai kiểu hoặc sai giá trị
+            lambda m: m["files"][0].__setitem__("bytes", True),
+            lambda m: m["files"][0].__setitem__("bytes", len(PNG_PAYLOAD) + 1),
+            lambda m: m["files"][0].pop("bytes"),
+            # format / rel_path lệch
+            lambda m: m["files"][0].__setitem__("format", "PDF"),
+            lambda m: m["files"][0].__setitem__("rel_path", "bench/vision/synthetic/other.png"),
+        ],
+    )
+    def test_tampered_entry_fields_blocked(self, repo: dict, mutator):
+        write_manifest(repo, _mutate(load_manifest(repo), mutator))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:298: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:298: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_tampered_entry_fields_blo12/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+_________ TestManifestValidation.test_duplicate_manifest_entry_blocked _________
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b646f50>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+
+    def test_duplicate_manifest_entry_blocked(self, repo: dict):
+        def duplicate(manifest: dict) -> None:
+            manifest["files"].append(dict(manifest["files"][0]))
+    
+        write_manifest(repo, _mutate(load_manifest(repo), duplicate))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:305: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:305: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_duplicate_manifest_entry_0/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+__________ TestManifestValidation.test_unknown_file_declared_blocked ___________
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10b646b90>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+
+    def test_unknown_file_declared_blocked(self, repo: dict):
+        def add_unknown(manifest: dict) -> None:
+            manifest["files"].append(
+                {
+                    "path": "not_generated.png",
+                    "sha256": "a" * 64,
+                    "bytes": 10,
+                    "format": "PNG",
+                }
+            )
+    
+        write_manifest(repo, _mutate(load_manifest(repo), add_unknown))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:319: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:319: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_unknown_file_declared_blo0/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+_____ TestManifestValidation.test_manifest_omitting_requested_file_blocked _____
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10afaa150>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+
+    def test_manifest_omitting_requested_file_blocked(self, repo: dict):
+        """Manifest hợp lệ nhưng không khai file được yêu cầu -> chặn (danh sách đóng)."""
+    
+        def drop_png(manifest: dict) -> None:
+            manifest["files"] = [e for e in manifest["files"] if e["path"] != "page_a.png"]
+    
+        write_manifest(repo, _mutate(load_manifest(repo), drop_png))
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:328: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:328: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_manifest_omitting_request0/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+_____________ TestManifestValidation.test_missing_manifest_blocked _____________
+
+self = <test_synthetic_vision_gate.TestManifestValidation object at 0x10afaa490>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+
+    def test_missing_manifest_blocked(self, repo: dict):
+        (repo["synth"] / "manifest.json").unlink()
+>       assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+
+tests/test_synthetic_vision_gate.py:332: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:332: in <lambda>
+    assert_no_runner(lambda: validate_synthetic_gate([repo["png"]]), VisionBlockedError)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_missing_manifest_blocked0/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+_ TestPolicyBlocksBeforeProbe.test_untrusted_or_non_vision_model_blocked_before_io[glm-5.3] _
+
+self = <test_synthetic_vision_gate.TestPolicyBlocksBeforeProbe object at 0x10b4cf150>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+model = 'glm-5.3'
+
+    @pytest.mark.parametrize(
+        "model",
+        ["unknown-model", "gpt-6.1-sol", "deepseek-v4.1-flash-contributor", "glm-5.3"],
+    )
+    def test_untrusted_or_non_vision_model_blocked_before_io(self, repo: dict, model: str):
+        """Model lạ / contributor / không có image capability đều bị chặn trước I/O."""
+        with patch("builtins.open") as mock_open, \
+             patch("subprocess.run") as mock_run, \
+             patch("shutil.which") as mock_which:
+            with pytest.raises(VisionBlockedError):
+                check_vision_gate(
+                    files=[repo["png"]], model=model, adapter=OPENCODE, is_synthetic=True
+                )
+>           mock_open.assert_not_called()
+
+tests/test_synthetic_vision_gate.py:464: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock name='open' id='4500055888'>
+
+    def assert_not_called(self):
+        """assert that the mock was never called.
+        """
+        if self.call_count != 0:
+            msg = ("Expected '%s' to not have been called. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'open' to not have been called. Called 1 times.
+E           Calls: [call(PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_untrusted_or_non_vision_m3/repo/bench/vision/synthetic/manifest.json'), 'r', encoding='utf-8'),
+E            call().__enter__(),
+E            call().__enter__().read(),
+E            call().__exit__(<class 'TypeError'>, TypeError('the JSON object must be str, bytes or bytearray, not MagicMock'), <traceback object at 0x10c575e00>)].
+
+../../.pyenv/versions/3.11.8/lib/python3.11/unittest/mock.py:900: AssertionError
+_____ TestPolicyBlocksBeforeProbe.test_outside_path_blocked_without_runner _____
+
+self = <test_synthetic_vision_gate.TestPolicyBlocksBeforeProbe object at 0x10b4cf590>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+tmp_path = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_outside_path_blocked_with0')
+
+    def test_outside_path_blocked_without_runner(self, repo: dict, tmp_path: Path):
+        outside = tmp_path / "elsewhere.png"
+        outside.write_bytes(PNG_PAYLOAD)
+>       assert_no_runner(
+            lambda: check_vision_gate(
+                files=[outside], model=DEEPSEEK, adapter=OPENCODE, is_synthetic=True
+            ),
+            VisionSecurityError,
+        )
+
+tests/test_synthetic_vision_gate.py:471: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:472: in <lambda>
+    lambda: check_vision_gate(
+bin/lib/vision.py:717: in check_vision_gate
+    validated_attachments = validate_synthetic_gate(
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-222/test_outside_path_blocked_with0/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+=========================== short test summary info ============================
+FAILED tests/test_synthetic_vision_gate.py::TestFixtureRegistryIntegrity::test_arbitrary_file_in_synthetic_dir_not_trusted
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_malformed_json_blocked
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_manifest_root_not_object_blocked
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_bad_header_or_files_shape_blocked[<lambda>0]
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_bad_header_or_files_shape_blocked[<lambda>1]
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_bad_header_or_files_shape_blocked[<lambda>2]
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_bad_header_or_files_shape_blocked[<lambda>3]
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_bad_header_or_files_shape_blocked[<lambda>4]
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_bad_header_or_files_shape_blocked[<lambda>5]
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_bad_header_or_files_shape_blocked[<lambda>6]
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_bad_header_or_files_shape_blocked[<lambda>7]
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_bad_header_or_files_shape_blocked[<lambda>8]
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_tampered_entry_fields_blocked[<lambda>0]
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_tampered_entry_fields_blocked[<lambda>1]
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_tampered_entry_fields_blocked[<lambda>2]
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_tampered_entry_fields_blocked[<lambda>3]
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_tampered_entry_fields_blocked[<lambda>4]
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_tampered_entry_fields_blocked[<lambda>5]
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_tampered_entry_fields_blocked[<lambda>6]
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_tampered_entry_fields_blocked[<lambda>7]
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_tampered_entry_fields_blocked[<lambda>8]
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_tampered_entry_fields_blocked[<lambda>9]
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_tampered_entry_fields_blocked[<lambda>10]
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_tampered_entry_fields_blocked[<lambda>11]
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_tampered_entry_fields_blocked[<lambda>12]
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_duplicate_manifest_entry_blocked
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_unknown_file_declared_blocked
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_manifest_omitting_requested_file_blocked
+FAILED tests/test_synthetic_vision_gate.py::TestManifestValidation::test_missing_manifest_blocked
+FAILED tests/test_synthetic_vision_gate.py::TestPolicyBlocksBeforeProbe::test_untrusted_or_non_vision_model_blocked_before_io[glm-5.3]
+FAILED tests/test_synthetic_vision_gate.py::TestPolicyBlocksBeforeProbe::test_outside_path_blocked_without_runner
+31 failed, 906 passed in 20.80s

@@ -1,0 +1,8 @@
+Fallback lô4a chỉ bench/vision/{score,run}.py tests/test_vision_bench_score.py README (repo /Users/nightskat/Developer/polykit-wt-bench). agy timeout đã ghi files; 24 generator/scorer tests pass nhưng điều phối thấy lỗi. GHI FILE SỚM ≤600s không agent/commit.
+1 runner scores entire GT for mode pdf (wrong denominator), all mode PDF overwrite images predictions. Persist per-call score of ONLY task fields, aggregate images separate pdf; summary primary selected mode sensible.
+2 Filter predictions to task field IDs; never fallback parsing arbitrary dispatch envelope/error as predictions. retcode=0+status ok needed. Detect tool events from opencode JSONL, contamination flag/exclude accuracy if model used read/tools (unsandboxed). Add --format json to dispatch so opencode event tool evidence preserved if adapter fmt supports (inspect code). --cd use empty scratch cwd for model to avoid GT, gate trusted root from module unaffected. Prompt files outside GT root okay.
+3 timeout wrapper allow probe overhead beyond per-vendor600 (runner timeout timeout+120), no competing kills.
+4 parse_json_response ONLY assistant final text events; no thought/reasoning/error/tool accepted; single event JSON should decode too. Duplicate JSON keys fail; no envelope accepted.
+5 parse_date currently truncates junk trailing => invalid '2026-01-01 nonsense' accepted; strict allowed formats fullmatch only.
+6 baseline regex drops minus signs so -12345 could count +12345 recovery: fix signed boundaries; test 12345 vs -12345 and substring digits.
+No live calls. Run tests focused; ensure CLI images/pdf distinct summary. Tell exact command run real bench.

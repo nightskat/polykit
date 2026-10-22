@@ -1,0 +1,223 @@
+{
+  "call_index": 7,
+  "task_id": "multipage_contract_pdf",
+  "document": "multipage_contract.pdf",
+  "scope": "pdf",
+  "file_path": "/Users/nightskat/Developer/polykit-wt-bench/bench/vision/synthetic/multipage_contract.pdf",
+  "workdir": "docs/plans/bench-v3-glm-retry/scratch/multipage_contract_pdf",
+  "command": [
+    "/Users/nightskat/.pyenv/versions/3.11.8/bin/python",
+    "/Users/nightskat/Developer/polykit-wt-bench/bin/dispatch.py",
+    "opencode",
+    "--model",
+    "glm-5.3-flash",
+    "--effort",
+    "max",
+    "--data-class",
+    "code-nopii",
+    "--synthetic-vision",
+    "--file",
+    "/Users/nightskat/Developer/polykit-wt-bench/bench/vision/synthetic/multipage_contract.pdf",
+    "--timeout",
+    "600",
+    "--format",
+    "json",
+    "--cd",
+    "docs/plans/bench-v3-glm-retry/scratch/multipage_contract_pdf",
+    "--result-json",
+    "--prompt-file",
+    "docs/plans/bench-v3-glm-retry/prompts/prompt_multipage_contract_pdf.txt"
+  ],
+  "latency_seconds": 11.778,
+  "returncode": 1,
+  "status": "exit_1",
+  "contaminated": false,
+  "contamination_status": null,
+  "dispatch_status": null,
+  "field_ids": [
+    "p5_client_name",
+    "p5_contract_date",
+    "p5_contract_no",
+    "p5_vendor_name",
+    "p6_clause_title",
+    "p6_effective_date",
+    "p6_subtotal_amount",
+    "p6_total_amount",
+    "p6_vat_amount"
+  ],
+  "score": {
+    "evaluation_type": "deterministic_typed_accuracy",
+    "scope_field_ids": [
+      "p5_client_name",
+      "p5_contract_date",
+      "p5_contract_no",
+      "p5_vendor_name",
+      "p6_clause_title",
+      "p6_effective_date",
+      "p6_subtotal_amount",
+      "p6_total_amount",
+      "p6_vat_amount"
+    ],
+    "total_fields": 9,
+    "correct_fields": 0,
+    "accuracy_percent": 0.0,
+    "by_document": {
+      "page_05_multipage_p1.png": {
+        "correct": 0,
+        "total": 4,
+        "percent": 0.0
+      },
+      "page_06_multipage_p2.png": {
+        "correct": 0,
+        "total": 5,
+        "percent": 0.0
+      }
+    },
+    "by_type": {
+      "code": {
+        "correct": 0,
+        "total": 1,
+        "percent": 0.0
+      },
+      "date": {
+        "correct": 0,
+        "total": 2,
+        "percent": 0.0
+      },
+      "text": {
+        "correct": 0,
+        "total": 3,
+        "percent": 0.0
+      },
+      "amount": {
+        "correct": 0,
+        "total": 3,
+        "percent": 0.0
+      }
+    },
+    "fields": [
+      {
+        "id": "p5_contract_no",
+        "document": "page_05_multipage_p1.png",
+        "page": 5,
+        "name": "Số hiệu hợp đồng kinh tế",
+        "type": "code",
+        "ground_truth_raw": "HĐ-2026/SK-HA/01",
+        "prediction_raw": null,
+        "parsed_gt": "HĐ-2026/SK-HA/01",
+        "parsed_pred": null,
+        "correct": false,
+        "error_reason": "missing"
+      },
+      {
+        "id": "p5_contract_date",
+        "document": "page_05_multipage_p1.png",
+        "page": 5,
+        "name": "Ngày ký kết hợp đồng",
+        "type": "date",
+        "ground_truth_raw": "2026-04-18",
+        "prediction_raw": null,
+        "parsed_gt": "2026-04-18",
+        "parsed_pred": null,
+        "correct": false,
+        "error_reason": "missing"
+      },
+      {
+        "id": "p5_client_name",
+        "document": "page_05_multipage_p1.png",
+        "page": 5,
+        "name": "Tên pháp nhân Bên A",
+        "type": "text",
+        "ground_truth_raw": "Công ty Cổ phần Công nghệ Sao Kim",
+        "prediction_raw": null,
+        "parsed_gt": "Công ty Cổ phần Công nghệ Sao Kim",
+        "parsed_pred": null,
+        "correct": false,
+        "error_reason": "missing"
+      },
+      {
+        "id": "p5_vendor_name",
+        "document": "page_05_multipage_p1.png",
+        "page": 5,
+        "name": "Tên pháp nhân Bên B",
+        "type": "text",
+        "ground_truth_raw": "Công ty TNHH Phát triển Phần mềm Hải Âu",
+        "prediction_raw": null,
+        "parsed_gt": "Công ty TNHH Phát triển Phần mềm Hải Âu",
+        "parsed_pred": null,
+        "correct": false,
+        "error_reason": "missing"
+      },
+      {
+        "id": "p6_subtotal_amount",
+        "document": "page_06_multipage_p2.png",
+        "page": 6,
+        "name": "Giá trị hợp đồng trước thuế",
+        "type": "amount",
+        "ground_truth_raw": "450.000.000",
+        "prediction_raw": null,
+        "parsed_gt": "450.000.000",
+        "parsed_pred": null,
+        "correct": false,
+        "error_reason": "missing"
+      },
+      {
+        "id": "p6_vat_amount",
+        "document": "page_06_multipage_p2.png",
+        "page": 6,
+        "name": "Tiền thuế GTGT 10%",
+        "type": "amount",
+        "ground_truth_raw": "45.000.000",
+        "prediction_raw": null,
+        "parsed_gt": "45.000.000",
+        "parsed_pred": null,
+        "correct": false,
+        "error_reason": "missing"
+      },
+      {
+        "id": "p6_total_amount",
+        "document": "page_06_multipage_p2.png",
+        "page": 6,
+        "name": "Tổng giá trị thanh toán hợp đồng sau thuế",
+        "type": "amount",
+        "ground_truth_raw": "495.000.000",
+        "prediction_raw": null,
+        "parsed_gt": "495.000.000",
+        "parsed_pred": null,
+        "correct": false,
+        "error_reason": "missing"
+      },
+      {
+        "id": "p6_effective_date",
+        "document": "page_06_multipage_p2.png",
+        "page": 6,
+        "name": "Ngày hiệu lực hợp đồng",
+        "type": "date",
+        "ground_truth_raw": "2026-05-01",
+        "prediction_raw": null,
+        "parsed_gt": "2026-05-01",
+        "parsed_pred": null,
+        "correct": false,
+        "error_reason": "missing"
+      },
+      {
+        "id": "p6_clause_title",
+        "document": "page_06_multipage_p2.png",
+        "page": 6,
+        "name": "Tiêu đề điều khoản thanh toán",
+        "type": "text",
+        "ground_truth_raw": "GIÁ TRỊ VÀ PHƯƠNG THỨC THANH TOÁN",
+        "prediction_raw": null,
+        "parsed_gt": "GIÁ TRỊ VÀ PHƯƠNG THỨC THANH TOÁN",
+        "parsed_pred": null,
+        "correct": false,
+        "error_reason": "missing"
+      }
+    ]
+  },
+  "raw_stdout": "{\n  \"status\": \"error\",\n  \"vendor\": \"opencode\",\n  \"model\": \"glm-5.3-flash\",\n  \"summary\": \"opencode failed with exit code 1\",\n  \"warnings\": [\n    \"[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'glm-5.3-flash'\",\n    \"[polykit] d\\u1ea5u v\\u1ebft th\\u00eam, l\\u1ea5y t\\u1eeb STDOUT:\",\n    \"{\\\"type\\\":\\\"error\\\",\\\"timestamp\\\":1792662463918,\\\"sessionID\\\":\\\"ses_e9cfdb5d4ffe0oIAFPNqbxY5qh\\\",\\\"error\\\":{\\\"name\\\":\\\"APIError\\\",\\\"data\\\":{\\\"message\\\":\\\"Upstream request failed: [400] Failed to deserialize the JSON body into the target type: data did not match any variant of untagged enum ChatCompletionRequestUserMessageContent at line 1 column 327687\\\",\\\"statusCode\\\":400,\\\"isRetryable\\\":false,\\\"responseHeaders\\\":{\\\"cf-ray\\\":\\\"a4e794ef4b900ccf-PDX\\\",\\\"connection\\\":\\\"keep-alive\\\",\\\"content-length\\\":\\\"255\\\",\\\"content-type\\\":\\\"application/json\\\",\\\"date\\\":\\\"Thu, 22 Oct 2026 09:47:43 GMT\\\",\\\"server\\\":\\\"cloudflare\\\",\\\"x-opencode-log-id\\\":\\\"01a16302-535e-721b-b556-2a45b8ea2d64\\\",\\\"x-zen-model\\\":\\\"glm-5.3-flash\\\"},\\\"responseBody\\\":\\\"{\\\\\\\"error\\\\\\\":{\\\\\\\"type\\\\\\\":\\\\\\\"invalid_request_error\\\\\\\",\\\\\\\"message\\\\\\\":\\\\\\\"Upstream request failed: [400] Failed to deserialize the JSON body into the target type: data did not match any variant of untagged enum ChatCompletionRequestUserMessageContent at line 1 column 327687\\\\\\\"}}\\\",\\\"metadata\\\":{\\\"url\\\":\\\"https://opencode.ai/inference/go/openai/v1/chat/completions\\\"}}}}\"\n  ],\n  \"stdout\": \"{\\\"type\\\":\\\"error\\\",\\\"timestamp\\\":1792662463918,\\\"sessionID\\\":\\\"ses_e9cfdb5d4ffe0oIAFPNqbxY5qh\\\",\\\"error\\\":{\\\"name\\\":\\\"APIError\\\",\\\"data\\\":{\\\"message\\\":\\\"Upstream request failed: [400] Failed to deserialize the JSON body into the target type: data did not match any variant of untagged enum ChatCompletionRequestUserMessageContent at line 1 column 327687\\\",\\\"statusCode\\\":400,\\\"isRetryable\\\":false,\\\"responseHeaders\\\":{\\\"cf-ray\\\":\\\"a4e794ef4b900ccf-PDX\\\",\\\"connection\\\":\\\"keep-alive\\\",\\\"content-length\\\":\\\"255\\\",\\\"content-type\\\":\\\"application/json\\\",\\\"date\\\":\\\"Thu, 22 Oct 2026 09:47:43 GMT\\\",\\\"server\\\":\\\"cloudflare\\\",\\\"x-opencode-log-id\\\":\\\"01a16302-535e-721b-b556-2a45b8ea2d64\\\",\\\"x-zen-model\\\":\\\"glm-5.3-flash\\\"},\\\"responseBody\\\":\\\"{\\\\\\\"error\\\\\\\":{\\\\\\\"type\\\\\\\":\\\\\\\"invalid_request_error\\\\\\\",\\\\\\\"message\\\\\\\":\\\\\\\"Upstream request failed: [400] Failed to deserialize the JSON body into the target type: data did not match any variant of untagged enum ChatCompletionRequestUserMessageContent at line 1 column 327687\\\\\\\"}}\\\",\\\"metadata\\\":{\\\"url\\\":\\\"https://opencode.ai/inference/go/openai/v1/chat/completions\\\"}}}}\\n\",\n  \"exit_code\": 1,\n  \"reason\": \"vendor_exit_nonzero\",\n  \"served_model\": null,\n  \"unsandboxed\": true,\n  \"data_class\": \"code-nopii\"\n}\n",
+  "raw_stderr": "[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'glm-5.3-flash'\n[polykit] ⚠ traps for opencode:\n  1. opencode run --model opencode-go/<m> --variant <effort>: cờ đổi ở bản mới; stdin DEVNULL; không shell\n",
+  "model_stdout": "",
+  "parsed_predictions": null,
+  "timestamp": "2026-10-22T09:47:44.006451+00:00"
+}

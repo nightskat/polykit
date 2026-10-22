@@ -1,0 +1,87 @@
+........................................................................ [ 69%]
+....................FF...F......                                         [100%]
+=================================== FAILURES ===================================
+_______________ test_runner_images_mode_scores_image_fields_only _______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a476e50>
+scope_env = (PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-206/test_runner_images...ivate/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-206/test_runner_images_mode_scores0'))
+
+    def test_runner_images_mode_scores_image_fields_only(monkeypatch, scope_env):
+        """mode=images scores only image-page fields; pdf scope is absent."""
+        payload = json.dumps({"p1_a": "100", "p4_a": "200", "p5_a": "300"})
+    
+        def fake(cmd, timeout=600, dry_run=False, wrapper_grace=120):
+            return 0, _envelope(_stream(_text_event(payload))), "", 1.0
+    
+        summary, _ = _run_with_fake_dispatch(monkeypatch, scope_env, "images", fake)
+    
+>       assert summary["score_report"]["total_fields"] == 2  # p1_a, p4_a
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       assert 5 == 2
+
+tests/test_vision_bench_score.py:578: AssertionError
+----------------------------- Captured stderr call -----------------------------
+
+[CẢNH BÁO / NOTICE] Harness runs unsandboxed. Prompt-only restriction ('do not read workspace') is NOT strong security proof; an unconfined model could technically access workspace files if capable. Each call runs with --cd into an empty scratch dir and --format json is kept for tool-event detection; calls that used tools are excluded from accuracy. Results must be interpreted with this architectural boundary in mind.
+
+[1/4] Dispatching page_01_narrow_table.png to deepseek-v4.1-flash (effort=high)...
+[2/4] Dispatching page_04_degraded_scan.png to deepseek-v4.1-flash (effort=high)...
+[3/4] Dispatching page_05_multipage_p1.png to deepseek-v4.1-flash (effort=high)...
+[4/4] Dispatching page_06_multipage_p2.png to deepseek-v4.1-flash (effort=high)...
+
+Benchmark completed. Summary written to: /private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-206/test_runner_images_mode_scores0/out_images/run_summary.json
+__________________ test_runner_all_mode_keeps_scopes_separate __________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a474e50>
+scope_env = (PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-206/test_runner_all_mo...ivate/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-206/test_runner_all_mode_keeps_sco0'))
+
+    def test_runner_all_mode_keeps_scopes_separate(monkeypatch, scope_env):
+        """mode=all reports images and pdf separately; primary is the additive merge."""
+        payload = json.dumps({"p1_a": "100", "p4_a": "999", "p5_a": "300", "p5_b": "2026-01-01", "p6_a": "ABC"})
+    
+        def fake(cmd, timeout=600, dry_run=False, wrapper_grace=120):
+            return 0, _envelope(_stream(_text_event(payload))), "", 1.0
+    
+        summary, _ = _run_with_fake_dispatch(monkeypatch, scope_env, "all", fake)
+    
+        images = summary["summary"]["images"]
+        pdf = summary["summary"]["pdf"]
+>       assert images["total_fields"] == 2 and images["correct_fields"] == 1
+E       assert (5 == 2)
+
+tests/test_vision_bench_score.py:598: AssertionError
+----------------------------- Captured stderr call -----------------------------
+
+[CẢNH BÁO / NOTICE] Harness runs unsandboxed. Prompt-only restriction ('do not read workspace') is NOT strong security proof; an unconfined model could technically access workspace files if capable. Each call runs with --cd into an empty scratch dir and --format json is kept for tool-event detection; calls that used tools are excluded from accuracy. Results must be interpreted with this architectural boundary in mind.
+
+[1/5] Dispatching page_01_narrow_table.png to deepseek-v4.1-flash (effort=high)...
+[2/5] Dispatching page_04_degraded_scan.png to deepseek-v4.1-flash (effort=high)...
+[3/5] Dispatching page_05_multipage_p1.png to deepseek-v4.1-flash (effort=high)...
+[4/5] Dispatching page_06_multipage_p2.png to deepseek-v4.1-flash (effort=high)...
+[5/5] Dispatching multipage_contract.pdf to deepseek-v4.1-flash (effort=high)...
+
+Benchmark completed. Summary written to: /private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-206/test_runner_all_mode_keeps_sco0/out_all/run_summary.json
+______________ test_runner_wrapper_timeout_exceeds_vendor_timeout ______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a48dc10>
+
+    def test_runner_wrapper_timeout_exceeds_vendor_timeout(monkeypatch):
+        """Wrapper waits timeout+120 so dispatch can write diagnostics; one killer."""
+        seen: dict[str, Any] = {}
+    
+        def fake_run(cmd, **kwargs):
+            seen["timeout"] = kwargs.get("timeout")
+            raise subprocess.TimeoutExpired(cmd=cmd, timeout=kwargs.get("timeout"))
+    
+        monkeypatch.setattr(run_mod.subprocess, "run", fake_run)
+        rc, _stdout, stderr, _latency = run_dispatch_call(["dispatch", "x"], timeout=600)
+    
+>       assert rc == 124
+E       assert 1 == 124
+
+tests/test_vision_bench_score.py:675: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_vision_bench_score.py::test_runner_images_mode_scores_image_fields_only
+FAILED tests/test_vision_bench_score.py::test_runner_all_mode_keeps_scopes_separate
+FAILED tests/test_vision_bench_score.py::test_runner_wrapper_timeout_exceeds_vendor_timeout
+3 failed, 101 passed in 4.72s

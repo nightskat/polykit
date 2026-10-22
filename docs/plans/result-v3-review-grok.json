@@ -1,0 +1,18 @@
+{
+  "status": "timeout",
+  "vendor": "grok",
+  "model": "grok-4.7",
+  "summary": "grok dispatch exceeded 600s",
+  "warnings": [
+    "[polykit] warning: model list for vendor 'grok' is unknown, cannot validate 'grok-4.7'",
+    "[polykit] vendor k\u1ecbp in 1 d\u00f2ng ra STDOUT tr\u01b0\u1edbc khi b\u1ecb gi\u1ebft \u2014 output DANG D\u1ede:",
+    "[vendor:stdout] T\u00f4i review read-only diff round 3, t\u1eadp trung c\u00e1c l\u1ed7 bypass adversarial b\u1ea1n li\u1ec7t k\u00ea. \u0110\u1ecdc diff v\u00e0 file hi\u1ec7n t\u1ea1i tr\u01b0\u1edbc, kh\u00f4ng s\u1eeda g\u00ec.Diff g\u1ed3m 12 file. T\u00f4i \u0111\u1ed1i chi\u1ebfu gate, builder, scorer v\u00e0 b\u1eb1ng ch\u1ee9ng auth v\u1edbi code hi\u1ec7n t\u1ea1i.",
+    "[polykit] vendor KH\u00d4NG k\u1ecbp in g\u00ec ra stderr tr\u01b0\u1edbc khi b\u1ecb gi\u1ebft."
+  ],
+  "stdout": "",
+  "exit_code": 124,
+  "reason": "timeout",
+  "served_model": null,
+  "unsandboxed": false,
+  "data_class": null
+}

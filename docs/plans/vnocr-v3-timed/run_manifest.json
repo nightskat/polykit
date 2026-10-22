@@ -1,0 +1,128 @@
+{
+  "tool": {
+    "commit": "bd90adf 2026-10-13",
+    "dirty": false
+  },
+  "source": {
+    "basename": "polykit-v3-final-png",
+    "sha256": null,
+    "pages": [
+      {
+        "name": "page_01_narrow_table.png",
+        "sha256": "8fff419916fed503b1053309281539c51ea4ab5043de19c600877d1c513001c2"
+      },
+      {
+        "name": "page_02_negative_numbers.png",
+        "sha256": "97592980dcd3236e573cd6d2326987d23ba57c96f810e8bae17bb77c21c6a462"
+      },
+      {
+        "name": "page_03_confusing_chars.png",
+        "sha256": "027cc6ad2bbda8dd69b4c9a87948993021c9553034e665cd42cbc371df8373dd"
+      },
+      {
+        "name": "page_04_degraded_scan.png",
+        "sha256": "859eb2fc864f24be1290fc8b3b6db5f38f7e6ba39945da829e62f2372dfbdaa0"
+      },
+      {
+        "name": "page_05_multipage_p1.png",
+        "sha256": "bf5a6a796fb11dcf8a83ba0d1e641bbb03cc459dd49a5547c9d468539e0f0971"
+      },
+      {
+        "name": "page_06_multipage_p2.png",
+        "sha256": "fc1f2612983f7a744868fbf697e651cb816e3a4041aa90d4348cdd966908a358"
+      }
+    ]
+  },
+  "config": {
+    "thresholds": {
+      "min_characters": 24,
+      "min_vietnamese_ratio": 0.05,
+      "max_noise_ratio": 0.2,
+      "min_confidence": 0.7
+    },
+    "orientation_model": null,
+    "orientation_min_confidence": 0.8,
+    "vlm_backend": null,
+    "uses_language_correction": true,
+    "tables": false
+  },
+  "coverage": {
+    "summary": {
+      "expected_pages": 6,
+      "flagged_pages": 0,
+      "advisory_pages": 1
+    },
+    "pages": [
+      {
+        "name": "page_01_narrow_table.png",
+        "status": "covered",
+        "reasons": [],
+        "page_hints": [
+          "bang_nhieu_cot"
+        ]
+      },
+      {
+        "name": "page_02_negative_numbers.png",
+        "status": "covered",
+        "reasons": [],
+        "page_hints": [
+          "bang_nhieu_cot"
+        ]
+      },
+      {
+        "name": "page_03_confusing_chars.png",
+        "status": "covered",
+        "reasons": [],
+        "page_hints": [
+          "bang_nhieu_cot"
+        ]
+      },
+      {
+        "name": "page_04_degraded_scan.png",
+        "status": "covered",
+        "reasons": [],
+        "page_hints": [
+          "bang_nhieu_cot",
+          "vung_chu_hep"
+        ]
+      },
+      {
+        "name": "page_05_multipage_p1.png",
+        "status": "covered",
+        "reasons": []
+      },
+      {
+        "name": "page_06_multipage_p2.png",
+        "status": "covered",
+        "reasons": [],
+        "page_hints": [
+          "bang_nhieu_cot"
+        ]
+      }
+    ]
+  },
+  "orientation": {
+    "used": false,
+    "pages": []
+  },
+  "digits_vlm": {
+    "status": "not_run_vlm",
+    "conflicts": [],
+    "advisories": []
+  },
+  "render_check": {
+    "engine": "none",
+    "trang_kiem": 0,
+    "reason": "source_is_not_pdf",
+    "trang_nghi_hong": [],
+    "trang_da_cuu": [],
+    "trang_van_hong": []
+  },
+  "tables": {
+    "enabled": false,
+    "status": "disabled"
+  },
+  "overall_status": "completed",
+  "ocr_error_pages": [],
+  "render_failed_pages": []
+}

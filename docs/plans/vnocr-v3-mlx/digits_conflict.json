@@ -1,0 +1,1525 @@
+{
+  "status": "needs_human_reading",
+  "cross_check_source": "mlx",
+  "advisories": [],
+  "filter": {
+    "strict_one_sided": true,
+    "pages_without_crosscheck": 0,
+    "suppressed_notes": 0,
+    "pages_flagged": 5,
+    "pages_total": 6
+  },
+  "pages": [
+    {
+      "name": "page_01_narrow_table.png",
+      "conflicts": [
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "deterministic_only",
+          "kind": "amount_or_reference",
+          "raw": "890.123.156",
+          "canonical": "890123156",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "deterministic_only",
+          "kind": "amount_or_reference",
+          "raw": "349.444.404",
+          "canonical": "349444404",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "deterministic_only",
+          "kind": "amount_or_reference",
+          "raw": "23.136.780",
+          "canonical": "23136780",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "deterministic_only",
+          "kind": "amount_or_reference",
+          "raw": "120.045.690",
+          "canonical": "120045690",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "deterministic_only",
+          "kind": "amount_or_reference",
+          "raw": "246.330.884",
+          "canonical": "246330884",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "deterministic_only",
+          "kind": "amount_or_reference",
+          "raw": "49.281.177",
+          "canonical": "49281177",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "deterministic_only",
+          "kind": "amount_or_reference",
+          "raw": "10.100.000",
+          "canonical": "10100000",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "deterministic_only",
+          "kind": "amount_or_reference",
+          "raw": "31.557.890",
+          "canonical": "31557890",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "deterministic_only",
+          "kind": "amount_or_reference",
+          "raw": "149.678.900",
+          "canonical": "149678900",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "deterministic_only",
+          "kind": "amount_or_reference",
+          "raw": "83.510.686",
+          "canonical": "83510686",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "deterministic_only",
+          "kind": "amount_or_reference",
+          "raw": "334.058.749",
+          "canonical": "334058749",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "deterministic_only",
+          "kind": "amount_or_reference",
+          "raw": "1.810.423.455",
+          "canonical": "1810423455",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "deterministic_only",
+          "kind": "amount_or_reference",
+          "raw": "38.024.570",
+          "canonical": "38024570",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "deterministic_only",
+          "kind": "amount_or_reference",
+          "raw": "663.894.312",
+          "canonical": "663894312",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "deterministic_only",
+          "kind": "amount_or_reference",
+          "raw": "000.000",
+          "canonical": "000000",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "deterministic_only",
+          "kind": "amount_or_reference",
+          "raw": "71.330.000",
+          "canonical": "71330000",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "deterministic_only",
+          "kind": "long_number",
+          "raw": "30106",
+          "canonical": "30106",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "mlx_only",
+          "kind": "date",
+          "raw": "30/06/2026",
+          "canonical": "30062026",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "2.684.797.990",
+          "canonical": "2684797990",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "890.123.456",
+          "canonical": "890123456",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "1.810.423.456",
+          "canonical": "1810423456",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "344.444.434",
+          "canonical": "344444434",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "874.374.534",
+          "canonical": "874374534",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "45.678.900",
+          "canonical": "45678900",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "23.456.780",
+          "canonical": "23456780",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "34.567.890",
+          "canonical": "34567890",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "58.024.670",
+          "canonical": "58024670",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "120.345.670",
+          "canonical": "120345670",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "145.678.900",
+          "canonical": "145678900",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "246.320.884",
+          "canonical": "246320884",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "663.894.314",
+          "canonical": "663894314",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "49.264.177",
+          "canonical": "49264177",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "83.514.686",
+          "canonical": "83514686",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "334.058.744",
+          "canonical": "334058744",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "531.115.451",
+          "canonical": "531115451",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "36.200.000",
+          "canonical": "36200000",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "71.320.000",
+          "canonical": "71320000",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "810.400.000",
+          "canonical": "810400000",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_01_narrow_table.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "895.000.000",
+          "canonical": "895000000",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        }
+      ],
+      "reasons": [
+        "ocr_mlx_disagreement"
+      ],
+      "notes": []
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "conflicts": [
+        {
+          "name": "page_02_negative_numbers.png",
+          "side": "deterministic_only",
+          "kind": "amount_or_reference",
+          "raw": "3.000.000",
+          "canonical": "3000000",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_02_negative_numbers.png",
+          "side": "deterministic_only",
+          "kind": "amount_or_reference",
+          "raw": "18.400.000",
+          "canonical": "18400000",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_02_negative_numbers.png",
+          "side": "deterministic_only",
+          "kind": "amount_or_reference",
+          "raw": "900.000",
+          "canonical": "900000",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_02_negative_numbers.png",
+          "side": "deterministic_only",
+          "kind": "amount_or_reference",
+          "raw": "500.000",
+          "canonical": "500000",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_02_negative_numbers.png",
+          "side": "deterministic_only",
+          "kind": "amount_or_reference",
+          "raw": "29.000.000",
+          "canonical": "29000000",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_02_negative_numbers.png",
+          "side": "deterministic_only",
+          "kind": "amount_or_reference",
+          "raw": "280.000",
+          "canonical": "280000",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_02_negative_numbers.png",
+          "side": "deterministic_only",
+          "kind": "long_number",
+          "raw": "2290",
+          "canonical": "2290",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_02_negative_numbers.png",
+          "side": "deterministic_only",
+          "kind": "long_number",
+          "raw": "1221",
+          "canonical": "1221",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_02_negative_numbers.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "98.765.432",
+          "canonical": "98765432",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_02_negative_numbers.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "15.500.000",
+          "canonical": "15500000",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_02_negative_numbers.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "25.000.000",
+          "canonical": "25000000",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_02_negative_numbers.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "8.400.000",
+          "canonical": "8400000",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_02_negative_numbers.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "8.900.000",
+          "canonical": "8900000",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_02_negative_numbers.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "45.000.000",
+          "canonical": "45000000",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_02_negative_numbers.png",
+          "side": "mlx_only",
+          "kind": "amount_or_reference",
+          "raw": "1.250.000",
+          "canonical": "1250000",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_02_negative_numbers.png",
+          "side": "mlx_only",
+          "kind": "long_number",
+          "raw": "1113",
+          "canonical": "1113",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_02_negative_numbers.png",
+          "side": "mlx_only",
+          "kind": "long_number",
+          "raw": "2294",
+          "canonical": "2294",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_02_negative_numbers.png",
+          "side": "mlx_only",
+          "kind": "long_number",
+          "raw": "4190",
+          "canonical": "4190",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_02_negative_numbers.png",
+          "side": "mlx_only",
+          "kind": "long_number",
+          "raw": "1319",
+          "canonical": "1319",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_02_negative_numbers.png",
+          "side": "mlx_only",
+          "kind": "long_number",
+          "raw": "3341",
+          "canonical": "3341",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_02_negative_numbers.png",
+          "side": "mlx_only",
+          "kind": "long_number",
+          "raw": "4111",
+          "canonical": "4111",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_02_negative_numbers.png",
+          "side": "mlx_only",
+          "kind": "long_number",
+          "raw": "1111",
+          "canonical": "1111",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_02_negative_numbers.png",
+          "side": "mlx_only",
+          "kind": "long_number",
+          "raw": "1121",
+          "canonical": "1121",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        }
+      ],
+      "reasons": [
+        "ocr_mlx_disagreement"
+      ],
+      "notes": []
+    },
+    {
+      "name": "page_03_confusing_chars.png",
+      "conflicts": [
+        {
+          "name": "page_03_confusing_chars.png",
+          "side": "deterministic_only",
+          "kind": "long_number",
+          "raw": "2028",
+          "canonical": "2028",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_03_confusing_chars.png",
+          "side": "deterministic_only",
+          "kind": "long_number",
+          "raw": "0568",
+          "canonical": "0568",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_03_confusing_chars.png",
+          "side": "mlx_only",
+          "kind": "long_number",
+          "raw": "0011",
+          "canonical": "0011",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_03_confusing_chars.png",
+          "side": "mlx_only",
+          "kind": "long_number",
+          "raw": "8568",
+          "canonical": "8568",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        }
+      ],
+      "reasons": [
+        "ocr_mlx_disagreement"
+      ],
+      "notes": []
+    },
+    {
+      "name": "page_04_degraded_scan.png",
+      "conflicts": [],
+      "reasons": [],
+      "notes": []
+    },
+    {
+      "name": "page_05_multipage_p1.png",
+      "conflicts": [
+        {
+          "name": "page_05_multipage_p1.png",
+          "side": "deterministic_only",
+          "kind": "long_number",
+          "raw": "20155",
+          "canonical": "20155",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_05_multipage_p1.png",
+          "side": "deterministic_only",
+          "kind": "long_number",
+          "raw": "2028",
+          "canonical": "2028",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_05_multipage_p1.png",
+          "side": "deterministic_only",
+          "kind": "long_number",
+          "raw": "0312887650",
+          "canonical": "0312887650",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_05_multipage_p1.png",
+          "side": "deterministic_only",
+          "kind": "long_number",
+          "raw": "01098",
+          "canonical": "01098",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_05_multipage_p1.png",
+          "side": "deterministic_only",
+          "kind": "long_number",
+          "raw": "6543",
+          "canonical": "6543",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_05_multipage_p1.png",
+          "side": "deterministic_only",
+          "kind": "long_number",
+          "raw": "10243",
+          "canonical": "10243",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_05_multipage_p1.png",
+          "side": "mlx_only",
+          "kind": "long_number",
+          "raw": "2015",
+          "canonical": "2015",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_05_multipage_p1.png",
+          "side": "mlx_only",
+          "kind": "long_number",
+          "raw": "0312987654",
+          "canonical": "0312987654",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_05_multipage_p1.png",
+          "side": "mlx_only",
+          "kind": "long_number",
+          "raw": "0109876543",
+          "canonical": "0109876543",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_05_multipage_p1.png",
+          "side": "mlx_only",
+          "kind": "long_number",
+          "raw": "3799",
+          "canonical": "3799",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        }
+      ],
+      "reasons": [
+        "ocr_mlx_disagreement"
+      ],
+      "notes": []
+    },
+    {
+      "name": "page_06_multipage_p2.png",
+      "conflicts": [
+        {
+          "name": "page_06_multipage_p2.png",
+          "side": "deterministic_only",
+          "kind": "date",
+          "raw": "92-20/01",
+          "canonical": "922001",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_06_multipage_p2.png",
+          "side": "deterministic_only",
+          "kind": "date",
+          "raw": "01/05/2028",
+          "canonical": "01052028",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_06_multipage_p2.png",
+          "side": "deterministic_only",
+          "kind": "date",
+          "raw": "31/12/2028",
+          "canonical": "31122028",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_06_multipage_p2.png",
+          "side": "mlx_only",
+          "kind": "date",
+          "raw": "01/05/2026",
+          "canonical": "01052026",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        },
+        {
+          "name": "page_06_multipage_p2.png",
+          "side": "mlx_only",
+          "kind": "date",
+          "raw": "31/12/2026",
+          "canonical": "31122026",
+          "status": "CẦN NGƯỜI ĐỌC",
+          "reason": "ocr_mlx_disagreement"
+        }
+      ],
+      "reasons": [
+        "ocr_mlx_disagreement"
+      ],
+      "notes": []
+    }
+  ],
+  "conflicts": [
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "deterministic_only",
+      "kind": "amount_or_reference",
+      "raw": "890.123.156",
+      "canonical": "890123156",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "deterministic_only",
+      "kind": "amount_or_reference",
+      "raw": "349.444.404",
+      "canonical": "349444404",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "deterministic_only",
+      "kind": "amount_or_reference",
+      "raw": "23.136.780",
+      "canonical": "23136780",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "deterministic_only",
+      "kind": "amount_or_reference",
+      "raw": "120.045.690",
+      "canonical": "120045690",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "deterministic_only",
+      "kind": "amount_or_reference",
+      "raw": "246.330.884",
+      "canonical": "246330884",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "deterministic_only",
+      "kind": "amount_or_reference",
+      "raw": "49.281.177",
+      "canonical": "49281177",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "deterministic_only",
+      "kind": "amount_or_reference",
+      "raw": "10.100.000",
+      "canonical": "10100000",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "deterministic_only",
+      "kind": "amount_or_reference",
+      "raw": "31.557.890",
+      "canonical": "31557890",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "deterministic_only",
+      "kind": "amount_or_reference",
+      "raw": "149.678.900",
+      "canonical": "149678900",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "deterministic_only",
+      "kind": "amount_or_reference",
+      "raw": "83.510.686",
+      "canonical": "83510686",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "deterministic_only",
+      "kind": "amount_or_reference",
+      "raw": "334.058.749",
+      "canonical": "334058749",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "deterministic_only",
+      "kind": "amount_or_reference",
+      "raw": "1.810.423.455",
+      "canonical": "1810423455",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "deterministic_only",
+      "kind": "amount_or_reference",
+      "raw": "38.024.570",
+      "canonical": "38024570",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "deterministic_only",
+      "kind": "amount_or_reference",
+      "raw": "663.894.312",
+      "canonical": "663894312",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "deterministic_only",
+      "kind": "amount_or_reference",
+      "raw": "000.000",
+      "canonical": "000000",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "deterministic_only",
+      "kind": "amount_or_reference",
+      "raw": "71.330.000",
+      "canonical": "71330000",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "deterministic_only",
+      "kind": "long_number",
+      "raw": "30106",
+      "canonical": "30106",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "mlx_only",
+      "kind": "date",
+      "raw": "30/06/2026",
+      "canonical": "30062026",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "2.684.797.990",
+      "canonical": "2684797990",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "890.123.456",
+      "canonical": "890123456",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "1.810.423.456",
+      "canonical": "1810423456",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "344.444.434",
+      "canonical": "344444434",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "874.374.534",
+      "canonical": "874374534",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "45.678.900",
+      "canonical": "45678900",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "23.456.780",
+      "canonical": "23456780",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "34.567.890",
+      "canonical": "34567890",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "58.024.670",
+      "canonical": "58024670",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "120.345.670",
+      "canonical": "120345670",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "145.678.900",
+      "canonical": "145678900",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "246.320.884",
+      "canonical": "246320884",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "663.894.314",
+      "canonical": "663894314",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "49.264.177",
+      "canonical": "49264177",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "83.514.686",
+      "canonical": "83514686",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "334.058.744",
+      "canonical": "334058744",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "531.115.451",
+      "canonical": "531115451",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "36.200.000",
+      "canonical": "36200000",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "71.320.000",
+      "canonical": "71320000",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "810.400.000",
+      "canonical": "810400000",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_01_narrow_table.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "895.000.000",
+      "canonical": "895000000",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "side": "deterministic_only",
+      "kind": "amount_or_reference",
+      "raw": "3.000.000",
+      "canonical": "3000000",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "side": "deterministic_only",
+      "kind": "amount_or_reference",
+      "raw": "18.400.000",
+      "canonical": "18400000",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "side": "deterministic_only",
+      "kind": "amount_or_reference",
+      "raw": "900.000",
+      "canonical": "900000",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "side": "deterministic_only",
+      "kind": "amount_or_reference",
+      "raw": "500.000",
+      "canonical": "500000",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "side": "deterministic_only",
+      "kind": "amount_or_reference",
+      "raw": "29.000.000",
+      "canonical": "29000000",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "side": "deterministic_only",
+      "kind": "amount_or_reference",
+      "raw": "280.000",
+      "canonical": "280000",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "side": "deterministic_only",
+      "kind": "long_number",
+      "raw": "2290",
+      "canonical": "2290",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "side": "deterministic_only",
+      "kind": "long_number",
+      "raw": "1221",
+      "canonical": "1221",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "98.765.432",
+      "canonical": "98765432",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "15.500.000",
+      "canonical": "15500000",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "25.000.000",
+      "canonical": "25000000",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "8.400.000",
+      "canonical": "8400000",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "8.900.000",
+      "canonical": "8900000",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "45.000.000",
+      "canonical": "45000000",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "side": "mlx_only",
+      "kind": "amount_or_reference",
+      "raw": "1.250.000",
+      "canonical": "1250000",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "side": "mlx_only",
+      "kind": "long_number",
+      "raw": "1113",
+      "canonical": "1113",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "side": "mlx_only",
+      "kind": "long_number",
+      "raw": "2294",
+      "canonical": "2294",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "side": "mlx_only",
+      "kind": "long_number",
+      "raw": "4190",
+      "canonical": "4190",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "side": "mlx_only",
+      "kind": "long_number",
+      "raw": "1319",
+      "canonical": "1319",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "side": "mlx_only",
+      "kind": "long_number",
+      "raw": "3341",
+      "canonical": "3341",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "side": "mlx_only",
+      "kind": "long_number",
+      "raw": "4111",
+      "canonical": "4111",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "side": "mlx_only",
+      "kind": "long_number",
+      "raw": "1111",
+      "canonical": "1111",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "side": "mlx_only",
+      "kind": "long_number",
+      "raw": "1121",
+      "canonical": "1121",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_03_confusing_chars.png",
+      "side": "deterministic_only",
+      "kind": "long_number",
+      "raw": "2028",
+      "canonical": "2028",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_03_confusing_chars.png",
+      "side": "deterministic_only",
+      "kind": "long_number",
+      "raw": "0568",
+      "canonical": "0568",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_03_confusing_chars.png",
+      "side": "mlx_only",
+      "kind": "long_number",
+      "raw": "0011",
+      "canonical": "0011",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_03_confusing_chars.png",
+      "side": "mlx_only",
+      "kind": "long_number",
+      "raw": "8568",
+      "canonical": "8568",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_05_multipage_p1.png",
+      "side": "deterministic_only",
+      "kind": "long_number",
+      "raw": "20155",
+      "canonical": "20155",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_05_multipage_p1.png",
+      "side": "deterministic_only",
+      "kind": "long_number",
+      "raw": "2028",
+      "canonical": "2028",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_05_multipage_p1.png",
+      "side": "deterministic_only",
+      "kind": "long_number",
+      "raw": "0312887650",
+      "canonical": "0312887650",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_05_multipage_p1.png",
+      "side": "deterministic_only",
+      "kind": "long_number",
+      "raw": "01098",
+      "canonical": "01098",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_05_multipage_p1.png",
+      "side": "deterministic_only",
+      "kind": "long_number",
+      "raw": "6543",
+      "canonical": "6543",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_05_multipage_p1.png",
+      "side": "deterministic_only",
+      "kind": "long_number",
+      "raw": "10243",
+      "canonical": "10243",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_05_multipage_p1.png",
+      "side": "mlx_only",
+      "kind": "long_number",
+      "raw": "2015",
+      "canonical": "2015",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_05_multipage_p1.png",
+      "side": "mlx_only",
+      "kind": "long_number",
+      "raw": "0312987654",
+      "canonical": "0312987654",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_05_multipage_p1.png",
+      "side": "mlx_only",
+      "kind": "long_number",
+      "raw": "0109876543",
+      "canonical": "0109876543",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_05_multipage_p1.png",
+      "side": "mlx_only",
+      "kind": "long_number",
+      "raw": "3799",
+      "canonical": "3799",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_06_multipage_p2.png",
+      "side": "deterministic_only",
+      "kind": "date",
+      "raw": "92-20/01",
+      "canonical": "922001",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_06_multipage_p2.png",
+      "side": "deterministic_only",
+      "kind": "date",
+      "raw": "01/05/2028",
+      "canonical": "01052028",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_06_multipage_p2.png",
+      "side": "deterministic_only",
+      "kind": "date",
+      "raw": "31/12/2028",
+      "canonical": "31122028",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_06_multipage_p2.png",
+      "side": "mlx_only",
+      "kind": "date",
+      "raw": "01/05/2026",
+      "canonical": "01052026",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    },
+    {
+      "name": "page_06_multipage_p2.png",
+      "side": "mlx_only",
+      "kind": "date",
+      "raw": "31/12/2026",
+      "canonical": "31122026",
+      "status": "CẦN NGƯỜI ĐỌC",
+      "reason": "ocr_mlx_disagreement"
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+Bạn là trợ lý trích xuất dữ liệu hình ảnh và tài liệu quang học chuyên nghiệp.
+Hãy quan sát kỹ tài liệu đính kèm (page_03_confusing_chars.png) và trích xuất chính xác các trường sau:
+
+DANH SÁCH TRƯỜNG CẦN TRÍCH XUẤT:
+[
+  {
+    "id": "p3_contract_code",
+    "type": "code",
+    "name": "Mã hợp đồng điện tử mới (năm 2026)"
+  },
+  {
+    "id": "p3_ref_code_2006",
+    "type": "code",
+    "name": "Mã tham chiếu hồ sơ cũ (năm 2006)"
+  },
+  {
+    "id": "p3_serial_code",
+    "type": "code",
+    "name": "Số xê-ri thiết bị kiểm định"
+  },
+  {
+    "id": "p3_reconciliation_date",
+    "type": "date",
+    "name": "Ngày đối soát biên bản"
+  },
+  {
+    "id": "p3_fee_amount",
+    "type": "amount",
+    "name": "Số tiền phí đối soát dịch vụ"
+  }
+]
+
+QUY TẮC BẮT BUỘC:
+1. CHỈ trích xuất thông tin nhìn thấy được trên ảnh/tài liệu đính kèm.
+2. TUYỆT ĐỐI KHÔNG sử dụng công cụ (tool), không duyệt workspace, không đọc file mã nguồn hay file ground truth.
+3. Trả về DUY NHẤT một JSON object hợp lệ ánh xạ từng trường 'id' sang giá trị tương ứng ('id': 'giá trị').
+4. Không giải thích, không thêm ghi chú, không dùng định dạng ngoài JSON object.
+
+Ví dụ cấu trúc trả về:
+{"trường_id_1": "giá trị 1", "trường_id_2": "giá trị 2"}

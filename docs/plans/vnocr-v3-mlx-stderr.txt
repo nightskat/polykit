@@ -1,0 +1,8 @@
+[mlx] page_01_narrow_table.png n=97
+[mlx] page_02_negative_numbers.png n=45
+[mlx] page_03_confusing_chars.png n=20
+[mlx] page_04_degraded_scan.png n=19
+[mlx] page_05_multipage_p1.png n=20
+[mlx] page_06_multipage_p2.png n=21
+gợi ý: 1 trang NÊN NHÌN ẢNH dù có thể đủ độ phủ (trang ghép nhiều vùng / dải chữ hẹp) — xem page_hints trong coverage.json. Vắng gợi ý KHÔNG có nghĩa trang đã được kiểm kê.
+coverage: 6 trang — cần người đọc: 0 trang cờ độ phủ, 5 trang bất đồng chữ số (overall status: needs_human_reading)

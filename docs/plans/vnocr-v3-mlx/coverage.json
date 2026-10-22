@@ -1,0 +1,169 @@
+{
+  "thresholds": {
+    "min_characters": 24,
+    "min_vietnamese_ratio": 0.05,
+    "max_noise_ratio": 0.2,
+    "min_confidence": 0.7
+  },
+  "summary": {
+    "expected_pages": 6,
+    "flagged_pages": 0,
+    "advisory_pages": 1
+  },
+  "pages": [
+    {
+      "name": "page_01_narrow_table.png",
+      "orientation": "n/a",
+      "reported_characters": 1068,
+      "ocr_error": null,
+      "characters": 1067,
+      "letters": 454,
+      "digits": 337,
+      "vietnamese_letters": 110,
+      "vietnamese_ratio": 0.2423,
+      "noise_characters": 2,
+      "noise_ratio": 0.0019,
+      "confidence": 0.995,
+      "geometry_penalty": 0.0,
+      "effective_confidence": 0.995,
+      "status": "covered",
+      "reasons": [],
+      "page_hints": [
+        {
+          "code": "bang_nhieu_cot",
+          "blocks": 5,
+          "row_aligned_ratio": 0.94
+        }
+      ],
+      "look_at_image": false
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "orientation": "n/a",
+      "reported_characters": 769,
+      "ocr_error": null,
+      "characters": 768,
+      "letters": 411,
+      "digits": 149,
+      "vietnamese_letters": 122,
+      "vietnamese_ratio": 0.2968,
+      "noise_characters": 2,
+      "noise_ratio": 0.0026,
+      "confidence": 0.9914,
+      "geometry_penalty": 0.0,
+      "effective_confidence": 0.9914,
+      "status": "covered",
+      "reasons": [],
+      "page_hints": [
+        {
+          "code": "bang_nhieu_cot",
+          "blocks": 4,
+          "row_aligned_ratio": 0.92
+        }
+      ],
+      "look_at_image": false
+    },
+    {
+      "name": "page_03_confusing_chars.png",
+      "orientation": "n/a",
+      "reported_characters": 833,
+      "ocr_error": null,
+      "characters": 832,
+      "letters": 540,
+      "digits": 77,
+      "vietnamese_letters": 146,
+      "vietnamese_ratio": 0.2704,
+      "noise_characters": 0,
+      "noise_ratio": 0.0,
+      "confidence": 1.0,
+      "geometry_penalty": 0.0,
+      "effective_confidence": 1.0,
+      "status": "covered",
+      "reasons": [],
+      "page_hints": [
+        {
+          "code": "bang_nhieu_cot",
+          "blocks": 2,
+          "row_aligned_ratio": 0.11
+        }
+      ],
+      "look_at_image": false
+    },
+    {
+      "name": "page_04_degraded_scan.png",
+      "orientation": "n/a",
+      "reported_characters": 632,
+      "ocr_error": null,
+      "characters": 631,
+      "letters": 432,
+      "digits": 47,
+      "vietnamese_letters": 120,
+      "vietnamese_ratio": 0.2778,
+      "noise_characters": 0,
+      "noise_ratio": 0.0,
+      "confidence": 1.0,
+      "geometry_penalty": 0.0,
+      "effective_confidence": 1.0,
+      "status": "covered",
+      "reasons": [],
+      "page_hints": [
+        {
+          "code": "bang_nhieu_cot",
+          "blocks": 2,
+          "row_aligned_ratio": 0.63
+        },
+        {
+          "code": "vung_chu_hep",
+          "text_width_pct": 49
+        }
+      ],
+      "look_at_image": true
+    },
+    {
+      "name": "page_05_multipage_p1.png",
+      "orientation": "n/a",
+      "reported_characters": 1004,
+      "ocr_error": null,
+      "characters": 1003,
+      "letters": 651,
+      "digits": 82,
+      "vietnamese_letters": 130,
+      "vietnamese_ratio": 0.1997,
+      "noise_characters": 0,
+      "noise_ratio": 0.0,
+      "confidence": 1.0,
+      "geometry_penalty": 0.0,
+      "effective_confidence": 1.0,
+      "status": "covered",
+      "reasons": [],
+      "page_hints": [],
+      "look_at_image": false
+    },
+    {
+      "name": "page_06_multipage_p2.png",
+      "orientation": "n/a",
+      "reported_characters": 735,
+      "ocr_error": null,
+      "characters": 734,
+      "letters": 462,
+      "digits": 73,
+      "vietnamese_letters": 102,
+      "vietnamese_ratio": 0.2208,
+      "noise_characters": 0,
+      "noise_ratio": 0.0,
+      "confidence": 1.0,
+      "geometry_penalty": 0.0,
+      "effective_confidence": 1.0,
+      "status": "covered",
+      "reasons": [],
+      "page_hints": [
+        {
+          "code": "bang_nhieu_cot",
+          "blocks": 4,
+          "row_aligned_ratio": 0.5
+        }
+      ],
+      "look_at_image": false
+    }
+  ]
+}

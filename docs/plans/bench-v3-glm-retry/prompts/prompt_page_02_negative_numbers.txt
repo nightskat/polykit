@@ -1,0 +1,277 @@
+Bạn là trợ lý trích xuất dữ liệu hình ảnh và tài liệu quang học chuyên nghiệp.
+Hãy quan sát kỹ tài liệu đính kèm (page_02_negative_numbers.png) và trích xuất chính xác các trường sau:
+
+DANH SÁCH TRƯỜNG CẦN TRÍCH XUẤT:
+[
+  {
+    "id": "p2_balance_date",
+    "type": "date",
+    "name": "Ngày báo cáo cân đối"
+  },
+  {
+    "id": "p2_report_code",
+    "type": "code",
+    "name": "Mã tài liệu kế toán"
+  },
+  {
+    "id": "p2_r01_c1",
+    "type": "code",
+    "name": "Mã tài khoản hàng 1",
+    "row": 1,
+    "column": "Mã TK"
+  },
+  {
+    "id": "p2_r01_c2",
+    "type": "text",
+    "name": "Khoản mục kế toán hàng 1",
+    "row": 1,
+    "column": "Khoản mục kế toán / Chỉ tiêu dự phòng"
+  },
+  {
+    "id": "p2_r01_c3",
+    "type": "amount",
+    "name": "Lợi nhuận sau thuế chưa phân phối năm nay - Số đầu năm",
+    "row": 1,
+    "column": "Số đầu năm"
+  },
+  {
+    "id": "p2_loss_carried",
+    "type": "amount",
+    "name": "Lợi nhuận sau thuế chưa phân phối (âm)",
+    "row": 1,
+    "column": "Số cuối Quý 3/2026"
+  },
+  {
+    "id": "p2_r02_c1",
+    "type": "code",
+    "name": "Mã tài khoản hàng 2",
+    "row": 2,
+    "column": "Mã TK"
+  },
+  {
+    "id": "p2_r02_c2",
+    "type": "text",
+    "name": "Khoản mục kế toán hàng 2",
+    "row": 2,
+    "column": "Khoản mục kế toán / Chỉ tiêu dự phòng"
+  },
+  {
+    "id": "p2_r02_c3",
+    "type": "amount",
+    "name": "Lưu chuyển tiền thuần từ hoạt động kinh doanh - Số đầu năm",
+    "row": 2,
+    "column": "Số đầu năm"
+  },
+  {
+    "id": "p2_cashflow_neg",
+    "type": "amount",
+    "name": "Lưu chuyển tiền thuần kinh doanh (âm)",
+    "row": 2,
+    "column": "Số cuối Quý 3/2026"
+  },
+  {
+    "id": "p2_r03_c1",
+    "type": "code",
+    "name": "Mã tài khoản hàng 3",
+    "row": 3,
+    "column": "Mã TK"
+  },
+  {
+    "id": "p2_r03_c2",
+    "type": "text",
+    "name": "Khoản mục kế toán hàng 3",
+    "row": 3,
+    "column": "Khoản mục kế toán / Chỉ tiêu dự phòng"
+  },
+  {
+    "id": "p2_r03_c3",
+    "type": "amount",
+    "name": "Dự phòng tổn thất đầu tư tài chính dài hạn - Số đầu năm",
+    "row": 3,
+    "column": "Số đầu năm"
+  },
+  {
+    "id": "p2_reserve_neg",
+    "type": "amount",
+    "name": "Dự phòng tổn thất tài chính (âm)",
+    "row": 3,
+    "column": "Số cuối Quý 3/2026"
+  },
+  {
+    "id": "p2_r04_c1",
+    "type": "code",
+    "name": "Mã tài khoản hàng 4",
+    "row": 4,
+    "column": "Mã TK"
+  },
+  {
+    "id": "p2_r04_c2",
+    "type": "text",
+    "name": "Khoản mục kế toán hàng 4",
+    "row": 4,
+    "column": "Khoản mục kế toán / Chỉ tiêu dự phòng"
+  },
+  {
+    "id": "p2_r04_c3",
+    "type": "amount",
+    "name": "Cổ phiếu quỹ đang nắm giữ - Số đầu năm",
+    "row": 4,
+    "column": "Số đầu năm"
+  },
+  {
+    "id": "p2_r04_c4",
+    "type": "amount",
+    "name": "Cổ phiếu quỹ đang nắm giữ - Số cuối Quý 3/2026",
+    "row": 4,
+    "column": "Số cuối Quý 3/2026"
+  },
+  {
+    "id": "p2_r05_c1",
+    "type": "code",
+    "name": "Mã tài khoản hàng 5",
+    "row": 5,
+    "column": "Mã TK"
+  },
+  {
+    "id": "p2_r05_c2",
+    "type": "text",
+    "name": "Khoản mục kế toán hàng 5",
+    "row": 5,
+    "column": "Khoản mục kế toán / Chỉ tiêu dự phòng"
+  },
+  {
+    "id": "p2_r05_c3",
+    "type": "amount",
+    "name": "Dự phòng phải thu khó đòi ngắn hạn - Số đầu năm",
+    "row": 5,
+    "column": "Số đầu năm"
+  },
+  {
+    "id": "p2_r05_c4",
+    "type": "amount",
+    "name": "Dự phòng phải thu khó đòi ngắn hạn - Số cuối Quý 3/2026",
+    "row": 5,
+    "column": "Số cuối Quý 3/2026"
+  },
+  {
+    "id": "p2_r06_c1",
+    "type": "code",
+    "name": "Mã tài khoản hàng 6",
+    "row": 6,
+    "column": "Mã TK"
+  },
+  {
+    "id": "p2_r06_c2",
+    "type": "text",
+    "name": "Khoản mục kế toán hàng 6",
+    "row": 6,
+    "column": "Khoản mục kế toán / Chỉ tiêu dự phòng"
+  },
+  {
+    "id": "p2_r06_c3",
+    "type": "amount",
+    "name": "Phải trả công nhân viên còn tồn đọng - Số đầu năm",
+    "row": 6,
+    "column": "Số đầu năm"
+  },
+  {
+    "id": "p2_r06_c4",
+    "type": "amount",
+    "name": "Phải trả công nhân viên còn tồn đọng - Số cuối Quý 3/2026",
+    "row": 6,
+    "column": "Số cuối Quý 3/2026"
+  },
+  {
+    "id": "p2_r07_c1",
+    "type": "code",
+    "name": "Mã tài khoản hàng 7",
+    "row": 7,
+    "column": "Mã TK"
+  },
+  {
+    "id": "p2_r07_c2",
+    "type": "text",
+    "name": "Khoản mục kế toán hàng 7",
+    "row": 7,
+    "column": "Khoản mục kế toán / Chỉ tiêu dự phòng"
+  },
+  {
+    "id": "p2_r07_c3",
+    "type": "amount",
+    "name": "Vốn góp của chủ sở hữu - Số đầu năm",
+    "row": 7,
+    "column": "Số đầu năm"
+  },
+  {
+    "id": "p2_r07_c4",
+    "type": "amount",
+    "name": "Vốn góp của chủ sở hữu - Số cuối Quý 3/2026",
+    "row": 7,
+    "column": "Số cuối Quý 3/2026"
+  },
+  {
+    "id": "p2_r08_c1",
+    "type": "code",
+    "name": "Mã tài khoản hàng 8",
+    "row": 8,
+    "column": "Mã TK"
+  },
+  {
+    "id": "p2_r08_c2",
+    "type": "text",
+    "name": "Khoản mục kế toán hàng 8",
+    "row": 8,
+    "column": "Khoản mục kế toán / Chỉ tiêu dự phòng"
+  },
+  {
+    "id": "p2_r08_c3",
+    "type": "amount",
+    "name": "Tiền mặt tồn quỹ - Số đầu năm",
+    "row": 8,
+    "column": "Số đầu năm"
+  },
+  {
+    "id": "p2_r08_c4",
+    "type": "amount",
+    "name": "Tiền mặt tồn quỹ - Số cuối Quý 3/2026",
+    "row": 8,
+    "column": "Số cuối Quý 3/2026"
+  },
+  {
+    "id": "p2_r09_c1",
+    "type": "code",
+    "name": "Mã tài khoản hàng 9",
+    "row": 9,
+    "column": "Mã TK"
+  },
+  {
+    "id": "p2_r09_c2",
+    "type": "text",
+    "name": "Khoản mục kế toán hàng 9",
+    "row": 9,
+    "column": "Khoản mục kế toán / Chỉ tiêu dự phòng"
+  },
+  {
+    "id": "p2_r09_c3",
+    "type": "amount",
+    "name": "Tiền gửi ngân hàng không kỳ hạn - Số đầu năm",
+    "row": 9,
+    "column": "Số đầu năm"
+  },
+  {
+    "id": "p2_r09_c4",
+    "type": "amount",
+    "name": "Tiền gửi ngân hàng không kỳ hạn - Số cuối Quý 3/2026",
+    "row": 9,
+    "column": "Số cuối Quý 3/2026"
+  }
+]
+
+QUY TẮC BẮT BUỘC:
+1. CHỈ trích xuất thông tin nhìn thấy được trên ảnh/tài liệu đính kèm.
+2. TUYỆT ĐỐI KHÔNG sử dụng công cụ (tool), không duyệt workspace, không đọc file mã nguồn hay file ground truth.
+3. Trả về DUY NHẤT một JSON object hợp lệ ánh xạ từng trường 'id' sang giá trị tương ứng ('id': 'giá trị').
+4. Không giải thích, không thêm ghi chú, không dùng định dạng ngoài JSON object.
+
+Ví dụ cấu trúc trả về:
+{"trường_id_1": "giá trị 1", "trường_id_2": "giá trị 2"}

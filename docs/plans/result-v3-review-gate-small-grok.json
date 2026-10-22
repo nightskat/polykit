@@ -1,0 +1,15 @@
+{
+  "status": "ok",
+  "vendor": "grok",
+  "model": "grok-4.7",
+  "summary": "grok completed successfully",
+  "warnings": [
+    "[polykit] warning: model list for vendor 'grok' is unknown, cannot validate 'grok-4.7'"
+  ],
+  "stdout": "Kh\u00f4ng th\u1ea5y finding th\u1ef1c.\n\nMalform JSON, schema/generator, path tr\u1ea7n, sha/bytes, format/rel_path, file xin thi\u1ebfu trong manifest, `..`, path ngo\u00e0i `synth_dir`, v\u00e0 symlink directory/file \u0111\u1ec1u fail-closed. Subset manifest ch\u1ec9 thu h\u1eb9p allowlist. Hash file d\u01b0\u1edbi c\u1ed5ng ch\u1eb7n l\u1ec7ch byte k\u1ec3 c\u1ea3 khi symlink/TOCTOU l\u1ecdt.check.\n",
+  "exit_code": 0,
+  "reason": null,
+  "served_model": null,
+  "unsandboxed": false,
+  "data_class": null
+}

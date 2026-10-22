@@ -1,0 +1,613 @@
+Bạn là trợ lý trích xuất dữ liệu hình ảnh và tài liệu quang học chuyên nghiệp.
+Hãy quan sát kỹ tài liệu đính kèm (page_01_narrow_table.png) và trích xuất chính xác các trường sau:
+
+DANH SÁCH TRƯỜNG CẦN TRÍCH XUẤT:
+[
+  {
+    "id": "p1_period_date",
+    "type": "date",
+    "name": "Ngày kết thúc kỳ kế toán"
+  },
+  {
+    "id": "p1_report_code",
+    "type": "code",
+    "name": "Mã tài liệu báo cáo"
+  },
+  {
+    "id": "p1_r01_c1",
+    "type": "code",
+    "name": "STT hàng 1",
+    "row": 1,
+    "column": "STT"
+  },
+  {
+    "id": "p1_r01_c2",
+    "type": "code",
+    "name": "Mã số hàng 1",
+    "row": 1,
+    "column": "Mã số"
+  },
+  {
+    "id": "p1_r01_c3",
+    "type": "text",
+    "name": "Chỉ tiêu hàng 1",
+    "row": 1,
+    "column": "Chỉ tiêu tài chính"
+  },
+  {
+    "id": "p1_r01_c4",
+    "type": "code",
+    "name": "Thuyết minh hàng 1",
+    "row": 1,
+    "column": "TM"
+  },
+  {
+    "id": "p1_rev_q1",
+    "type": "amount",
+    "name": "Doanh thu bán hàng Quý 1",
+    "row": 1,
+    "column": "Quý 1/2026"
+  },
+  {
+    "id": "p1_r01_c6",
+    "type": "amount",
+    "name": "Doanh thu bán hàng & dịch vụ Quý 2/2026",
+    "row": 1,
+    "column": "Quý 2/2026"
+  },
+  {
+    "id": "p1_r01_c7",
+    "type": "amount",
+    "name": "Doanh thu bán hàng & dịch vụ Lũy kế 2026",
+    "row": 1,
+    "column": "Lũy kế 2026"
+  },
+  {
+    "id": "p1_r02_c1",
+    "type": "code",
+    "name": "STT hàng 2",
+    "row": 2,
+    "column": "STT"
+  },
+  {
+    "id": "p1_r02_c2",
+    "type": "code",
+    "name": "Mã số hàng 2",
+    "row": 2,
+    "column": "Mã số"
+  },
+  {
+    "id": "p1_r02_c3",
+    "type": "text",
+    "name": "Chỉ tiêu hàng 2",
+    "row": 2,
+    "column": "Chỉ tiêu tài chính"
+  },
+  {
+    "id": "p1_r02_c4",
+    "type": "code",
+    "name": "Thuyết minh hàng 2",
+    "row": 2,
+    "column": "TM"
+  },
+  {
+    "id": "p1_cogs_q1",
+    "type": "amount",
+    "name": "Giá vốn hàng bán Quý 1",
+    "row": 2,
+    "column": "Quý 1/2026"
+  },
+  {
+    "id": "p1_r02_c6",
+    "type": "amount",
+    "name": "Giá vốn hàng bán Quý 2/2026",
+    "row": 2,
+    "column": "Quý 2/2026"
+  },
+  {
+    "id": "p1_r02_c7",
+    "type": "amount",
+    "name": "Giá vốn hàng bán Lũy kế 2026",
+    "row": 2,
+    "column": "Lũy kế 2026"
+  },
+  {
+    "id": "p1_r03_c1",
+    "type": "code",
+    "name": "STT hàng 3",
+    "row": 3,
+    "column": "STT"
+  },
+  {
+    "id": "p1_r03_c2",
+    "type": "code",
+    "name": "Mã số hàng 3",
+    "row": 3,
+    "column": "Mã số"
+  },
+  {
+    "id": "p1_r03_c3",
+    "type": "text",
+    "name": "Chỉ tiêu hàng 3",
+    "row": 3,
+    "column": "Chỉ tiêu tài chính"
+  },
+  {
+    "id": "p1_r03_c4",
+    "type": "code",
+    "name": "Thuyết minh hàng 3",
+    "row": 3,
+    "column": "TM"
+  },
+  {
+    "id": "p1_gross_profit_q1",
+    "type": "amount",
+    "name": "Lợi nhuận gộp Quý 1",
+    "row": 3,
+    "column": "Quý 1/2026"
+  },
+  {
+    "id": "p1_r03_c6",
+    "type": "amount",
+    "name": "Lợi nhuận gộp Quý 2/2026",
+    "row": 3,
+    "column": "Quý 2/2026"
+  },
+  {
+    "id": "p1_r03_c7",
+    "type": "amount",
+    "name": "Lợi nhuận gộp Lũy kế 2026",
+    "row": 3,
+    "column": "Lũy kế 2026"
+  },
+  {
+    "id": "p1_r04_c1",
+    "type": "code",
+    "name": "STT hàng 4",
+    "row": 4,
+    "column": "STT"
+  },
+  {
+    "id": "p1_r04_c2",
+    "type": "code",
+    "name": "Mã số hàng 4",
+    "row": 4,
+    "column": "Mã số"
+  },
+  {
+    "id": "p1_r04_c3",
+    "type": "text",
+    "name": "Chỉ tiêu hàng 4",
+    "row": 4,
+    "column": "Chỉ tiêu tài chính"
+  },
+  {
+    "id": "p1_r04_c4",
+    "type": "code",
+    "name": "Thuyết minh hàng 4",
+    "row": 4,
+    "column": "TM"
+  },
+  {
+    "id": "p1_r04_c5",
+    "type": "amount",
+    "name": "Doanh thu tài chính Quý 1/2026",
+    "row": 4,
+    "column": "Quý 1/2026"
+  },
+  {
+    "id": "p1_r04_c6",
+    "type": "amount",
+    "name": "Doanh thu tài chính Quý 2/2026",
+    "row": 4,
+    "column": "Quý 2/2026"
+  },
+  {
+    "id": "p1_r04_c7",
+    "type": "amount",
+    "name": "Doanh thu tài chính Lũy kế 2026",
+    "row": 4,
+    "column": "Lũy kế 2026"
+  },
+  {
+    "id": "p1_r05_c1",
+    "type": "code",
+    "name": "STT hàng 5",
+    "row": 5,
+    "column": "STT"
+  },
+  {
+    "id": "p1_r05_c2",
+    "type": "code",
+    "name": "Mã số hàng 5",
+    "row": 5,
+    "column": "Mã số"
+  },
+  {
+    "id": "p1_r05_c3",
+    "type": "text",
+    "name": "Chỉ tiêu hàng 5",
+    "row": 5,
+    "column": "Chỉ tiêu tài chính"
+  },
+  {
+    "id": "p1_r05_c4",
+    "type": "code",
+    "name": "Thuyết minh hàng 5",
+    "row": 5,
+    "column": "TM"
+  },
+  {
+    "id": "p1_r05_c5",
+    "type": "amount",
+    "name": "Chi phí tài chính Quý 1/2026",
+    "row": 5,
+    "column": "Quý 1/2026"
+  },
+  {
+    "id": "p1_r05_c6",
+    "type": "amount",
+    "name": "Chi phí tài chính Quý 2/2026",
+    "row": 5,
+    "column": "Quý 2/2026"
+  },
+  {
+    "id": "p1_r05_c7",
+    "type": "amount",
+    "name": "Chi phí tài chính Lũy kế 2026",
+    "row": 5,
+    "column": "Lũy kế 2026"
+  },
+  {
+    "id": "p1_r06_c1",
+    "type": "code",
+    "name": "STT hàng 6",
+    "row": 6,
+    "column": "STT"
+  },
+  {
+    "id": "p1_r06_c2",
+    "type": "code",
+    "name": "Mã số hàng 6",
+    "row": 6,
+    "column": "Mã số"
+  },
+  {
+    "id": "p1_r06_c3",
+    "type": "text",
+    "name": "Chỉ tiêu hàng 6",
+    "row": 6,
+    "column": "Chỉ tiêu tài chính"
+  },
+  {
+    "id": "p1_r06_c4",
+    "type": "code",
+    "name": "Thuyết minh hàng 6",
+    "row": 6,
+    "column": "TM"
+  },
+  {
+    "id": "p1_r06_c5",
+    "type": "amount",
+    "name": "Chi phí quản lý doanh nghiệp Quý 1/2026",
+    "row": 6,
+    "column": "Quý 1/2026"
+  },
+  {
+    "id": "p1_r06_c6",
+    "type": "amount",
+    "name": "Chi phí quản lý doanh nghiệp Quý 2/2026",
+    "row": 6,
+    "column": "Quý 2/2026"
+  },
+  {
+    "id": "p1_r06_c7",
+    "type": "amount",
+    "name": "Chi phí quản lý doanh nghiệp Lũy kế 2026",
+    "row": 6,
+    "column": "Lũy kế 2026"
+  },
+  {
+    "id": "p1_r07_c1",
+    "type": "code",
+    "name": "STT hàng 7",
+    "row": 7,
+    "column": "STT"
+  },
+  {
+    "id": "p1_r07_c2",
+    "type": "code",
+    "name": "Mã số hàng 7",
+    "row": 7,
+    "column": "Mã số"
+  },
+  {
+    "id": "p1_r07_c3",
+    "type": "text",
+    "name": "Chỉ tiêu hàng 7",
+    "row": 7,
+    "column": "Chỉ tiêu tài chính"
+  },
+  {
+    "id": "p1_r07_c4",
+    "type": "code",
+    "name": "Thuyết minh hàng 7",
+    "row": 7,
+    "column": "TM"
+  },
+  {
+    "id": "p1_r07_c5",
+    "type": "amount",
+    "name": "Tổng lợi nhuận trước thuế Quý 1/2026",
+    "row": 7,
+    "column": "Quý 1/2026"
+  },
+  {
+    "id": "p1_r07_c6",
+    "type": "amount",
+    "name": "Tổng lợi nhuận trước thuế Quý 2/2026",
+    "row": 7,
+    "column": "Quý 2/2026"
+  },
+  {
+    "id": "p1_r07_c7",
+    "type": "amount",
+    "name": "Tổng lợi nhuận trước thuế Lũy kế 2026",
+    "row": 7,
+    "column": "Lũy kế 2026"
+  },
+  {
+    "id": "p1_r08_c1",
+    "type": "code",
+    "name": "STT hàng 8",
+    "row": 8,
+    "column": "STT"
+  },
+  {
+    "id": "p1_r08_c2",
+    "type": "code",
+    "name": "Mã số hàng 8",
+    "row": 8,
+    "column": "Mã số"
+  },
+  {
+    "id": "p1_r08_c3",
+    "type": "text",
+    "name": "Chỉ tiêu hàng 8",
+    "row": 8,
+    "column": "Chỉ tiêu tài chính"
+  },
+  {
+    "id": "p1_r08_c4",
+    "type": "code",
+    "name": "Thuyết minh hàng 8",
+    "row": 8,
+    "column": "TM"
+  },
+  {
+    "id": "p1_r08_c5",
+    "type": "amount",
+    "name": "Thuế TNDN hiện hành Quý 1/2026",
+    "row": 8,
+    "column": "Quý 1/2026"
+  },
+  {
+    "id": "p1_r08_c6",
+    "type": "amount",
+    "name": "Thuế TNDN hiện hành Quý 2/2026",
+    "row": 8,
+    "column": "Quý 2/2026"
+  },
+  {
+    "id": "p1_r08_c7",
+    "type": "amount",
+    "name": "Thuế TNDN hiện hành Lũy kế 2026",
+    "row": 8,
+    "column": "Lũy kế 2026"
+  },
+  {
+    "id": "p1_r09_c1",
+    "type": "code",
+    "name": "STT hàng 9",
+    "row": 9,
+    "column": "STT"
+  },
+  {
+    "id": "p1_r09_c2",
+    "type": "code",
+    "name": "Mã số hàng 9",
+    "row": 9,
+    "column": "Mã số"
+  },
+  {
+    "id": "p1_r09_c3",
+    "type": "text",
+    "name": "Chỉ tiêu hàng 9",
+    "row": 9,
+    "column": "Chỉ tiêu tài chính"
+  },
+  {
+    "id": "p1_r09_c4",
+    "type": "code",
+    "name": "Thuyết minh hàng 9",
+    "row": 9,
+    "column": "TM"
+  },
+  {
+    "id": "p1_r09_c5",
+    "type": "amount",
+    "name": "Lợi nhuận sau thuế TNDN Quý 1/2026",
+    "row": 9,
+    "column": "Quý 1/2026"
+  },
+  {
+    "id": "p1_r09_c6",
+    "type": "amount",
+    "name": "Lợi nhuận sau thuế TNDN Quý 2/2026",
+    "row": 9,
+    "column": "Quý 2/2026"
+  },
+  {
+    "id": "p1_r09_c7",
+    "type": "amount",
+    "name": "Lợi nhuận sau thuế TNDN Lũy kế 2026",
+    "row": 9,
+    "column": "Lũy kế 2026"
+  },
+  {
+    "id": "p1_r10_c1",
+    "type": "code",
+    "name": "STT hàng 10",
+    "row": 10,
+    "column": "STT"
+  },
+  {
+    "id": "p1_r10_c2",
+    "type": "code",
+    "name": "Mã số hàng 10",
+    "row": 10,
+    "column": "Mã số"
+  },
+  {
+    "id": "p1_r10_c3",
+    "type": "text",
+    "name": "Chỉ tiêu hàng 10",
+    "row": 10,
+    "column": "Chỉ tiêu tài chính"
+  },
+  {
+    "id": "p1_r10_c4",
+    "type": "code",
+    "name": "Thuyết minh hàng 10",
+    "row": 10,
+    "column": "TM"
+  },
+  {
+    "id": "p1_r10_c5",
+    "type": "amount",
+    "name": "Khấu hao tài sản cố định Quý 1/2026",
+    "row": 10,
+    "column": "Quý 1/2026"
+  },
+  {
+    "id": "p1_r10_c6",
+    "type": "amount",
+    "name": "Khấu hao tài sản cố định Quý 2/2026",
+    "row": 10,
+    "column": "Quý 2/2026"
+  },
+  {
+    "id": "p1_r10_c7",
+    "type": "amount",
+    "name": "Khấu hao tài sản cố định Lũy kế 2026",
+    "row": 10,
+    "column": "Lũy kế 2026"
+  },
+  {
+    "id": "p1_r11_c1",
+    "type": "code",
+    "name": "STT hàng 11",
+    "row": 11,
+    "column": "STT"
+  },
+  {
+    "id": "p1_r11_c2",
+    "type": "code",
+    "name": "Mã số hàng 11",
+    "row": 11,
+    "column": "Mã số"
+  },
+  {
+    "id": "p1_r11_c3",
+    "type": "text",
+    "name": "Chỉ tiêu hàng 11",
+    "row": 11,
+    "column": "Chỉ tiêu tài chính"
+  },
+  {
+    "id": "p1_r11_c4",
+    "type": "code",
+    "name": "Thuyết minh hàng 11",
+    "row": 11,
+    "column": "TM"
+  },
+  {
+    "id": "p1_r11_c5",
+    "type": "amount",
+    "name": "Tiền thu từ bán hàng Quý 1/2026",
+    "row": 11,
+    "column": "Quý 1/2026"
+  },
+  {
+    "id": "p1_r11_c6",
+    "type": "amount",
+    "name": "Tiền thu từ bán hàng Quý 2/2026",
+    "row": 11,
+    "column": "Quý 2/2026"
+  },
+  {
+    "id": "p1_r11_c7",
+    "type": "amount",
+    "name": "Tiền thu từ bán hàng Lũy kế 2026",
+    "row": 11,
+    "column": "Lũy kế 2026"
+  },
+  {
+    "id": "p1_r12_c1",
+    "type": "code",
+    "name": "STT hàng 12",
+    "row": 12,
+    "column": "STT"
+  },
+  {
+    "id": "p1_r12_c2",
+    "type": "code",
+    "name": "Mã số hàng 12",
+    "row": 12,
+    "column": "Mã số"
+  },
+  {
+    "id": "p1_r12_c3",
+    "type": "text",
+    "name": "Chỉ tiêu hàng 12",
+    "row": 12,
+    "column": "Chỉ tiêu tài chính"
+  },
+  {
+    "id": "p1_r12_c4",
+    "type": "code",
+    "name": "Thuyết minh hàng 12",
+    "row": 12,
+    "column": "TM"
+  },
+  {
+    "id": "p1_r12_c5",
+    "type": "amount",
+    "name": "Tiền chi trả người cung cấp Quý 1/2026",
+    "row": 12,
+    "column": "Quý 1/2026"
+  },
+  {
+    "id": "p1_r12_c6",
+    "type": "amount",
+    "name": "Tiền chi trả người cung cấp Quý 2/2026",
+    "row": 12,
+    "column": "Quý 2/2026"
+  },
+  {
+    "id": "p1_r12_c7",
+    "type": "amount",
+    "name": "Tiền chi trả người cung cấp Lũy kế 2026",
+    "row": 12,
+    "column": "Lũy kế 2026"
+  }
+]
+
+QUY TẮC BẮT BUỘC:
+1. CHỈ trích xuất thông tin nhìn thấy được trên ảnh/tài liệu đính kèm.
+2. TUYỆT ĐỐI KHÔNG sử dụng công cụ (tool), không duyệt workspace, không đọc file mã nguồn hay file ground truth.
+3. Trả về DUY NHẤT một JSON object hợp lệ ánh xạ từng trường 'id' sang giá trị tương ứng ('id': 'giá trị').
+4. Không giải thích, không thêm ghi chú, không dùng định dạng ngoài JSON object.
+
+Ví dụ cấu trúc trả về:
+{"trường_id_1": "giá trị 1", "trường_id_2": "giá trị 2"}

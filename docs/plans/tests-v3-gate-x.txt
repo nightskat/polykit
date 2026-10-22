@@ -1,0 +1,46 @@
+..F
+=================================== FAILURES ===================================
+_ TestFixtureRegistryIntegrity.test_arbitrary_file_in_synthetic_dir_not_trusted _
+
+self = <test_synthetic_vision_gate.TestFixtureRegistryIntegrity object at 0x10a98a6d0>
+repo = {'manifest': {'files': [{'bytes': 46, 'format': 'PNG', 'path': 'page_a.png', 'rel_path': 'bench/vision/synthetic/page_...ench/vision/synthetic/page_a.png', 'sha256': 'a5f8589954f87ab39598966018d36f22fe66977a331f2f7e61817ed0dfd0063f'}}, ...}
+
+    def test_arbitrary_file_in_synthetic_dir_not_trusted(self, repo: dict):
+        """File tự tạo cùng thư mục nhưng không khai registry/manifest vẫn bị chặn."""
+        rogue = repo["synth"] / "rogue.png"
+        rogue.write_bytes(PNG_MAGIC + b"rogue content")
+>       assert_no_runner(
+            lambda: validate_synthetic_gate([rogue]),
+            VisionBlockedError,
+        )
+
+tests/test_synthetic_vision_gate.py:162: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_synthetic_vision_gate.py:133: in assert_no_runner
+    callable_()
+tests/test_synthetic_vision_gate.py:163: in <lambda>
+    lambda: validate_synthetic_gate([rogue]),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+bin/lib/vision.py:422: in validate_synthetic_gate
+    check_no_symlinks(synth_dir, root)
+bin/lib/vision.py:380: in check_no_symlinks
+    if os.path.islink(root) or root.is_symlink():
+                               ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/c4/49lqjv4j6s72pt3k0tn9fcrr0000gn/T/pytest-of-nightskat/pytest-220/test_arbitrary_file_in_synthet0/repo')
+
+    def is_symlink(self):
+        """
+        Whether this path is a symbolic link.
+        """
+        try:
+>           return S_ISLNK(self.lstat().st_mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: an integer is required
+
+../../.pyenv/versions/3.11.8/lib/python3.11/pathlib.py:1303: TypeError
+=========================== short test summary info ============================
+FAILED tests/test_synthetic_vision_gate.py::TestFixtureRegistryIntegrity::test_arbitrary_file_in_synthetic_dir_not_trusted
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+1 failed, 2 passed in 0.09s

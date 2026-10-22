@@ -1,0 +1,35 @@
+{
+  "strategy": "vision_four_orientations",
+  "pages": [
+    {
+      "name": "page_01_narrow_table.png",
+      "orientation": "n/a",
+      "ocr_error": null
+    },
+    {
+      "name": "page_02_negative_numbers.png",
+      "orientation": "n/a",
+      "ocr_error": null
+    },
+    {
+      "name": "page_03_confusing_chars.png",
+      "orientation": "n/a",
+      "ocr_error": null
+    },
+    {
+      "name": "page_04_degraded_scan.png",
+      "orientation": "n/a",
+      "ocr_error": null
+    },
+    {
+      "name": "page_05_multipage_p1.png",
+      "orientation": "n/a",
+      "ocr_error": null
+    },
+    {
+      "name": "page_06_multipage_p2.png",
+      "orientation": "n/a",
+      "ocr_error": null
+    }
+  ]
+}

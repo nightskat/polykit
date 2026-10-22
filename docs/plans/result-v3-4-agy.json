@@ -1,0 +1,19 @@
+{
+  "status": "timeout",
+  "vendor": "agy",
+  "model": "gemini-3.8-flash-high",
+  "summary": "agy dispatch exceeded 600s",
+  "warnings": [
+    "[polykit] warning: model list for vendor 'agy' is unknown, cannot validate 'gemini-3.8-flash-high'",
+    "[polykit] vendor k\u1ecbp in 1 d\u00f2ng ra STDOUT tr\u01b0\u1edbc khi b\u1ecb gi\u1ebft \u2014 output DANG D\u1ede:",
+    "[vendor:stdout] \u0110ang ch\u1ea1y to\u00e0n b\u1ed9 test suite \u0111\u1ec3 x\u00e1c minh kh\u00f4ng h\u1ed3i quy...",
+    "[polykit] vendor k\u1ecbp in 1 d\u00f2ng ra STDERR tr\u01b0\u1edbc khi b\u1ecb gi\u1ebft \u2014 output DANG D\u1ede:",
+    "[vendor:stderr] root agent idle; waiting up to 10m0s for 1 background task(s)"
+  ],
+  "stdout": "",
+  "exit_code": 124,
+  "reason": "timeout",
+  "served_model": null,
+  "unsandboxed": false,
+  "data_class": null
+}
