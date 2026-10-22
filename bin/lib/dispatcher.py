@@ -387,15 +387,17 @@ def _classify_completed(vendor: str, model: str, res, served_model: str | None =
     if not warnings:
         warnings = ["[polykit] vendor thoát với mã lỗi nhưng không in gì ra stdout lẫn stderr."]
     if is_quota_error(stderr + "\n" + stdout_sach, res.returncode):
+        # Non-ok ⇒ KHÔNG có bằng chứng model đã phục vụ, kể cả khi caller lỡ
+        # truyền vào slug đã yêu cầu. Chỉ nhánh exit 0 mới được mang served.
         return DispatchResult(status="skipped", vendor=vendor, model=model,
                               summary=f"{vendor} quota-capped (402/exhausted)",
                               warnings=warnings, stdout=stdout,
                               exit_code=res.returncode, reason="quota_capped",
-                              served_model=served)
+                              served_model=None)
     return DispatchResult(status="error", vendor=vendor, model=model,
                           summary=f"{vendor} failed with exit code {res.returncode}",
                           warnings=warnings, stdout=stdout, exit_code=res.returncode,
-                          served_model=served)
+                          served_model=None)
 
 def run_vendor(
     vendor: str,
@@ -682,7 +684,11 @@ def _run_vendor(
                     summary=f"vendor {vendor} skipped: {state.value}{chi_tiet}",
                     warnings=[],
                     reason=state.value,
-                    served_model=None if resolved_model == "auto" else resolved_model
+                    # Chưa spawn ⇒ KHÔNG có model nào đã phục vụ. `resolved_model`
+                    # chỉ là Ý ĐỊNH (yêu cầu), không phải bằng chứng — ghi vào
+                    # served_model là bịa (fallback Grok3: gpt-6.1-sol "served"
+                    # trên một lượt skipped not_installed).
+                    served_model=None
                 )
 
     # 7. env con
@@ -911,10 +917,21 @@ def _run_vendor(
                 if v_cfg.get("model_flag"):
                     cmd_has_model = True
 
-            served = resolved_model if cmd_has_model else None
+            # served_model = model THẬT đã phục vụ, cần BẰNG CHỨNG (metadata
+            # envelope do vendor trả). Dynamic CLI không có metadata đó: việc
+            # argv có `--model <slug>` chỉ là Ý ĐỊNH của ta, không phải lời xác
+            # nhận của vendor. ⇒ served LUÔN None; requested vẫn nằm ở `model`
+            # và phải nói rõ vì sao (fallback Grok3: intent bị ghi thành served).
+            served = None
             warning_msg = None
             if not cmd_has_model:
                 warning_msg = f"vendor '{vendor}' không nhận cờ model, đang chạy mặc định của chính nó, không xác định được slug."
+            else:
+                warning_msg = (
+                    f"vendor '{vendor}' nhận cờ model nhưng CLI không trả metadata xác thực "
+                    f"model đã phục vụ: served_model=None; requested_model="
+                    f"{resolved_model!r} chỉ là yêu cầu, chưa phải bằng chứng."
+                )
 
             def finalize(result: DispatchResult) -> DispatchResult:
                 if warning_msg:

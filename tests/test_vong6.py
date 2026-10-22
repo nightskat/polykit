@@ -96,7 +96,10 @@ def test_vong6_not_installed_branch(monkeypatch):
     data = json.loads(res.stdout)
     assert data["status"] == "skipped"
     assert data["reason"] == "not_installed"
-    assert data["served_model"] == "claude-opus-5", f"Expected claude-opus-5, got {data['served_model']}"
+    # Chưa spawn ⇒ chưa có model nào phục vụ. requested slug không được ghi
+    # thành served (chính là lỗi fallback Grok3: gpt-6.1-sol "served" dù skip).
+    assert data["served_model"] is None
+    assert data["model"] == "claude-opus-5"
 
 def test_vong12_dynamic_vendor_not_installed(fake_vendors, capsys):
     import sys
@@ -130,6 +133,11 @@ def test_vong12_dynamic_vendor_not_installed(fake_vendors, capsys):
     data2 = json.loads(out2)
     assert data2["status"] == "skipped"
     assert data2["reason"] == "not_installed"
-    assert data2["served_model"] == "fake-model"
+    # With-flag KHÔNG phải bằng chứng: CLI có cờ model vẫn không xác nhận model
+    # đã phục vụ. skipped ⇒ served None, requested giữ ở "model".
+    assert data2["served_model"] is None
+    assert data2["model"] == "fake-model"
     assert not any("không nhận cờ model" in w for w in data2["warnings"])
+    assert any("served_model=None" in w for w in data2["warnings"]), data2["warnings"]
+    assert len(data2["warnings"]) == len(set(data2["warnings"])), data2["warnings"]
     assert "không nhận cờ model" not in err2

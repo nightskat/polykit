@@ -181,3 +181,103 @@ def test_evidence_record_ghi_cả_hai_model():
 def test_evidence_record_cũ_không_truyền_served_model_vẫn_chạy():
     rec = make_record("codex", "auto", "ok", "2026-08-03T00:00:00Z")
     assert rec["served_model"] is None
+
+
+# --- Negative: served_model KHÔNG BAO GIỜ suy từ ý định ------------------------
+# Fallback Grok3: run_vendor(codex, model="gpt-6.1-sol", probe path=None) trả
+# skipped/not_installed NHƯNG served_model="gpt-6.1-sol"; và dispatcher ghi
+# served=resolved_model chỉ vì argv dynamic CÓ cờ --model. Cả hai đều là
+# "intent thành evidence". Bất biến: chưa spawn ⇒ None; và CLI dynamic không
+# trả metadata xác thực ⇒ None dù có cờ model.
+
+PINNED = "gpt-6.1-sol"
+
+
+class _OkRes:
+    returncode = 0
+    stdout = "done"
+    stderr = ""
+
+
+class _RunnerSpy:
+    """Runner giả. Ghi lại lời gọi để chứng minh 'skip trước spawn'."""
+
+    def __init__(self):
+        self.calls = []
+
+    def __call__(self, cmd, **kwargs):
+        self.calls.append(cmd)
+        return _OkRes()
+
+
+@pytest.mark.parametrize("path,authed,quota_capped,reason", [
+    (None, True, False, "not_installed"),
+    ("/usr/bin/codex", False, False, "installed_not_authed"),
+    ("/usr/bin/codex", True, True, "quota_capped"),
+])
+def test_state_không_ready_served_model_none_và_không_spawn(
+        path, authed, quota_capped, reason, make_probe):
+    spy = _RunnerSpy()
+    res = run_vendor(
+        vendor="codex", prompt="x", model=PINNED, runner=spy,
+        detector=lambda spec: make_probe("codex", path, authed=authed,
+                                         quota_capped=quota_capped),
+    )
+    assert res.status == "skipped"
+    assert res.reason == reason
+    assert res.model == PINNED           # requested giữ nguyên
+    assert res.served_model is None      # KHÔNG suy từ requested
+    assert spy.calls == [], "skip trước spawn ⇒ runner không được gọi"
+
+
+def test_ready_chạy_thật_nhưng_served_vẫn_none_khi_không_metadata(make_probe):
+    spy = _RunnerSpy()
+    res = run_vendor(
+        vendor="codex", prompt="x", model=PINNED, runner=spy,
+        detector=lambda spec: make_probe("codex", "/usr/bin/codex"),
+    )
+    assert res.status == "ok"
+    assert res.model == PINNED
+    assert res.served_model is None
+    assert len(spy.calls) == 1
+
+
+def test_unknown_vendor_served_none_và_không_spawn():
+    spy = _RunnerSpy()
+    res = run_vendor(vendor="khong_ton_tai_xyz", prompt="x", model=PINNED, runner=spy)
+    assert res.status == "blocked"
+    assert res.reason == "unknown_vendor"
+    assert res.served_model is None
+    assert spy.calls == []
+
+
+def test_dynamic_cli_có_cờ_model_served_none_và_warning_rõ(fake_vendors, monkeypatch):
+    """Dynamic vendor CÓ model_flag chạy ok: vẫn served=None, warning nêu requested."""
+    import lib.dispatcher as d
+    monkeypatch.setattr(d.shutil, "which", lambda name, *a, **k: "/usr/bin/true")
+    spy = _RunnerSpy()
+    res = run_vendor(vendor="fakevendor_with_flag", prompt="x", model="fake-model", runner=spy)
+
+    assert res.status == "ok"
+    assert res.model == "fake-model"      # requested giữ nguyên
+    assert res.served_model is None       # cờ model chỉ là ý định
+    assert len(spy.calls) == 1
+    assert any("served_model=None" in w and "fake-model" in w for w in res.warnings), \
+        res.warnings
+    assert len(res.warnings) == len(set(res.warnings)), res.warnings
+
+
+def test_dynamic_cli_có_cờ_model_not_installed_served_none_và_không_spawn(
+        fake_vendors, monkeypatch):
+    import lib.dispatcher as d
+    monkeypatch.setattr(d.shutil, "which", lambda name, *a, **k: None)
+    spy = _RunnerSpy()
+    res = run_vendor(vendor="fakevendor_with_flag", prompt="x", model="fake-model", runner=spy)
+
+    assert res.status == "skipped"
+    assert res.reason == "not_installed"
+    assert res.model == "fake-model"
+    assert res.served_model is None
+    assert spy.calls == []
+    assert any("served_model=None" in w for w in res.warnings), res.warnings
+    assert len(res.warnings) == len(set(res.warnings)), res.warnings
