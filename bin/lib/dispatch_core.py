@@ -571,6 +571,7 @@ def _build_hermes_argv(
     effort: str | None = None,
     source: str = "explicit",
     data_class: str | None = None,
+    attachments: list[str] | None = None,
 ) -> list[str]:
     """Helper nội bộ xây dựng danh sách argv cho hermes.
 
@@ -578,6 +579,11 @@ def _build_hermes_argv(
     Dùng selector chuẩn hoá từ policy/resolver thay vì chuỗi thô.
     Lane unsandboxed chỉ mở khi caller khai báo data_class='code-nopii' và
     cổng dữ liệu (PII + attachment/vision) qua. Không có tham số bool override.
+
+    `attachments` PHẢI đi vào cổng: hermes không có cờ đính kèm, nhưng nuốt
+    tham số này rồi vẫn dựng argv = lượt unsandboxed vẫn chạy trong khi caller
+    tưởng file đã được xét. Có attachment (kể cả không tồn tại trên đĩa) ⇒
+    `vision_blocked` trước checker/spawn.
     """
     selector = _enforce_builder_policy(
         vendor="hermes",
@@ -590,6 +596,7 @@ def _build_hermes_argv(
         evaluate_go_data_gate(
             data_class=data_class,
             prompt=prompt,
+            attachments=attachments,
             vendor="hermes",
         )
     except GoDataGateBlocked as e:
@@ -656,6 +663,7 @@ def build_hermes_cmd(
     workdir: str | None = None,
     source: str = "explicit",
     *,
+    attachments: list[str] | None = None,
     data_class: str | None = None,
 ) -> list[str]:
     """Builder cho Hermes Go adapter.
@@ -664,6 +672,10 @@ def build_hermes_cmd(
     mở unsandboxed khi caller khai báo tường minh data_class='code-nopii'
     (keyword-only) và cổng dữ liệu qua; thiếu cờ ⇒ 'sandbox_unsupported'.
     Không có tham số bool nào bỏ được cổng.
+
+    `attachments` là keyword-only và đi thẳng vào cổng dữ liệu: hermes không
+    nhận cờ file, nên bỏ qua tham số này = chạy unsandboxed dù caller có nêu
+    attachment. Có attachment ⇒ DispatchError reason 'vision_blocked'.
     """
     validate_sandbox(sandbox)
     return _build_hermes_argv(
@@ -672,6 +684,7 @@ def build_hermes_cmd(
         effort=effort,
         source=source,
         data_class=data_class,
+        attachments=attachments,
     )
 
 

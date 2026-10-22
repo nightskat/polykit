@@ -520,6 +520,11 @@ def _run_vendor(
         policy_warnings = []
     probe = None
     go_optin = False
+    # Bằng chứng runner của đường opt-in ĐÃ thực sự được gọi. Cổng dữ liệu qua
+    # chưa đủ: builder kiểm lại cổng (có thể fail lần hai) và skip vendor có
+    # thể xảy ra trước spawn. Chỉ có mặt trong list này mới được ghi
+    # unsandboxed=true (finding vòng 2 F1/F3).
+    go_spawned: list[bool] = []
     # 1. Chạy guards
     try:
         validated_timeout = validate_timeout(timeout)
@@ -652,6 +657,9 @@ def _run_vendor(
                 served_model=None,
                 data_class=data_class,
             )
+        # Cổng 1 qua (chưa spawn). Chỉ riêng cờ này KHÔNG đủ để ghi
+        # unsandboxed=true: builder còn kiểm lại cổng (pg-redact có thể pass
+        # rồi fail) và skip vendor có thể xảy ra trước spawn — xem `_mark_go`.
         go_optin = True
         policy_warnings.extend(gate_warnings)
 
@@ -727,18 +735,31 @@ def _run_vendor(
                 # BUG-15 req 4: kèm bằng chứng probe (thời gian/mã thoát) vào
                 # thông điệp skip — nhãn trần không đủ để cãi lại.
                 chi_tiet = f" — {probe.error}" if probe.error else ""
+                # F3 (review vòng 2): caller ĐÃ khai data_class=code-nopii và
+                # cổng đã qua, nên result JSON phải giữ dấu vết đó — nhưng
+                # CHƯA spawn thì unsandboxed phải false (không tự nhận đã chạy
+                # không sandbox) và warning phải nói rõ cổng qua / chưa spawn.
+                skip_warnings: list[str] = []
+                if go_optin:
+                    skip_warnings.append(
+                        f"[polykit] cổng data_class={DATA_CLASS_CODE_NOPII} đã qua "
+                        f"nhưng vendor chưa sẵn sàng ({state.value}) — CHƯA spawn: "
+                        f"unsandboxed=false, không có lượt chạy nào (served_model=null)."
+                    )
                 return DispatchResult(
                     status="skipped",
                     vendor=vendor,
                     model=resolved_model,
                     summary=f"vendor {vendor} skipped: {state.value}{chi_tiet}",
-                    warnings=[],
+                    warnings=skip_warnings,
                     reason=state.value,
                     # Chưa spawn ⇒ KHÔNG có model nào đã phục vụ. `resolved_model`
                     # chỉ là Ý ĐỊNH (yêu cầu), không phải bằng chứng — ghi vào
                     # served_model là bịa (fallback Grok3: gpt-6.1-sol "served"
                     # trên một lượt skipped not_installed).
-                    served_model=None
+                    served_model=None,
+                    unsandboxed=False,
+                    data_class=DATA_CLASS_CODE_NOPII if go_optin else None,
                 )
 
     # 7. env con
@@ -747,12 +768,22 @@ def _run_vendor(
 
     # 8. Dispatch theo vendor
     def _mark_go(res: DispatchResult) -> DispatchResult:
-        """Đường opt-in: result JSON phải nói rõ unsandboxed/data_class, kể cả
-        khi lỗi/timeout SAU cổng. Blocked trước cổng thì không gọi hàm này."""
-        if go_optin:
+        """Đường opt-in: result JSON phải nói rõ unsandboxed/data_class khi lượt
+        chạy ĐÃ thực sự spawn (kể cả timeout/lỗi SAU cổng).
+
+        `go_spawned` là bằng chứng runner đã được gọi. Cổng 1 qua mà builder
+        kiểm lại cổng fail (vd pg-redact pass rồi fail), hoặc vendor bị skip
+        trước spawn, thì KHÔNG ghi unsandboxed=true — blocked/skipped trước
+        spawn không bao giờ tự nhận đã chạy không sandbox."""
+        if go_optin and go_spawned:
             res.unsandboxed = True
             res.data_class = DATA_CLASS_CODE_NOPII
         return res
+
+    def go_runner(*args, **kwargs):
+        """Bọc runner để ghi bằng chứng spawn trước khi process có thể nổ."""
+        go_spawned.append(True)
+        return runner(*args, **kwargs)
 
     try:
         if vendor == "codex":
@@ -937,7 +968,7 @@ def _run_vendor(
                 source=resolved_source,
                 timeout=validated_timeout,
                 env=env,
-                runner=runner,
+                runner=go_runner,
                 data_class=data_class,
             ))
 
@@ -1115,8 +1146,12 @@ def _dispatch_go_adapter(
       xuống builder (variant của Go profile).
     - Builder kiểm lại cổng data_class=code-nopii; thiếu cờ ⇒ `blocked`
       reason sandbox_unsupported, không giả lập một lượt chạy đã xảy ra.
-    - Mọi result ở đây mang unsandboxed/data_class của đường opt-in (kể cả
-      lỗi sau cổng), vì đã qua cổng ở _run_vendor.
+    - Mọi result ở đây mang unsandboxed/data_class của đường opt-in CHỈ SAU khi
+      runner thật sự được gọi (kể cả lỗi sau cổng). Blocked trước spawn (builder
+      từ chối cổng, argv hỏng) luôn unsandboxed=false.
+    - Attachment đi vào cổng của CẢ HAI vendor: hermes không có cờ file, nhưng
+      nhận attachment rồi lặng lẽ bỏ qua = mở lượt unsandboxed mà caller tưởng
+      file đã được xét (review vòng 2 F2).
     """
     try:
         if vendor == "opencode":
@@ -1135,6 +1170,7 @@ def _dispatch_go_adapter(
                 model=model,
                 prompt=prompt,
                 effort=effort,
+                attachments=attachments,
                 sandbox=sandbox,
                 workdir=workdir,
                 source=source,
@@ -1147,11 +1183,29 @@ def _dispatch_go_adapter(
             vendor=vendor,
             model=model,
             summary=f"vendor {vendor} blocked: {e}",
-            warnings=[f"[polykit] reason={reason}; KHÔNG spawn.", str(e)],
+            warnings=[f"[polykit] reason={reason}; CHƯA spawn, unsandboxed=false.", str(e)],
             reason=reason,
             exit_code=1,
             served_model=None,
-            unsandboxed=bool(data_class == DATA_CLASS_CODE_NOPII),
+            # Builder từ chối = chưa có process nào chạy ⇒ không được nhận
+            # unsandboxed chỉ vì caller đã khai data_class=code-nopii (F1).
+            unsandboxed=False,
+            data_class=data_class,
+        )
+    except Exception as e:  # noqa: BLE001 — builder lỗi bất ngờ vẫn là chưa spawn
+        return DispatchResult(
+            status="blocked",
+            vendor=vendor,
+            model=model,
+            summary=f"vendor {vendor} blocked: builder error ({type(e).__name__})",
+            warnings=[
+                f"[polykit] reason=builder_error; CHƯA spawn, unsandboxed=false.",
+                f"{type(e).__name__}: {e}",
+            ],
+            reason="builder_error",
+            exit_code=1,
+            served_model=None,
+            unsandboxed=False,
             data_class=data_class,
         )
 
@@ -1165,7 +1219,7 @@ def _dispatch_go_adapter(
             reason="invalid_argv",
             exit_code=1,
             served_model=None,
-            unsandboxed=bool(data_class == DATA_CLASS_CODE_NOPII),
+            unsandboxed=False,
             data_class=data_class,
         )
 

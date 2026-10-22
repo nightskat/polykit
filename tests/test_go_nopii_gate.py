@@ -10,6 +10,10 @@ Bất biến được kiểm ở đây:
 - GO_SANDBOX_CONFINED không phải bypass; không có bool/value-object nào thay cờ.
 - Result JSON đường opt-in: unsandboxed=true, data_class=code-nopii, kể cả
   khi lỗi/timeout sau cổng; served_model không đoán.
+- Review vòng 2 (F1/F2/F3): blocked TRƯỚC spawn luôn unsandboxed=false (kể cả
+  khi checker pass rồi fail ở lần kiểm thứ hai); helper/_dispatch_go_adapter
+  của CẢ HAI vendor phải chặn attachment/PII; skip sau cổng giữ data_class
+  nhưng unsandboxed=false kèm warning "cổng đã qua, chưa spawn".
 """
 from __future__ import annotations
 
@@ -45,17 +49,20 @@ GO_VENDORS = ("opencode", "hermes")
 # ---------------------------------------------------------------------------
 
 class SpyDetector:
-    def __init__(self, ready=True):
+    def __init__(self, ready=True, path="/bin/x", authed=None, quota_capped=False):
         self.called = False
         self.ready = ready
+        self.path = path
+        self.authed = authed
+        self.quota_capped = quota_capped
 
     def __call__(self, spec):
         self.called = True
         return VendorProbe(
             name=getattr(spec, "name", "x"),
-            path="/bin/x",
-            authed=self.ready,
-            quota_capped=False,
+            path=self.path,
+            authed=(self.ready if self.authed is None else self.authed),
+            quota_capped=self.quota_capped,
         )
 
 
@@ -107,6 +114,39 @@ def checker_missing(monkeypatch):
     import lib.go_data_gate as gate_mod
 
     monkeypatch.setattr(gate_mod, "_which", lambda name: None)
+
+
+class SequenceChecker:
+    """pg-redact giả trả returncode theo trình tự — bắt lỗi checker không idempotent."""
+
+    def __init__(self, codes):
+        self.codes = list(codes)
+        self.called = 0
+        self.paths = []
+
+    def __call__(self, cmd, **kwargs):
+        assert self.called < len(self.codes), (
+            f"checker bị gọi {self.called + 1} lần, kịch bản chỉ có {len(self.codes)}"
+        )
+        code = self.codes[self.called]
+        self.called += 1
+        self.paths.append(cmd[-1])
+        return subprocess.CompletedProcess(cmd, code, stdout="", stderr="")
+
+
+@pytest.fixture
+def checker_seq(monkeypatch):
+    """Trả factory: checker_seq([0, 1]) → lần 1 pass, lần 2 fail."""
+
+    import lib.go_data_gate as gate_mod
+
+    def _make(codes):
+        spy = SequenceChecker(codes)
+        monkeypatch.setattr(gate_mod, "_which", lambda name: "/usr/bin/pg-redact")
+        monkeypatch.setattr(gate_mod, "_checker_runner", spy)
+        return spy
+
+    return _make
 
 
 # ---------------------------------------------------------------------------
@@ -485,3 +525,196 @@ def test_cli_optin_attachment_blocked(vendor, checker_pass):
     assert data["reason"] == "vision_blocked"
     assert data["unsandboxed"] is False
     assert checker_pass.called == 0, "chặn attachment trước checker/detector/spawn"
+
+
+# ---------------------------------------------------------------------------
+# 5. Review vòng 2 — F1 (không nhận unsandboxed trước spawn), F2 (helper hermes
+#    attachment), F3 (skip sau cổng giữ data_class). Cả 2 vendor mỗi nhánh.
+# ---------------------------------------------------------------------------
+
+def _adapter(vendor, runner, *, attachments=None,
+             data_class=DATA_CLASS_CODE_NOPII, prompt="print(1)"):
+    """Gọi thẳng helper _dispatch_go_adapter (đường mà run_vendor dùng)."""
+    from lib.dispatcher import _dispatch_go_adapter
+
+    return _dispatch_go_adapter(
+        vendor=vendor,
+        prompt=prompt,
+        model="deepseek-v4.1-flash",
+        effort=None,
+        attachments=attachments,
+        sandbox="read-only",
+        workdir=None,
+        source="explicit",
+        timeout=10,
+        env={},
+        runner=runner,
+        data_class=data_class,
+    )
+
+
+@pytest.mark.parametrize("vendor", GO_VENDORS)
+def test_run_vendor_checker_pass_then_fail_khong_nhan_unsandboxed(vendor, checker_seq):
+    """F1: pg-redact lần 1 pass, lần 2 fail ⇒ blocked, unsandboxed=false, runner=0."""
+    spy_checker = checker_seq([0, 1])
+    det, run = SpyDetector(), SpyRunner()
+    prompt = "khach Nguyen Van A CCCD 012345678901"
+
+    res = run_vendor(vendor=vendor, prompt=prompt, model="auto",
+                     runner=run, detector=det,
+                     data_class=DATA_CLASS_CODE_NOPII)
+
+    assert res.status == "blocked"
+    assert res.reason == "pii_detected"
+    assert res.unsandboxed is False, "blocked trước spawn không được nhận unsandboxed"
+    assert res.data_class == DATA_CLASS_CODE_NOPII
+    assert run.called is False and det.called is True
+    assert spy_checker.called == 2, "cả hai cổng đều phải chạy checker"
+    payload = json.dumps(res.to_dict())
+    assert "012345678901" not in payload
+    assert prompt not in payload
+
+
+@pytest.mark.parametrize("vendor", GO_VENDORS)
+def test_helper_attachment_blocked_truoc_checker_va_spawn(vendor, checker_pass):
+    """F2: helper attachment (hermes + opencode) ⇒ vision_blocked, checker=0, runner=0."""
+    run = SpyRunner()
+    res = _adapter(vendor, run, attachments=["/tmp/khach-nhay-cam.pdf"])
+
+    assert res.status == "blocked"
+    assert res.reason == "vision_blocked"
+    assert res.unsandboxed is False
+    assert res.data_class == DATA_CLASS_CODE_NOPII
+    assert checker_pass.called == 0, "chặn attachment trước checker"
+    assert run.called is False, "chặn attachment trước spawn"
+
+
+@pytest.mark.parametrize("vendor", GO_VENDORS)
+def test_helper_attachment_whitespace_van_bi_chan(vendor, checker_pass):
+    run = SpyRunner()
+    res = _adapter(vendor, run, attachments=[" "])
+
+    assert res.status == "blocked"
+    assert res.reason == "vision_blocked"
+    assert res.unsandboxed is False
+    assert checker_pass.called == 0 and run.called is False
+
+
+@pytest.mark.parametrize("vendor", GO_VENDORS)
+def test_helper_pii_blocked_khong_nhan_unsandboxed(vendor, monkeypatch):
+    """F1 phía helper: PII ⇒ blocked, unsandboxed=false, runner=0."""
+    import lib.go_data_gate as gate_mod
+
+    monkeypatch.setattr(gate_mod, "_which", lambda name: "/usr/bin/pg-redact")
+    monkeypatch.setattr(gate_mod, "_checker_runner", SpyChecker(returncode=1))
+
+    run = SpyRunner()
+    res = _adapter(vendor, run, prompt="CCCD 012345678901")
+
+    assert res.status == "blocked"
+    assert res.reason == "pii_detected"
+    assert res.unsandboxed is False
+    assert res.data_class == DATA_CLASS_CODE_NOPII
+    assert run.called is False
+    assert "012345678901" not in json.dumps(res.to_dict())
+
+
+@pytest.mark.parametrize("vendor", GO_VENDORS)
+def test_helper_khong_co_optin_van_blocked_false(vendor, checker_pass):
+    """Helper không có cờ ⇒ sandbox_unsupported, unsandboxed=false, data_class=null."""
+    run = SpyRunner()
+    res = _adapter(vendor, run, data_class=None)
+
+    assert res.status == "blocked"
+    assert res.reason == "sandbox_unsupported"
+    assert res.unsandboxed is False
+    assert res.data_class is None
+    assert checker_pass.called == 0 and run.called is False
+
+
+@pytest.mark.parametrize("vendor", GO_VENDORS)
+def test_helper_qua_cong_that_thi_unsandboxed_true(vendor, checker_pass):
+    """Đối chứng: helper spawn thật sau cổng vẫn giữ unsandboxed=true."""
+    run = SpyRunner(stdout="done")
+    res = _adapter(vendor, run)
+
+    assert res.status == "ok", res.warnings
+    assert res.unsandboxed is True
+    assert res.data_class == DATA_CLASS_CODE_NOPII
+    assert run.called is True
+
+
+def test_hermes_builder_guard_attachment(checker_pass):
+    """F2: builder hermes cũng tự giữ cổng — attachment ⇒ DispatchError, không checker."""
+    from lib.dispatch_core import _build_hermes_argv
+
+    for call in (
+        lambda: build_hermes_cmd("deepseek-v4.1-flash", "print(1)",
+                                 attachments=["/tmp/a.png"],
+                                 data_class=DATA_CLASS_CODE_NOPII),
+        lambda: _build_hermes_argv("deepseek-v4.1-flash", "print(1)",
+                                   data_class=DATA_CLASS_CODE_NOPII,
+                                   attachments=["/tmp/a.png"]),
+    ):
+        with pytest.raises(DispatchError) as exc:
+            call()
+        assert exc.value.reason == "vision_blocked"
+    assert checker_pass.called == 0, "hermes phải chặn attachment trước checker"
+
+
+@pytest.mark.parametrize("vendor", GO_VENDORS)
+@pytest.mark.parametrize("path,authed,quota_capped,reason", [
+    (None, True, False, "not_installed"),
+    ("/bin/x", False, False, "installed_not_authed"),
+    ("/bin/x", True, True, "quota_capped"),
+])
+def test_run_vendor_skip_sau_cong_giu_data_class_khong_nhan_unsandboxed(
+        vendor, path, authed, quota_capped, reason, checker_pass):
+    """F3: cổng qua nhưng vendor skip ⇒ data_class giữ, unsandboxed=false, có warning."""
+    det = SpyDetector(path=path, authed=authed, quota_capped=quota_capped)
+    run = SpyRunner()
+
+    res = run_vendor(vendor=vendor, prompt="print(1)", model="auto",
+                     runner=run, detector=det,
+                     data_class=DATA_CLASS_CODE_NOPII)
+
+    assert res.status == "skipped"
+    assert res.reason == reason
+    assert res.data_class == DATA_CLASS_CODE_NOPII, "audit phải thấy caller đã khai code-nopii"
+    assert res.unsandboxed is False, "chưa spawn ⇒ không nhận đã chạy unsandboxed"
+    assert res.served_model is None
+    assert run.called is False
+    assert checker_pass.called == 1, "cổng đã chạy trước khi skip"
+    joined = "\n".join(res.warnings)
+    assert DATA_CLASS_CODE_NOPII in joined
+    assert "CHƯA spawn" in joined and "unsandboxed=false" in joined
+    payload = res.to_dict()
+    assert payload["data_class"] == DATA_CLASS_CODE_NOPII
+    assert payload["unsandboxed"] is False
+
+
+@pytest.mark.parametrize("vendor", GO_VENDORS)
+def test_run_vendor_skip_khong_optin_van_null_data_class(vendor, checker_pass):
+    """Không có cờ ⇒ chặn trước detector, data_class vẫn null (không tự khai hộ)."""
+    det, run = SpyDetector(path=None, authed=True), SpyRunner()
+    res = run_vendor(vendor=vendor, prompt="print(1)", model="auto",
+                     runner=run, detector=det)
+
+    assert res.status == "blocked" and res.reason == "sandbox_unsupported"
+    assert res.data_class is None and res.unsandboxed is False
+    assert det.called is False and run.called is False
+
+
+@pytest.mark.parametrize("vendor", GO_VENDORS)
+def test_run_vendor_missing_checker_van_warn_va_chay(vendor, checker_missing):
+    """Không có pg-redact: warning rõ, text code-nopii vẫn chạy (policy giữ nguyên)."""
+    det, run = SpyDetector(), SpyRunner(stdout="done")
+    res = run_vendor(vendor=vendor, prompt="print(1)", model="auto",
+                     runner=run, detector=det,
+                     data_class=DATA_CLASS_CODE_NOPII)
+
+    assert res.status == "ok", res.warnings
+    assert res.unsandboxed is True
+    joined = "\n".join(res.warnings)
+    assert "pg-redact" in joined and DATA_CLASS_CODE_NOPII in joined
+    assert run.called is True
