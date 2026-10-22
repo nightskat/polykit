@@ -83,9 +83,9 @@ def test_build_agy_cmd_stream_giu_nguyen_khi_khong_co():
 
 def test_khong_co_co_codex_giong_het_cu():
     """"Giống hệt cũ" = không có cờ stream. Effort `low` là mặc định MỚI của
-    PolyKit từ bench 20/08, có ở cả hai nhánh nên không phải khác biệt do stream."""
+    PolyKit từ bench 20/08. Builder auto giờ pin resolved model canonical (-m gpt-6.1-sol)."""
     assert build_codex_cmd("auto", "read-only", None, "text") == [
-        "codex", "exec", "-c", "model_reasoning_effort=low",
+        "codex", "exec", "-m", "gpt-6.1-sol", "-c", "model_reasoning_effort=low",
         "-s", "read-only", "--skip-git-repo-check",
     ]
     assert build_codex_cmd("gpt-4", "workspace-write", "/p", "json") == [
@@ -98,6 +98,7 @@ def test_khong_co_co_grok_giong_het_cu():
     grok_bin = str(Path.home() / ".grok/bin/grok")
     assert build_grok_cmd("auto", "read-only", None, "text", "/tmp/p") == [
         grok_bin, "--prompt-file", "/tmp/p",
+        "-m", "grok-4.6",
         "--tools", "read_file,grep,list_dir", "--always-approve",
     ]
 

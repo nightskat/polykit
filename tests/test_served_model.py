@@ -7,11 +7,14 @@ chạy (~$1/lượt khi prompt mở). Không có field này = không biết ti�
 from __future__ import annotations
 
 import json
+import pytest
 
 from lib.dispatch_core import DispatchResult
 from lib.dispatcher import run_vendor
 from lib.evidence import make_record
 from lib.openrouter import or_dispatch
+
+PAID_MODEL = "openrouter/deepseek/deepseek-v4-pro"
 
 
 def _fake_opener(payload: dict):
@@ -31,7 +34,7 @@ def test_or_dispatch_bắt_được_model_router_đã_chọn():
         "provider": "Google",
         "choices": [{"message": {"content": "hi"}}],
     })
-    res = or_dispatch("hello", model="openrouter/auto", key="fake", opener=opener)
+    res = or_dispatch("hello", model=PAID_MODEL, key="fake", opener=opener)
     assert res.ok
     assert res.served_model == "google/gemini-2.5-flash-lite"
     assert res.provider == "Google"
@@ -39,7 +42,7 @@ def test_or_dispatch_bắt_được_model_router_đã_chọn():
 
 def test_or_dispatch_response_thiếu_field_thì_none_chứ_không_vỡ():
     # Response cũ/không chuẩn: vẫn phải ok, served_model=None (không bịa).
-    res = or_dispatch("hello", key="fake",
+    res = or_dispatch("hello", model=PAID_MODEL, key="fake",
                       opener=_fake_opener({"choices": [{"message": {"content": "hi"}}]}))
     assert res.ok and res.text == "hi"
     assert res.served_model is None and res.provider is None
@@ -48,7 +51,7 @@ def test_or_dispatch_response_thiếu_field_thì_none_chứ_không_vỡ():
 def test_dispatch_openrouter_gắn_served_model_và_nêu_trong_summary():
     import lib.dispatcher as d
 
-    def fake_or_dispatch(prompt, model="auto", timeout=120):
+    def fake_or_dispatch(prompt, model="auto", timeout=120, **kwargs):
         from lib.openrouter import ORResult
         return ORResult(ok=True, text="ok", served_model="anthropic/claude-opus-5")
 
@@ -57,7 +60,7 @@ def test_dispatch_openrouter_gắn_served_model_và_nêu_trong_summary():
     saved = oro.or_dispatch
     oro.or_dispatch = fake_or_dispatch
     try:
-        res = run_vendor(vendor="openrouter", prompt="x", model="openrouter/fusion")
+        res = run_vendor(vendor="openrouter", prompt="x", model=PAID_MODEL)
     finally:
         oro.or_dispatch = saved
         if orig is not None:
@@ -82,7 +85,10 @@ def test_model_auto_thì_served_model_none_chứ_không_ghi_auto(make_probe):
     assert res.served_model is None
 
 
-def test_model_ghim_thì_served_model_bằng_chính_nó(make_probe):
+def test_model_ghim_thì_requested_model_giữ_gpt55_nhưng_served_model_none_khi_plaintext(make_probe):
+    # Test cũ đang bịa explicit codex == served chỉ vì argv pin gpt-5.5.
+    # Contract đúng: requested model (res.model) giữ "gpt-5.5",
+    # served_model là None nếu runner plaintext không trả metadata xác thực.
     class Res:
         returncode = 0
         stdout = "done"
@@ -91,7 +97,71 @@ def test_model_ghim_thì_served_model_bằng_chính_nó(make_probe):
     res = run_vendor(vendor="codex", prompt="x", model="gpt-5.5",
                      runner=lambda cmd, **kw: Res(),
                      detector=lambda spec: make_probe("codex", "/usr/bin/codex"))
-    assert res.served_model == "gpt-5.5"
+    assert res.status == "ok"
+    assert res.model == "gpt-5.5"
+    assert getattr(res, "requested_model", res.model) == "gpt-5.5"
+    assert res.served_model is None
+
+
+@pytest.mark.parametrize("vendor,pinned_model", [
+    ("codex", "gpt-5.5"),
+    ("grok", "grok-2"),
+    ("claude", "claude-3-7-sonnet"),
+])
+def test_model_ghim_plaintext_không_metadata_thì_served_model_none(vendor, pinned_model, make_probe):
+    # codex/grok/claude: runner plaintext không có metadata -> served_model=None,
+    # requested model giữ nguyên slug đã yêu cầu.
+    class Res:
+        returncode = 0
+        stdout = "done"
+        stderr = ""
+
+    res = run_vendor(vendor=vendor, prompt="x", model=pinned_model,
+                     runner=lambda cmd, **kw: Res(),
+                     detector=lambda spec: make_probe(vendor, f"/usr/bin/{vendor}"))
+    assert res.status == "ok"
+    assert res.model == pinned_model
+    assert getattr(res, "requested_model", res.model) == pinned_model
+    assert res.served_model is None
+
+
+@pytest.mark.parametrize("vendor,pinned_model", [
+    ("codex", "gpt-5.5"),
+    ("grok", "grok-2"),
+    ("claude", "claude-3-7-sonnet"),
+    ("agy", "claude-sonnet-4-6"),
+])
+def test_fake_json_assistant_claim_không_thành_bằng_chứng_served_model(vendor, pinned_model, make_probe):
+    # Fake JSON {"model": "assistant-claim"} do assistant xuất ra trong stdout
+    # KHÔNG được coi là bằng chứng xác thực (metadata) cho served_model.
+    class Res:
+        returncode = 0
+        stdout = json.dumps({"model": "assistant-claim", "text": "assistant response"})
+        stderr = ""
+
+    res = run_vendor(vendor=vendor, prompt="x", model=pinned_model,
+                     runner=lambda cmd, **kw: Res(),
+                     detector=lambda spec: make_probe(vendor, f"/usr/bin/{vendor}"))
+    assert res.status == "ok"
+    assert res.model == pinned_model
+    assert getattr(res, "requested_model", res.model) == pinned_model
+    assert res.served_model is None
+
+
+@pytest.mark.parametrize("vendor", ["codex", "grok", "claude", "agy"])
+def test_fake_json_assistant_claim_khi_model_auto_không_thành_bằng_chứng(vendor, make_probe):
+    class Res:
+        returncode = 0
+        stdout = json.dumps({"model": "assistant-claim"})
+        stderr = ""
+
+    res = run_vendor(vendor=vendor, prompt="x", model="auto",
+                     runner=lambda cmd, **kw: Res(),
+                     detector=lambda spec: make_probe(vendor, f"/usr/bin/{vendor}"))
+    assert res.status == "ok"
+    assert res.model == "auto"
+    assert getattr(res, "requested_model", res.model) == "auto"
+    assert res.served_model is None
 
 
 def test_dispatch_result_to_dict_có_khoá_served_model():
@@ -111,3 +181,103 @@ def test_evidence_record_ghi_cả_hai_model():
 def test_evidence_record_cũ_không_truyền_served_model_vẫn_chạy():
     rec = make_record("codex", "auto", "ok", "2026-08-03T00:00:00Z")
     assert rec["served_model"] is None
+
+
+# --- Negative: served_model KHÔNG BAO GIỜ suy từ ý định ------------------------
+# Fallback Grok3: run_vendor(codex, model="gpt-6.1-sol", probe path=None) trả
+# skipped/not_installed NHƯNG served_model="gpt-6.1-sol"; và dispatcher ghi
+# served=resolved_model chỉ vì argv dynamic CÓ cờ --model. Cả hai đều là
+# "intent thành evidence". Bất biến: chưa spawn ⇒ None; và CLI dynamic không
+# trả metadata xác thực ⇒ None dù có cờ model.
+
+PINNED = "gpt-6.1-sol"
+
+
+class _OkRes:
+    returncode = 0
+    stdout = "done"
+    stderr = ""
+
+
+class _RunnerSpy:
+    """Runner giả. Ghi lại lời gọi để chứng minh 'skip trước spawn'."""
+
+    def __init__(self):
+        self.calls = []
+
+    def __call__(self, cmd, **kwargs):
+        self.calls.append(cmd)
+        return _OkRes()
+
+
+@pytest.mark.parametrize("path,authed,quota_capped,reason", [
+    (None, True, False, "not_installed"),
+    ("/usr/bin/codex", False, False, "installed_not_authed"),
+    ("/usr/bin/codex", True, True, "quota_capped"),
+])
+def test_state_không_ready_served_model_none_và_không_spawn(
+        path, authed, quota_capped, reason, make_probe):
+    spy = _RunnerSpy()
+    res = run_vendor(
+        vendor="codex", prompt="x", model=PINNED, runner=spy,
+        detector=lambda spec: make_probe("codex", path, authed=authed,
+                                         quota_capped=quota_capped),
+    )
+    assert res.status == "skipped"
+    assert res.reason == reason
+    assert res.model == PINNED           # requested giữ nguyên
+    assert res.served_model is None      # KHÔNG suy từ requested
+    assert spy.calls == [], "skip trước spawn ⇒ runner không được gọi"
+
+
+def test_ready_chạy_thật_nhưng_served_vẫn_none_khi_không_metadata(make_probe):
+    spy = _RunnerSpy()
+    res = run_vendor(
+        vendor="codex", prompt="x", model=PINNED, runner=spy,
+        detector=lambda spec: make_probe("codex", "/usr/bin/codex"),
+    )
+    assert res.status == "ok"
+    assert res.model == PINNED
+    assert res.served_model is None
+    assert len(spy.calls) == 1
+
+
+def test_unknown_vendor_served_none_và_không_spawn():
+    spy = _RunnerSpy()
+    res = run_vendor(vendor="khong_ton_tai_xyz", prompt="x", model=PINNED, runner=spy)
+    assert res.status == "blocked"
+    assert res.reason == "unknown_vendor"
+    assert res.served_model is None
+    assert spy.calls == []
+
+
+def test_dynamic_cli_có_cờ_model_served_none_và_warning_rõ(fake_vendors, monkeypatch):
+    """Dynamic vendor CÓ model_flag chạy ok: vẫn served=None, warning nêu requested."""
+    import lib.dispatcher as d
+    monkeypatch.setattr(d.shutil, "which", lambda name, *a, **k: "/usr/bin/true")
+    spy = _RunnerSpy()
+    res = run_vendor(vendor="fakevendor_with_flag", prompt="x", model="fake-model", runner=spy)
+
+    assert res.status == "ok"
+    assert res.model == "fake-model"      # requested giữ nguyên
+    assert res.served_model is None       # cờ model chỉ là ý định
+    assert len(spy.calls) == 1
+    assert any("served_model=None" in w and "fake-model" in w for w in res.warnings), \
+        res.warnings
+    assert len(res.warnings) == len(set(res.warnings)), res.warnings
+
+
+def test_dynamic_cli_có_cờ_model_not_installed_served_none_và_không_spawn(
+        fake_vendors, monkeypatch):
+    import lib.dispatcher as d
+    monkeypatch.setattr(d.shutil, "which", lambda name, *a, **k: None)
+    spy = _RunnerSpy()
+    res = run_vendor(vendor="fakevendor_with_flag", prompt="x", model="fake-model", runner=spy)
+
+    assert res.status == "skipped"
+    assert res.reason == "not_installed"
+    assert res.model == "fake-model"
+    assert res.served_model is None
+    assert spy.calls == []
+    assert any("served_model=None" in w for w in res.warnings), res.warnings
+    assert len(res.warnings) == len(set(res.warnings)), res.warnings

@@ -11,6 +11,34 @@ from pathlib import Path
 from lib.states import classify, VendorState
 from lib.vendors import detect, REGISTRY
 from lib.quota_error import is_quota_error
+try:
+    from lib.model_policy import (
+        GO_PROVIDER,
+        GO_VENDORS,
+        ModelPolicyViolation,
+        SelectionSource,
+    )
+    from lib.vendor_config import resolve_vendor_model, load_vendor_config, ResolvedTarget
+    from lib.vision import check_vision_gate, VisionBlockedError, VisionError
+    from lib.go_data_gate import (
+        DATA_CLASS_CODE_NOPII,
+        GoDataGateBlocked,
+        evaluate_go_data_gate,
+    )
+except ImportError:
+    from bin.lib.model_policy import (
+        GO_PROVIDER,
+        GO_VENDORS,
+        ModelPolicyViolation,
+        SelectionSource,
+    )
+    from bin.lib.vendor_config import resolve_vendor_model, load_vendor_config, ResolvedTarget
+    from bin.lib.vision import check_vision_gate, VisionBlockedError, VisionError
+    from bin.lib.go_data_gate import (
+        DATA_CLASS_CODE_NOPII,
+        GoDataGateBlocked,
+        evaluate_go_data_gate,
+    )
 from lib.dispatch_core import (
     DispatchError,
     DispatchResult,
@@ -21,6 +49,8 @@ from lib.dispatch_core import (
     build_grok_cmd,
     build_agy_cmd,
     build_dsh_cmd,
+    build_opencode_cmd,
+    build_hermes_cmd,
     write_dsh_patch,
     extract_stream_text,
     AGY_DEFAULT_MODEL,
@@ -48,6 +78,106 @@ _STREAM_UNSUPPORTED_REASON = {
     "dsh": "--profile headless chỉ in kết quả CUỐI",
     "openrouter": "HTTP API, không có CLI stream",
 }
+
+
+# ---------------------------------------------------------------------------
+# Sandbox confinement của Go adapters
+# ---------------------------------------------------------------------------
+# opencode/hermes không có confinement đã chứng minh. Lane unsandboxed CHỈ mở
+# qua cổng dữ liệu (bin/lib/go_data_gate.py): caller khai báo tường minh
+# data_class='code-nopii', không attachment/vision, pg-redact pass.
+# Hằng số dưới đây KHÔNG còn là bypass — lật nó lên cũng không mở gì.
+GO_SANDBOX_CONFINED = False
+
+
+def _openrouter_scoped_model(model: str | None) -> str:
+    """OpenRouter dùng namespace `org/model` — đó KHÔNG phải provider khác.
+
+    Prefix `openrouter/` trước khi parse để `meta-llama/llama-3-8b-instruct`
+    không bị hiểu nhầm thành provider `meta-llama` (giữ compatibility với các
+    slug org/model đang chạy), nhưng policy contributor/free vẫn chặn TRƯỚC
+    network vì parse nhìn thấy đúng toàn bộ selector.
+    """
+    if model is None:
+        return "auto"
+    m = str(model).strip()
+    if not m or m.lower() == "auto":
+        return "auto"
+    if m.lower().startswith("openrouter/"):
+        return m
+    return f"openrouter/{m}"
+
+
+def resolve_dispatch_target(
+    vendor: str,
+    model: str | None = "auto",
+    provider: str | None = None,
+    effort: str | None = None,
+    profile: str | None = None,
+    source: str | SelectionSource = "explicit",
+    allow_unknown: bool = False,
+    cfg: dict | None = None,
+) -> ResolvedTarget:
+    """Resolver CHUNG cho CLI (`bin/dispatch.py`) và library (`run_vendor`).
+
+    Một nguồn quyết định duy nhất ⇒ CLI và library không thể lệch nhau về
+    model/provider/effort/source. Hàm này THUẦN: không probe, không spawn,
+    không network, không đọc key.
+
+    Bất biến:
+    - source GỐC (auto/default/failover) không bị hoá thành `explicit` sau khi
+      resolve — chỉ `auto` + không profile được nâng thành AUTO, còn lại giữ
+      nguyên giá trị caller truyền vào.
+    - Gemini chưa có approved concrete default (config ghi CHUA_KIEM): giữ
+      nguyên `auto` để vendor tự chọn, KHÔNG bịa slug (plan: không invent model).
+    - OpenRouter: prefix `openrouter/` trước parse để giữ org/model compatibility;
+      policy (:free, router unresolved, contributor) áp trước network.
+    """
+    v_clean = (vendor or "").strip().lower()
+    # Chuẩn hoá enum/str về đúng một dạng: caller có thể truyền SelectionSource
+    # từ module import khác (bin.lib vs lib) — không được để lộ "SelectionSource.X"
+    # vào result JSON.
+    eff_source = getattr(source, "value", source)
+    model_is_auto = model is None or str(model).strip().lower() == "auto"
+
+    # 1. Source gốc: auto + không profile ⇒ AUTO (không phải explicit)
+    if model_is_auto and profile is None:
+        if eff_source == "explicit":
+            eff_source = SelectionSource.AUTO
+
+    # 2. Gemini auto: chưa có approved concrete default ⇒ giữ literal 'auto'
+    if v_clean == "gemini" and model_is_auto and not profile:
+        src_txt = getattr(eff_source, "value", eff_source)
+        return ResolvedTarget(
+            vendor=v_clean,
+            model="auto",
+            provider=provider,
+            effort=effort,
+            profile=None,
+            source=src_txt,
+            selector=None,
+            warnings=[
+                "[polykit] gemini auto: vendor tự chọn model; PolyKit KHÔNG bịa slug mặc định "
+                "(chưa có approved concrete default)."
+            ],
+        )
+
+    # 3. OpenRouter: giữ namespace org/model, chỉ scope dưới openrouter/
+    target = str(model).strip() if model is not None else "auto"
+    if v_clean == "openrouter":
+        target = _openrouter_scoped_model(target)
+
+    return resolve_vendor_model(
+        vendor=v_clean,
+        model=target,
+        provider=provider,
+        effort=effort,
+        profile=profile,
+        source=eff_source,
+        cfg=cfg,
+        allow_unknown=allow_unknown,
+    )
+
 
 
 def strip_echoed_prompt(stderr: str, prompt: str | None) -> str:
@@ -230,17 +360,14 @@ def _apply_stream_diagnose(result: DispatchResult, vendor: str, stream: bool,
     return result
 
 
-def _classify_completed(vendor: str, model: str, res, served_model: str | None = False,
+def _classify_completed(vendor: str, model: str, res, served_model: str | None = None,
                         prompt: str | None = None) -> DispatchResult:
     """M2: map kết quả subprocess → DispatchResult. returncode!=0 kèm dấu hiệu
     quota (402/insufficient credit/exhausted) → skipped/quota_capped, KHÔNG crash,
     KHÔNG coi là lỗi generic. Dùng chung cho codex/claude/grok."""
     stdout = res.stdout or ""
-    # `auto` = để CLI tự chọn → không suy ra được model thật, để None thay vì bịa.
-    if served_model is False:
-        served = None if model == "auto" else model
-    else:
-        served = served_model
+    # Chưa có verified metadata envelope thì không suy đoán served=model ở default.
+    served = served_model
     # Bỏ phần vendor echo lại prompt TRƯỚC khi dò lẫn khi hiển thị — nếu không,
     # PolyKit đọc chính chữ của mình rồi tưởng là lỗi của vendor.
     stderr = strip_echoed_prompt(res.stderr or "", prompt)
@@ -270,15 +397,17 @@ def _classify_completed(vendor: str, model: str, res, served_model: str | None =
     if not warnings:
         warnings = ["[polykit] vendor thoát với mã lỗi nhưng không in gì ra stdout lẫn stderr."]
     if is_quota_error(stderr + "\n" + stdout_sach, res.returncode):
+        # Non-ok ⇒ KHÔNG có bằng chứng model đã phục vụ, kể cả khi caller lỡ
+        # truyền vào slug đã yêu cầu. Chỉ nhánh exit 0 mới được mang served.
         return DispatchResult(status="skipped", vendor=vendor, model=model,
                               summary=f"{vendor} quota-capped (402/exhausted)",
                               warnings=warnings, stdout=stdout,
                               exit_code=res.returncode, reason="quota_capped",
-                              served_model=served)
+                              served_model=None)
     return DispatchResult(status="error", vendor=vendor, model=model,
                           summary=f"{vendor} failed with exit code {res.returncode}",
                           warnings=warnings, stdout=stdout, exit_code=res.returncode,
-                          served_model=served)
+                          served_model=None)
 
 def run_vendor(
     vendor: str,
@@ -292,19 +421,70 @@ def run_vendor(
     detector=detect,
     stream: bool = False,
     effort: str | None = None,
+    provider: str | None = None,
+    profile: str | None = None,
+    source: any = "explicit",
+    attachments: list[str] | None = None,
+    synthetic_vision: bool = False,
+    allow_sensitive_vision: bool = False,
+    sensitive_confirmation: any = None,
+    is_retry: bool = False,
+    is_failover: bool = False,
+    allow_unknown: bool = False,
+    data_class: str | None = None,
 ) -> DispatchResult:
     """Cổng dispatch công khai. `stream=True` = --stream-diagnose: chạy vendor ở
     chế độ stream để khi timeout còn đọc được vendor đã đi tới đâu (BUG-6).
+
+    Vision (Lô 9): `attachments` + `synthetic_vision` + `allow_sensitive_vision`
+    là cổng PII. Mặc định KHÔNG có attachment nào được chấp nhận: real/unknown
+    bị chặn trước prompt/probe/spawn. Consent sensitive phải là
+    `SingleTurnConfirmation` (không nhận cờ/string), và `is_retry`/`is_failover`
+    KHÔNG kế thừa consent.
+
+    Sandbox Go (Lô 11): KHÔNG có tham số `sandbox_verified`/bypass nào.
+    opencode/hermes chỉ chạy unsandboxed khi caller khai báo tường minh
+    `data_class='code-nopii'` và cổng dữ liệu qua (không attachment/vision,
+    pg-redact check prompt pass nếu có checker). Thiếu cờ ⇒ vẫn
+    `sandbox_unsupported` như trước.
 
     Hậu xử lý stream áp cho MỌI kết quả nên tách ra lớp mỏng này, không đổi
     hành vi khi stream=False (mọi thứ y như cũ)."""
     # BUG-15: cảnh báo sinh ra ở bước probe (vd auth chưa xác minh được nhưng
     # vẫn dispatch) phải sống sót tới result JSON — P4 cấm nuốt warning.
     probe_warnings: list[str] = []
-    result = _run_vendor(vendor, prompt, model, timeout, fmt, workdir, sandbox,
-                         runner, detector, stream, probe_warnings, effort=effort)
-    if probe_warnings:
-        result.warnings = probe_warnings + list(result.warnings)
+    # Cảnh báo chính sách model (catalog advisory, gemini auto…) cũng phải
+    # xuống result JSON, không chỉ nằm trong nội bộ resolver.
+    policy_warnings: list[str] = []
+    result = _run_vendor(
+        vendor=vendor,
+        prompt=prompt,
+        model=model,
+        timeout=timeout,
+        fmt=fmt,
+        workdir=workdir,
+        sandbox=sandbox,
+        runner=runner,
+        detector=detector,
+        stream=stream,
+        probe_warnings=probe_warnings,
+        policy_warnings=policy_warnings,
+        effort=effort,
+        provider=provider,
+        profile=profile,
+        source=source,
+        attachments=attachments,
+        synthetic_vision=synthetic_vision,
+        allow_sensitive_vision=allow_sensitive_vision,
+        sensitive_confirmation=sensitive_confirmation,
+        is_retry=is_retry,
+        is_failover=is_failover,
+        allow_unknown=allow_unknown,
+        data_class=data_class,
+    )
+    extra = [w for w in (policy_warnings + probe_warnings) if w]
+    if extra:
+        result.warnings = extra + [w for w in result.warnings if w not in extra]
     return _apply_stream_diagnose(result, vendor, stream, fmt)
 
 
@@ -320,10 +500,31 @@ def _run_vendor(
     detector=detect,
     stream: bool = False,
     probe_warnings: list[str] | None = None,
+    policy_warnings: list[str] | None = None,
     effort: str | None = None,
+    provider: str | None = None,
+    profile: str | None = None,
+    source: any = "explicit",
+    attachments: list[str] | None = None,
+    synthetic_vision: bool = False,
+    allow_sensitive_vision: bool = False,
+    sensitive_confirmation: any = None,
+    is_retry: bool = False,
+    is_failover: bool = False,
+    allow_unknown: bool = False,
+    data_class: str | None = None,
 ) -> DispatchResult:
     if probe_warnings is None:
         probe_warnings = []
+    if policy_warnings is None:
+        policy_warnings = []
+    probe = None
+    go_optin = False
+    # Bằng chứng runner của đường opt-in ĐÃ thực sự được gọi. Cổng dữ liệu qua
+    # chưa đủ: builder kiểm lại cổng (có thể fail lần hai) và skip vendor có
+    # thể xảy ra trước spawn. Chỉ có mặt trong list này mới được ghi
+    # unsandboxed=true (finding vòng 2 F1/F3).
+    go_spawned: list[bool] = []
     # 1. Chạy guards
     try:
         validated_timeout = validate_timeout(timeout)
@@ -339,11 +540,11 @@ def _run_vendor(
             depth = 0  # clamp: âm không được lách qua ngưỡng >= 3
         if depth >= 3:
             raise DispatchError(f"depth {depth} >= 3, possible loop")
-            
+
         # Prompt empty guard
         if not prompt or not prompt.strip():
             raise DispatchError("Empty prompt. Pipe content via stdin.")
-            
+
     except DispatchError as e:
         return DispatchResult(
             status="blocked",
@@ -351,24 +552,169 @@ def _run_vendor(
             model=model,
             summary=f"dispatch blocked: {str(e)}",
             warnings=[],
-            reason="guard_violation"
+            reason="guard_violation",
         )
 
-    # 2. Probe detector
+    # 2. MODEL POLICY + RESOLVER — TRƯỚC probe/detector/spawn/network.
+    #    Dùng CHUNG resolver với CLI (resolve_dispatch_target) nên hai entrypoint
+    #    không thể quyết định khác nhau. Source gốc (auto/default/failover) được
+    #    truyền nguyên vào policy: không biến thành explicit sau khi resolve.
+    try:
+        resolved_target = resolve_dispatch_target(
+            vendor=vendor,
+            model=model,
+            provider=provider,
+            effort=effort,
+            profile=profile,
+            source=source,
+            allow_unknown=allow_unknown,
+        )
+    except ModelPolicyViolation as e:
+        reason = getattr(e, "reason", None) or "policy_violation"
+        return DispatchResult(
+            status="blocked",
+            vendor=vendor,
+            model=model,
+            summary=f"dispatch blocked: {e}",
+            warnings=[
+                str(e),
+                f"[polykit] reason={reason}; requested={model!r} source={getattr(source, 'value', source)!r} "
+                "— blocked trước probe/spawn/network.",
+            ],
+            reason=reason,
+            exit_code=1,
+            served_model=None,
+        )
+    except DispatchError as e:
+        reason = getattr(e, "reason", None) or "guard_violation"
+        return DispatchResult(
+            status="blocked",
+            vendor=vendor,
+            model=model,
+            summary=f"dispatch blocked: {e}",
+            warnings=[str(e), f"[polykit] reason={reason}"],
+            reason=reason,
+            exit_code=1,
+            served_model=None,
+        )
+
+    resolved_model = resolved_target.model
+    resolved_provider = resolved_target.provider
+    resolved_effort = resolved_target.effort
+    resolved_source = resolved_target.source
+    policy_warnings.extend(w for w in resolved_target.warnings if w)
+
+    # 4. CỔNG DỮ LIỆU GO (opencode/hermes) — TRƯỚC vision gate/detector/probe/
+    #    spawn/network. Lane unsandboxed chỉ mở khi caller khai báo tường minh
+    #    data_class='code-nopii' (không có bool override), không attachment/
+    #    vision, và pg-redact check prompt pass (nếu có checker trên máy).
+    if vendor in GO_VENDORS:
+        try:
+            gate_warnings = evaluate_go_data_gate(
+                data_class=data_class,
+                prompt=prompt,
+                attachments=attachments,
+                synthetic_vision=synthetic_vision,
+                allow_sensitive_vision=allow_sensitive_vision,
+                sensitive_confirmation=sensitive_confirmation,
+                vendor=vendor,
+            )
+        except GoDataGateBlocked as e:
+            if e.reason == "sandbox_unsupported":
+                return DispatchResult(
+                    status="blocked",
+                    vendor=vendor,
+                    model=resolved_model,
+                    summary=f"vendor {vendor} blocked: sandbox_unsupported (no data_class opt-in)",
+                    warnings=[
+                        f"Go adapter '{vendor}' chỉ được chạy unsandboxed khi khai báo "
+                        f"tường minh --data-class {DATA_CLASS_CODE_NOPII} (code/dữ liệu "
+                        f"không PII). Không có cờ ⇒ chặn (sandbox_unsupported, Plan mục 83).",
+                        f"[polykit] reason=sandbox_unsupported; requested={resolved_model!r} "
+                        f"provider={(resolved_provider or GO_PROVIDER)!r} effort={resolved_effort!r} "
+                        f"source={resolved_source!r} — KHÔNG probe, KHÔNG spawn, KHÔNG network.",
+                        f"[polykit] cờ hợp lệ duy nhất: --data-class {DATA_CLASS_CODE_NOPII}; "
+                        f"không có tham số bool/evidence_sandbox nào để bật.",
+                    ],
+                    reason="sandbox_unsupported",
+                    exit_code=1,
+                    served_model=None,
+                    data_class=data_class,
+                )
+            # Các nhánh chặn còn lại (attachment/vision, PII, checker lỗi).
+            return DispatchResult(
+                status="blocked",
+                vendor=vendor,
+                model=resolved_model,
+                summary=f"vendor {vendor} blocked: {e.reason}",
+                warnings=[
+                    str(e),
+                    f"[polykit] reason={e.reason}; unsandboxed=false; "
+                    f"data_class={data_class!r} — KHÔNG probe, KHÔNG spawn, KHÔNG network.",
+                ],
+                reason=e.reason,
+                exit_code=1,
+                served_model=None,
+                data_class=data_class,
+            )
+        # Cổng 1 qua (chưa spawn). Chỉ riêng cờ này KHÔNG đủ để ghi
+        # unsandboxed=true: builder còn kiểm lại cổng (pg-redact có thể pass
+        # rồi fail) và skip vendor có thể xảy ra trước spawn — xem `_mark_go`.
+        go_optin = True
+        policy_warnings.extend(gate_warnings)
+
+    # 5. Vision Gate Check (TRƯỚC detector/probe/spawn/network!)
+    if attachments:
+        try:
+            check_vision_gate(
+                files=attachments,
+                model=resolved_model,
+                provider=resolved_provider or "",
+                adapter=vendor,
+                is_synthetic=synthetic_vision,
+                allow_sensitive=allow_sensitive_vision,
+                confirmation=sensitive_confirmation,
+                is_retry=is_retry,
+                is_failover=is_failover,
+                workspace_root=workdir,
+            )
+        except VisionBlockedError as e:
+            return DispatchResult(
+                status="blocked",
+                vendor=vendor,
+                model=resolved_model,
+                summary=f"vision gate blocked: {e}",
+                warnings=[str(e)],
+                reason="vision_blocked",
+                exit_code=1,
+                served_model=None,
+            )
+        except VisionError as e:
+            return DispatchResult(
+                status="blocked",
+                vendor=vendor,
+                model=resolved_model,
+                summary=f"vision error: {e}",
+                warnings=[str(e)],
+                reason="vision_format_error",
+                exit_code=1,
+                served_model=None,
+            )
+
+    # 6. Probe detector
     # EXCEPTION: gemini có nhiều lane không phụ thuộc chỉ 1 binary
     if vendor != "gemini":
-        from lib.vendor_config import load_vendor_config
         cfg = load_vendor_config()
         if vendor not in REGISTRY and vendor not in cfg.get("vendors", {}):
             return DispatchResult(
                 status="blocked",
                 vendor=vendor,
-                model=model,
+                model=resolved_model,
                 summary=f"unknown vendor: {vendor}",
                 warnings=[],
                 reason="unknown_vendor"
             )
-        
+
         if vendor in REGISTRY:
             probe = detector(REGISTRY[vendor])
             state = classify(probe)
@@ -389,24 +735,59 @@ def _run_vendor(
                 # BUG-15 req 4: kèm bằng chứng probe (thời gian/mã thoát) vào
                 # thông điệp skip — nhãn trần không đủ để cãi lại.
                 chi_tiet = f" — {probe.error}" if probe.error else ""
+                # F3 (review vòng 2): caller ĐÃ khai data_class=code-nopii và
+                # cổng đã qua, nên result JSON phải giữ dấu vết đó — nhưng
+                # CHƯA spawn thì unsandboxed phải false (không tự nhận đã chạy
+                # không sandbox) và warning phải nói rõ cổng qua / chưa spawn.
+                skip_warnings: list[str] = []
+                if go_optin:
+                    skip_warnings.append(
+                        f"[polykit] cổng data_class={DATA_CLASS_CODE_NOPII} đã qua "
+                        f"nhưng vendor chưa sẵn sàng ({state.value}) — CHƯA spawn: "
+                        f"unsandboxed=false, không có lượt chạy nào (served_model=null)."
+                    )
                 return DispatchResult(
                     status="skipped",
                     vendor=vendor,
-                    model=model,
+                    model=resolved_model,
                     summary=f"vendor {vendor} skipped: {state.value}{chi_tiet}",
-                    warnings=[],
+                    warnings=skip_warnings,
                     reason=state.value,
-                    served_model=None if model == "auto" else model
+                    # Chưa spawn ⇒ KHÔNG có model nào đã phục vụ. `resolved_model`
+                    # chỉ là Ý ĐỊNH (yêu cầu), không phải bằng chứng — ghi vào
+                    # served_model là bịa (fallback Grok3: gpt-6.1-sol "served"
+                    # trên một lượt skipped not_installed).
+                    served_model=None,
+                    unsandboxed=False,
+                    data_class=DATA_CLASS_CODE_NOPII if go_optin else None,
                 )
 
-    # 3. env con
+    # 7. env con
     env = os.environ.copy()
     env["XCLI_DISPATCH_DEPTH"] = str(depth + 1)
 
-    # 4. Dispatch theo vendor
+    # 8. Dispatch theo vendor
+    def _mark_go(res: DispatchResult) -> DispatchResult:
+        """Đường opt-in: result JSON phải nói rõ unsandboxed/data_class khi lượt
+        chạy ĐÃ thực sự spawn (kể cả timeout/lỗi SAU cổng).
+
+        `go_spawned` là bằng chứng runner đã được gọi. Cổng 1 qua mà builder
+        kiểm lại cổng fail (vd pg-redact pass rồi fail), hoặc vendor bị skip
+        trước spawn, thì KHÔNG ghi unsandboxed=true — blocked/skipped trước
+        spawn không bao giờ tự nhận đã chạy không sandbox."""
+        if go_optin and go_spawned:
+            res.unsandboxed = True
+            res.data_class = DATA_CLASS_CODE_NOPII
+        return res
+
+    def go_runner(*args, **kwargs):
+        """Bọc runner để ghi bằng chứng spawn trước khi process có thể nổ."""
+        go_spawned.append(True)
+        return runner(*args, **kwargs)
+
     try:
         if vendor == "codex":
-            cmd = build_codex_cmd(model, validated_sandbox, workdir, fmt, stream=stream, effort=effort)
+            cmd = build_codex_cmd(resolved_model, validated_sandbox, workdir, fmt, stream=stream, effort=resolved_effort, source=resolved_source)
             res = runner(
                 cmd,
                 input=prompt,
@@ -418,7 +799,7 @@ def _run_vendor(
             return _classify_completed(vendor, model, res, prompt=prompt)
 
         elif vendor == "claude":
-            cmd = build_claude_cmd(model, prompt)
+            cmd = build_claude_cmd(resolved_model, prompt, source=resolved_source)
             res = runner(
                 cmd,
                 capture_output=True,
@@ -432,10 +813,10 @@ def _run_vendor(
             with tempfile.NamedTemporaryFile(mode="w+", delete=False) as temp_prompt:
                 temp_prompt.write(prompt)
                 temp_prompt_path = temp_prompt.name
-            
+
             try:
-                cmd = build_grok_cmd(model, validated_sandbox, workdir, fmt, temp_prompt_path,
-                                     stream=stream)
+                cmd = build_grok_cmd(resolved_model, validated_sandbox, workdir, fmt, temp_prompt_path,
+                                     stream=stream, source=resolved_source)
                 res = runner(
                     cmd,
                     capture_output=True,
@@ -450,34 +831,38 @@ def _run_vendor(
                     os.unlink(temp_prompt_path)
 
         elif vendor == "agy":
-            # Codex review: `auto` mà ghim slug cứng thì catalog đổi mùa là gãy.
-            # Ưu tiên chọn từ catalog LIVE vừa probe được; hết cách mới dùng hằng số.
-            resolved = model
-            if model == "auto":
-                catalog = list(getattr(probe, "models", []) or [])
-                if catalog:
-                    resolved = (AGY_DEFAULT_MODEL if AGY_DEFAULT_MODEL in catalog
-                                else next((m for m in catalog if m.startswith("gemini-")),
-                                          catalog[0]))
+            # `auto` KHÔNG chọn catalog[0] hay phần tử đầu tiên khớp gemini-*:
+            # catalog đổi mùa, chọn tùy tiện = đổi model ngoài quyết định của
+            # người dùng. Chỉ dùng default ĐÃ DUYỆT; lệch catalog thì cảnh báo,
+            # không tự đổi (plan: không invent model).
+            resolved = resolved_model
+            if resolved_model == "auto":
+                resolved = AGY_DEFAULT_MODEL
+            catalog = list(getattr(probe, "models", []) or [])
+            if resolved == AGY_DEFAULT_MODEL and catalog and AGY_DEFAULT_MODEL not in catalog:
+                policy_warnings.append(
+                    f"[polykit] agy catalog live không chứa default đã duyệt "
+                    f"{AGY_DEFAULT_MODEL!r}; vẫn gửi default đó, KHÔNG tự chọn model "
+                    f"khác từ catalog."
+                )
             cmd = build_agy_cmd(resolved, prompt, stream=stream,
-                                timeout=validated_timeout)
+                                timeout=validated_timeout, source=resolved_source)
             res = runner([shutil.which("agy") or "agy"] + cmd[1:],
                          capture_output=True, text=True,
                          timeout=validated_timeout, env=env)
-            out = _classify_completed(vendor, model, res, prompt=prompt)
-            # served_model = slug ĐÃ GỬI. agy không báo lại model thật đã chạy,
-            # nên đây là ý định, không phải bằng chứng (Grok P1) — ghi rõ để
-            # đừng nhầm với served_model của OpenRouter (đọc từ response).
-            # `resolved` chính là slug build_agy_cmd đã gửi (không phụ thuộc vị
-            # trí cờ stream trong argv).
-            out.served_model = resolved
+            # CLI plaintext: LUÔN served=None, không tin stdout assistant JSON.
+            out = _classify_completed(vendor, model, res, served_model=None, prompt=prompt)
+            out.warnings.append(
+                f"[polykit] agy không xác nhận model thực đã phục vụ "
+                f"(chưa xác minh model thật); requested_model={resolved!r}."
+            )
             return out
 
         elif vendor == "dsh":
             # dsh KHÔNG có cờ --model → viết file patch YAML rồi truyền --patch.
             # 🔴 auto → deepseek-v4-pro (KHÔNG phải flash — flash trả rỗng trên task nhiều bước).
-            resolved = model
-            if model == "auto":
+            resolved = resolved_model
+            if resolved_model == "auto":
                 resolved = DSH_DEFAULT_MODEL
 
             # Tạo patch file tạm
@@ -487,9 +872,9 @@ def _run_vendor(
                     mode="w", suffix=".yaml", delete=False, prefix="dsh-patch-"
                 ) as pf:
                     patch_path = pf.name
-                    write_dsh_patch(resolved, patch_path)
+                    write_dsh_patch(resolved, patch_path, source=resolved_source)
 
-                cmd = build_dsh_cmd(resolved, patch_path)
+                cmd = build_dsh_cmd(resolved, patch_path, source=resolved_source)
                 # Append task prompt as positional arg
                 cmd.append(prompt)
 
@@ -513,44 +898,98 @@ def _run_vendor(
                     timeout=validated_timeout,
                     env=env,
                 )
-                out = _classify_completed(vendor, model, res, prompt=prompt)
-                out.served_model = resolved
+                # CLI plaintext: LUÔN served=None, không tin stdout assistant JSON.
+                out = _classify_completed(vendor, model, res, served_model=None, prompt=prompt)
+                out.warnings.append(
+                    f"[polykit] dsh không xác nhận model thực đã phục vụ "
+                    f"(chưa xác minh model thật); requested_model={resolved!r}."
+                )
                 return out
             finally:
                 if patch_path and os.path.exists(patch_path):
                     os.unlink(patch_path)
 
         elif vendor == "gemini":
-            return _dispatch_gemini(prompt, model, validated_timeout, runner, env,
+            return _dispatch_gemini(prompt, resolved_model, validated_timeout, runner, env,
                                     stream=stream)
 
         elif vendor == "openrouter":
             from lib.openrouter import or_dispatch
-            if effort is not None:
-                r = or_dispatch(prompt, model=model, timeout=validated_timeout, effort=effort)
-            else:
-                r = or_dispatch(prompt, model=model, timeout=validated_timeout)
+            r = or_dispatch(
+                prompt,
+                model=resolved_model,
+                timeout=validated_timeout,
+                effort=resolved_effort,
+                source=resolved_source,
+                allow_unknown=allow_unknown,
+            )
             if r.ok:
-                # Router OR (auto/fusion/free) chọn model khác hẳn cái đã gọi —
-                # ghi lại để biết tiền đi đâu (bench 03/08: fusion→opus-5 ~$1/lượt).
                 summary = "openrouter completed successfully"
-                if r.served_model and r.served_model != model:
+                if r.served_model and r.served_model != resolved_model:
                     summary += f" (served: {r.served_model})"
-                return DispatchResult(status="ok", vendor=vendor, model=model,
+                return DispatchResult(status="ok", vendor=vendor, model=resolved_model,
                                       summary=summary,
                                       stdout=r.text, exit_code=0,
                                       served_model=r.served_model)
             if r.quota_capped:
-                return DispatchResult(status="skipped", vendor=vendor, model=model,
+                return DispatchResult(status="skipped", vendor=vendor, model=resolved_model,
                                       summary="openrouter quota-capped (402/429)",
                                       warnings=[r.error or ""], exit_code=r.http_code or 1,
                                       reason="quota_capped")
-            return DispatchResult(status="error", vendor=vendor, model=model,
-                                  summary=f"openrouter failed: {r.error}",
-                                  warnings=[r.error or ""], exit_code=r.http_code or 1)
+            r_reason = r.reason or "exec_error"
+            is_blocked = (
+                r_reason.endswith("_blocked")
+                or "destination" in r_reason
+                or r_reason in ("contributor_model_blocked", "free_model_not_explicit", "policy_violation")
+            )
+            return DispatchResult(
+                status="blocked" if is_blocked else "error",
+                vendor=vendor,
+                model=resolved_model,
+                summary=f"openrouter failed: {r.error}",
+                warnings=[r.error or ""],
+                exit_code=r.http_code or 1,
+                reason=r_reason,
+            )
+
+        elif vendor in GO_VENDORS:
+            # Nhánh RIÊNG cho Go adapters (opencode, hermes): argv list,
+            # stdin=DEVNULL, cwd=workdir, effort truyền xuống builder.
+            # Chỉ tới được đây khi cổng data_class=code-nopii đã qua (bước 4);
+            # builder kiểm lại cổng + policy trước khi dựng argv.
+            return _mark_go(_dispatch_go_adapter(
+                vendor=vendor,
+                prompt=prompt,
+                model=resolved_model,
+                effort=resolved_effort,
+                attachments=attachments,
+                sandbox=validated_sandbox,
+                workdir=workdir,
+                source=resolved_source,
+                timeout=validated_timeout,
+                env=env,
+                runner=go_runner,
+                data_class=data_class,
+            ))
 
         else:
             # Handle dynamic vendors from JSON
+            # Go adapters KHÔNG BAO GIỜ được rơi xuống fallback shell=True
+            # (defensive: nhánh trên đã bắt, đây là chốt chống hồi quy).
+            if vendor in GO_VENDORS:
+                return DispatchResult(
+                    status="blocked",
+                    vendor=vendor,
+                    model=resolved_model,
+                    summary=f"vendor {vendor} blocked: sandbox_unsupported (no dynamic shell fallback)",
+                    warnings=[
+                        "Go adapters never fall back to the dynamic shell template "
+                        "(no proven confinement)."
+                    ],
+                    reason="sandbox_unsupported",
+                    exit_code=1,
+                    served_model=None,
+                )
             cfg = load_vendor_config()
             v_cfg = cfg.get("vendors", {}).get(vendor, {})
             if not v_cfg:
@@ -564,14 +1003,25 @@ def _run_vendor(
                 )
                 
             cmd_has_model = False
-            if model and model != "auto":
+            if resolved_model and resolved_model != "auto":
                 if v_cfg.get("model_flag"):
                     cmd_has_model = True
 
-            served = model if cmd_has_model else None
+            # served_model = model THẬT đã phục vụ, cần BẰNG CHỨNG (metadata
+            # envelope do vendor trả). Dynamic CLI không có metadata đó: việc
+            # argv có `--model <slug>` chỉ là Ý ĐỊNH của ta, không phải lời xác
+            # nhận của vendor. ⇒ served LUÔN None; requested vẫn nằm ở `model`
+            # và phải nói rõ vì sao (fallback Grok3: intent bị ghi thành served).
+            served = None
             warning_msg = None
             if not cmd_has_model:
                 warning_msg = f"vendor '{vendor}' không nhận cờ model, đang chạy mặc định của chính nó, không xác định được slug."
+            else:
+                warning_msg = (
+                    f"vendor '{vendor}' nhận cờ model nhưng CLI không trả metadata xác thực "
+                    f"model đã phục vụ: served_model=None; requested_model="
+                    f"{resolved_model!r} chỉ là yêu cầu, chưa phải bằng chứng."
+                )
 
             def finalize(result: DispatchResult) -> DispatchResult:
                 if warning_msg:
@@ -585,7 +1035,7 @@ def _run_vendor(
                 return finalize(DispatchResult(
                     status="skipped",
                     vendor=vendor,
-                    model=model,
+                    model=resolved_model,
                     summary=f"vendor {vendor} skipped: not_installed",
                     warnings=[],
                     reason="not_installed",
@@ -597,7 +1047,7 @@ def _run_vendor(
                 return finalize(DispatchResult(
                     status="blocked",
                     vendor=vendor,
-                    model=model,
+                    model=resolved_model,
                     summary=f"vendor {vendor} missing fields in JSON: headless",
                     warnings=[],
                     reason="missing_fields",
@@ -623,12 +1073,12 @@ def _run_vendor(
                 input_data = prompt
 
             if cmd_has_model:
-                cmd += f" {v_cfg['model_flag']} {shlex.quote(model)}"
+                cmd += f" {v_cfg['model_flag']} {shlex.quote(resolved_model)}"
                     
             if workdir and v_cfg.get("workdir_flag"):
                 cmd += f" {v_cfg['workdir_flag']} {shlex.quote(workdir)}"
                 
-            if sandbox == "workspace-write" and v_cfg.get("auto_approve"):
+            if validated_sandbox == "workspace-write" and v_cfg.get("auto_approve"):
                 cmd += f" {v_cfg['auto_approve']}"
 
             res = runner(
@@ -640,7 +1090,7 @@ def _run_vendor(
                 env=env,
                 input=input_data
             )
-            out = _classify_completed(vendor, model, res, served_model=served, prompt=prompt)
+            out = _classify_completed(vendor, resolved_model, res, served_model=served, prompt=prompt)
             return finalize(out)
 
     except subprocess.TimeoutExpired as e:
@@ -650,10 +1100,10 @@ def _run_vendor(
         # trích từ JSONL — bằng chứng vendor đang NGHĨ, không treo.
         stdout = _decode_partial(e.stdout)
         stderr = _decode_partial(e.stderr)
-        return DispatchResult(
+        return _mark_go(DispatchResult(
             status="timeout",
             vendor=vendor,
-            model=model,
+            model=resolved_model,
             summary=f"{vendor} dispatch exceeded {validated_timeout}s",
             warnings=_stream_timeout_warnings(vendor, stdout, stderr, prompt, stream),
             # stdout để RỖNG có chủ ý: trường này là "kết quả vendor". Nhét output
@@ -662,16 +1112,132 @@ def _run_vendor(
             # Phần dang dở đã nằm trong warnings, đã qua tail_lines.
             stdout="",
             reason="timeout",
-        )
+        ))
     except Exception as e:
-        return DispatchResult(
+        return _mark_go(DispatchResult(
             status="error",
             vendor=vendor,
-            model=model,
+            model=resolved_model,
             summary=f"dispatch execution error: {str(e)}",
             warnings=[str(e)],
             reason="exec_error",
+        ))
+
+def _dispatch_go_adapter(
+    vendor: str,
+    prompt: str,
+    model: str,
+    effort: str | None,
+    attachments: list[str] | None,
+    sandbox: str,
+    workdir: str | None,
+    source: str,
+    timeout: int,
+    env: dict,
+    runner,
+    data_class: str | None = None,
+) -> DispatchResult:
+    """Nhánh RIÊNG cho Go adapters (opencode/hermes).
+
+    Bất biến:
+    - argv là LIST (không shell=True, không nội suy string) — prompt/Unicode
+      nguyên vẹn, không bao giờ rơi xuống template dynamic.
+    - stdin=DEVNULL (không đọc stdin của PolyKit), cwd=workdir, effort truyền
+      xuống builder (variant của Go profile).
+    - Builder kiểm lại cổng data_class=code-nopii; thiếu cờ ⇒ `blocked`
+      reason sandbox_unsupported, không giả lập một lượt chạy đã xảy ra.
+    - Mọi result ở đây mang unsandboxed/data_class của đường opt-in CHỈ SAU khi
+      runner thật sự được gọi (kể cả lỗi sau cổng). Blocked trước spawn (builder
+      từ chối cổng, argv hỏng) luôn unsandboxed=false.
+    - Attachment đi vào cổng của CẢ HAI vendor: hermes không có cờ file, nhưng
+      nhận attachment rồi lặng lẽ bỏ qua = mở lượt unsandboxed mà caller tưởng
+      file đã được xét (review vòng 2 F2).
+    """
+    try:
+        if vendor == "opencode":
+            cmd = build_opencode_cmd(
+                model=model,
+                prompt=prompt,
+                effort=effort,
+                attachments=attachments,
+                sandbox=sandbox,
+                workdir=workdir,
+                source=source,
+                data_class=data_class,
+            )
+        else:
+            cmd = build_hermes_cmd(
+                model=model,
+                prompt=prompt,
+                effort=effort,
+                attachments=attachments,
+                sandbox=sandbox,
+                workdir=workdir,
+                source=source,
+                data_class=data_class,
+            )
+    except DispatchError as e:
+        reason = getattr(e, "reason", None) or "sandbox_unsupported"
+        return DispatchResult(
+            status="blocked",
+            vendor=vendor,
+            model=model,
+            summary=f"vendor {vendor} blocked: {e}",
+            warnings=[f"[polykit] reason={reason}; CHƯA spawn, unsandboxed=false.", str(e)],
+            reason=reason,
+            exit_code=1,
+            served_model=None,
+            # Builder từ chối = chưa có process nào chạy ⇒ không được nhận
+            # unsandboxed chỉ vì caller đã khai data_class=code-nopii (F1).
+            unsandboxed=False,
+            data_class=data_class,
         )
+    except Exception as e:  # noqa: BLE001 — builder lỗi bất ngờ vẫn là chưa spawn
+        return DispatchResult(
+            status="blocked",
+            vendor=vendor,
+            model=model,
+            summary=f"vendor {vendor} blocked: builder error ({type(e).__name__})",
+            warnings=[
+                f"[polykit] reason=builder_error; CHƯA spawn, unsandboxed=false.",
+                f"{type(e).__name__}: {e}",
+            ],
+            reason="builder_error",
+            exit_code=1,
+            served_model=None,
+            unsandboxed=False,
+            data_class=data_class,
+        )
+
+    if not isinstance(cmd, (list, tuple)) or not cmd:
+        return DispatchResult(
+            status="blocked",
+            vendor=vendor,
+            model=model,
+            summary=f"vendor {vendor} blocked: Go adapter argv must be a non-empty list",
+            warnings=["Go adapter argv is not a list — refusing to run (no shell fallback)."],
+            reason="invalid_argv",
+            exit_code=1,
+            served_model=None,
+            unsandboxed=False,
+            data_class=data_class,
+        )
+
+    res = runner(
+        list(cmd),
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        env=env,
+        cwd=workdir,
+    )
+    out = _classify_completed(vendor, model, res, served_model=None, prompt=prompt)
+    if data_class == DATA_CLASS_CODE_NOPII:
+        out.unsandboxed = True
+        out.data_class = DATA_CLASS_CODE_NOPII
+    return out
+
 
 def _dispatch_gemini(
     prompt: str,
@@ -727,9 +1293,11 @@ def _dispatch_gemini(
                 env=env,
             )
             if res.returncode == 0 and res.stdout and res.stdout.strip():
-                # Slug thật do agy.sh quyết (tier→model), không hard-code lại ở đây
-                # để khỏi lệch khi wrapper đổi — ghi lane+tier là thứ chắc chắn đúng.
-                served = f"agy:{tier}" if agy_bin else "agy:default"
+                # CLI plaintext: LUÔN served=None, không tin stdout assistant JSON.
+                lane_warnings = list(warnings)
+                lane_warnings.append(
+                    f"[polykit] gemini lane 1 (agy) chưa xác minh model thật từ output; requested={model!r}."
+                )
                 return DispatchResult(
                     status="ok",
                     vendor="gemini",
@@ -738,10 +1306,10 @@ def _dispatch_gemini(
                     # `warnings=[]` cứng là cùng họ lỗi BUG-9(2): thành công KHÔNG
                     # có nghĩa là không có gì để nói. Cảnh báo "lane 1 không stream"
                     # bị nuốt sạch ở đây, để ghi chú chung nói hộ là đã stream.
-                    warnings=list(warnings),
+                    warnings=lane_warnings,
                     stdout=res.stdout,
                     exit_code=0,
-                    served_model=served,
+                    served_model=None,
                 )
             else:
                 reason = "exit code nonzero" if res.returncode != 0 else "empty output"
@@ -767,12 +1335,16 @@ def _dispatch_gemini(
     # --- Lane 2: gemini CLI ---
     gemini_bin = shutil.which("gemini")
     if gemini_bin:
-        cli_model = "gemini-3.5-flash" if model == "auto" else model
         try:
-            cmd = [gemini_bin, "-m", cli_model, "-p", prompt]
-            if stream:
-                # -o/--output-format stream-json là cờ stream của gemini CLI.
-                cmd = [gemini_bin, "-m", cli_model, "-o", "stream-json", "-p", prompt]
+            if model == "auto":
+                # Grok finding 3: không bịa default gemini-3.5-flash khi model auto.
+                cmd = [gemini_bin, "-p", prompt]
+                if stream:
+                    cmd = [gemini_bin, "-o", "stream-json", "-p", prompt]
+            else:
+                cmd = [gemini_bin, "-m", model, "-p", prompt]
+                if stream:
+                    cmd = [gemini_bin, "-m", model, "-o", "stream-json", "-p", prompt]
             res = runner(
                 cmd,
                 capture_output=True,
@@ -783,6 +1355,10 @@ def _dispatch_gemini(
             if res.returncode == 0 and res.stdout and res.stdout.strip():
                 deg_warnings = warnings.copy()
                 deg_warnings.append("degraded: succeeded on lane 2")
+                # CLI plaintext: LUÔN served=None, không tin stdout assistant JSON.
+                deg_warnings.append(
+                    f"[polykit] gemini lane 2 (cli) chưa xác minh model thật từ output; requested={model!r}."
+                )
                 return DispatchResult(
                     status="ok",
                     vendor="gemini",
@@ -791,7 +1367,7 @@ def _dispatch_gemini(
                     warnings=deg_warnings,
                     stdout=res.stdout,
                     exit_code=0,
-                    served_model=cli_model,
+                    served_model=None,
                 )
             else:
                 reason = "exit code nonzero" if res.returncode != 0 else "empty output"
@@ -844,6 +1420,13 @@ def _dispatch_gemini(
             if stdout and stdout.strip():
                 deg_warnings = warnings.copy()
                 deg_warnings.append("degraded: succeeded on lane 3")
+                # Chỉ đọc actual metadata từ HTTP Gemini API top-level response.modelVersion (không đọc candidate text)
+                raw_model = resp_data.get("modelVersion")
+                proven_model = raw_model.strip() if (isinstance(raw_model, str) and raw_model.strip()) else None
+                if proven_model is None:
+                    deg_warnings.append(
+                        f"[polykit] gemini lane 3 (api) chưa xác minh model thật từ API response; requested={model!r}."
+                    )
                 return DispatchResult(
                     status="ok",
                     vendor="gemini",
@@ -852,7 +1435,7 @@ def _dispatch_gemini(
                     warnings=deg_warnings,
                     stdout=stdout,
                     exit_code=0,
-                    served_model=api_model,
+                    served_model=proven_model,
                 )
             else:
                 warnings.append("lane 3 failed: empty text response")

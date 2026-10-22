@@ -12,8 +12,8 @@ from pathlib import Path
 # Add the directory containing this script to sys.path to resolve 'lib'
 sys.path.insert(0, str(Path(__file__).parent))
 
-from lib.dispatcher import run_vendor
-from lib.dispatch_core import DispatchResult
+from lib.dispatcher import run_vendor, resolve_dispatch_target
+from lib.dispatch_core import DispatchResult, DispatchError
 from lib.vendor_config import (
     load_vendor_config,
     vendor_names,
@@ -22,8 +22,10 @@ from lib.vendor_config import (
     vendor_verify_cmd,
     vendor_zero_quota_cmds,
     vendor_auth_hint,
+    vendor_provider,
     default_timeout,
 )
+from lib.model_policy import ModelPolicyViolation, SelectionSource
 
 
 def _run_doctor(vendor_name: str) -> int:
@@ -126,7 +128,7 @@ def _doctor_ra_json(vendor: str, ma: int) -> None:
     ).to_dict(), indent=2))
 
 
-def _chan_som(args, resolved_model: str, summary: str, warning_lines: list[str]) -> None:
+def _chan_som(args, resolved_model: str, summary: str, warning_lines: list[str], reason: str = "guard_violation") -> None:
     """Chặn SỚM trước khi gọi vendor (model sai, --prompt-file lỗi/rỗng).
 
     BUG-8: --result-json hứa stdout là JSON, nên nhánh chặn cũng phải in
@@ -146,7 +148,7 @@ def _chan_som(args, resolved_model: str, summary: str, warning_lines: list[str])
             warnings=list(warning_lines),
             stdout="",
             exit_code=2,
-            reason="guard_violation",
+            reason=reason,
             served_model=None,
         )
         print(json.dumps(result.to_dict(), indent=2))
@@ -163,7 +165,20 @@ def main():
     # bỗng gãy, mà thông báo lại nói về file — sai chỗ để đi tìm (BUG-12, 20/08).
     parser = _ParserRaJson(description="Multi-vendor CLI dispatch wrapper", allow_abbrev=False)
     parser.add_argument("vendor", choices=names, help="Vendor to dispatch to")
-    parser.add_argument("model", nargs="?", default="auto", help="Model slug to use (default: auto)")
+    parser.add_argument("model", nargs="?", default=None, help="Model slug to use (default: auto)")
+    parser.add_argument("--model", dest="model_flag", default=None, help="Model slug alias")
+    parser.add_argument("--profile", dest="profile", default=None, help="Vendor profile configuration")
+    parser.add_argument("--provider", dest="provider", default=None, help="Explicit provider (e.g. opencode-go)")
+    parser.add_argument("--file", "-f", dest="files", action="append", default=[],
+                        help="Attachment file for vision (repeatable: -f a.png -f b.png)")
+    parser.add_argument("--synthetic-vision", action="store_true",
+                        help="Explicitly declare synthetic vision attachments")
+    parser.add_argument("--data-class", dest="data_class", default=None,
+                        help="Khai báo loại dữ liệu cho lane Go unsandboxed. Chỉ chấp nhận "
+                             "'code-nopii' (việc code/dữ liệu không PII). Thiếu cờ ⇒ "
+                             "opencode/hermes vẫn bị chặn sandbox_unsupported.")
+    parser.add_argument("--allow-sensitive-vision", action="store_true",
+                        help="Opt-in flag for sensitive vision input")
     parser.add_argument("--timeout", type=int, default=None,
                         help="Timeout in seconds (max: 600). Bỏ trống = default_timeout của vendor trong vendors.json, không có thì 120 (BUG-18)")
     parser.add_argument("--prompt", dest="prompt_text", default=None,
@@ -193,64 +208,144 @@ def main():
 
     args = parser.parse_args()
 
-    # --doctor mode
+    # Model positional (tương thích cũ) vs --model alias: xung đột thì CHẶN,
+    # không im lặng chọn một bên.
+    if args.model is not None and args.model_flag is not None:
+        if args.model != args.model_flag:
+            _chan_som(
+                args,
+                resolved_model=args.model,
+                summary="dispatch blocked: conflicting positional model and --model flag",
+                warning_lines=[
+                    f"[polykit] error: positional model '{args.model}' conflicts with --model '{args.model_flag}'"
+                ],
+                reason="guard_violation",
+            )
+        raw_model = args.model_flag
+    elif args.model_flag is not None:
+        raw_model = args.model_flag
+    elif args.model is not None:
+        raw_model = args.model
+    else:
+        raw_model = "auto"
+
+    # Nguồn GỐC của lựa chọn model. Chỉ `auto` + không profile mới là AUTO;
+    # giá trị này đi thẳng vào policy và KHÔNG bị nâng thành explicit sau resolve.
+    requested_source = (
+        SelectionSource.AUTO
+        if (raw_model == "auto" and args.profile is None)
+        else SelectionSource.EXPLICIT
+    )
+
+    # Cổng Vision CLI: attachments real/unknown blocked TRƯỚC prompt-file read/
+    # attachment stat/probe. Cờ --synthetic-vision chỉ mở cổng vision.py cho dữ
+    # liệu tổng hợp; sensitive vẫn cần confirmation từng lượt (chưa có transport
+    # sandbox ⇒ blocked honest).
+    if args.files:
+        if not args.synthetic_vision:
+            _chan_som(
+                args,
+                resolved_model=raw_model or "auto",
+                summary="dispatch blocked: attachments real/unknown blocked (sensitive vision unsupported without trusted UI confirmation)",
+                warning_lines=[
+                    "[polykit] error: sensitive or unknown attachments blocked before prompt-file read/attachment stat/probe.",
+                    "Sensitive vision requires single-turn trusted UI confirmation (currently unsupported without transport sandbox).",
+                    "Declare --synthetic-vision for synthetic test inputs.",
+                ],
+                reason="vision_blocked",
+            )
+
+    # BUG-18: không truyền --timeout → dùng trần RIÊNG của vendor
+    if args.timeout is None:
+        args.timeout = default_timeout(args.vendor, cfg)
+
+    # Provider: config/resolver quyết; CLI chỉ truyền Ý ĐỊNH nếu người dùng nêu.
+    provider_intent = args.provider
+    if not provider_intent:
+        provider_intent = vendor_provider(args.vendor, cfg)
+        if not provider_intent and args.vendor == "openrouter":
+            # OpenRouter không có entry trong vendors.json (REGISTRY-only).
+            # Với --doctor vendor-only (raw_model auto), không gán provider=openrouter
+            # để không bị chặn bởi router unresolved destination (doctor không dispatch prompt).
+            if not (args.doctor and raw_model == "auto"):
+                provider_intent = "openrouter"
+
+    # Resolver CHUNG với library — cùng một quyết định, không whitelist riêng.
+    resolved_model: str = raw_model or "auto"
+    resolved_provider = provider_intent
+    resolved_effort: str | None = args.effort
+    resolved_source = requested_source
+    res_warnings: list[str] = []
+
+    try:
+        target = resolve_dispatch_target(
+            vendor=args.vendor,
+            model=raw_model,
+            provider=provider_intent,
+            effort=args.effort,
+            profile=args.profile,
+            source=requested_source,
+            allow_unknown=args.allow_unknown_model,
+            cfg=cfg,
+        )
+    except (ModelPolicyViolation, DispatchError) as e:
+        r_reason = getattr(e, "reason", None) or "policy_violation"
+        _chan_som(
+            args,
+            resolved_model=raw_model or "auto",
+            summary=f"dispatch blocked: {e}",
+            warning_lines=[
+                f"[polykit] error: {e}",
+                f"[polykit] reason={r_reason}; requested={raw_model!r} "
+                f"source={requested_source.value} — blocked trước probe/spawn/network.",
+            ],
+            reason=r_reason,
+        )
+    else:
+        resolved_model = target.model
+        resolved_provider = target.provider or provider_intent
+        resolved_effort = target.effort
+        resolved_source = target.source
+        res_warnings.extend(w for w in target.warnings if w)
+
+    # Advisory (không chặn): chưa biết danh sách model của vendor thì nói rõ là
+    # không validate được slug — giữ hành vi cũ, không tự nhận là đã kiểm.
+    vendor_models = (cfg.get("vendors", {}).get(args.vendor) or {}).get("models")
+    if resolved_model != "auto" and vendor_models is None and not args.allow_unknown_model:
+        advisory = (
+            f"[polykit] warning: model list for vendor '{args.vendor}' is unknown, "
+            f"cannot validate '{resolved_model}'"
+        )
+        sys.stderr.write(advisory + "\n")
+        res_warnings.append(advisory)
+
+    # --doctor mode: dời sau model/source/provider/vision gate nhưng vẫn trước đọc prompt-file/stdin.
+    # Valid doctor vendor-only giữ contract không cần prompt; banned model hoặc
+    # sensitive attachments đã bị chặn ở các cổng phía trên trước _run_doctor.
     if args.doctor:
         ma = _run_doctor(args.vendor)
         if args.result_json:
             _doctor_ra_json(args.vendor, ma)
         sys.exit(ma)
 
-    # Resolve model auto → default_model từ vendors.json
-    # 🔴 dsh đặc biệt: JSON ghi default=flash nhưng flash trả rỗng trên task nhiều bước.
-    # Override cứng auto → pro ở CLI, khớp với DSH_DEFAULT_MODEL trong dispatcher.
-    # BUG-18: không truyền --timeout → dùng trần RIÊNG của vendor (grok nghĩ lâu hơn 120s).
-    if args.timeout is None:
-        args.timeout = default_timeout(args.vendor, cfg)
-
-    resolved_model = args.model
-    if args.model == "auto":
-        if args.vendor == "dsh":
-            from lib.dispatch_core import DSH_DEFAULT_MODEL
-            resolved_model = DSH_DEFAULT_MODEL
-        else:
-            dm = default_model(args.vendor, cfg)
-            if dm:
-                resolved_model = dm
-    elif args.vendor == "agy":
-        if resolved_model == "opus":
-            resolved_model = "claude-opus-4-6-thinking"
-        elif resolved_model == "sonnet":
-            resolved_model = "claude-sonnet-4-6"
-
-    # Validate model
-    if resolved_model != "auto":
-        vendor_data = cfg.get("vendors", {}).get(args.vendor, {})
-        valid_models = vendor_data.get("models")
-        if valid_models is None:
-            if not args.allow_unknown_model:
-                sys.stderr.write(f"[polykit] warning: model list for vendor '{args.vendor}' is unknown, cannot validate '{resolved_model}'\n")
-        elif isinstance(valid_models, list):
-            if resolved_model not in valid_models:
-                if not args.allow_unknown_model:
-                    _chan_som(
-                        args, resolved_model,
-                        summary=f"dispatch blocked: model '{resolved_model}' not in vendor '{args.vendor}' valid models.",
-                        warning_lines=[
-                            f"[polykit] error: model '{resolved_model}' not in vendor '{args.vendor}' valid models.",
-                            f"Valid models: {', '.join(valid_models)}",
-                            "Use --allow-unknown-model to bypass.",
-                        ],
-                    )
-
     # --dump-config: in cấu hình đã resolve, thoát 0 token
     if args.dump_config:
         info = {
             "vendor": args.vendor,
-            "requested_model": args.model,
+            "requested_model": raw_model,
             "resolved_model": resolved_model,
             "default_model": default_model(args.vendor, cfg),
             "traps_count": len(vendor_traps(args.vendor, cfg)),
+            "source": resolved_source,
         }
+        if resolved_provider:
+            info["provider"] = resolved_provider
+        if resolved_effort:
+            info["effort"] = resolved_effort
+        if args.profile:
+            info["profile"] = args.profile
+        if res_warnings:
+            info["warnings"] = list(res_warnings)
         print(json.dumps(info, indent=2))
         sys.exit(0)
 
@@ -262,8 +357,13 @@ def main():
             for i, trap in enumerate(traps, 1):
                 sys.stderr.write(f"  {i}. {trap}\n")
 
-    if args.effort and args.vendor not in ("codex", "openrouter"):
-        sys.stderr.write(f"[polykit] warning: vendor '{args.vendor}' không nhận cờ --effort, cờ này sẽ bị bỏ qua.\n")
+    # Vendor thực sự nhận effort: codex (model_reasoning_effort), openrouter
+    # (reasoning.effort), opencode/hermes (variant của Go profile).
+    if args.effort and args.vendor not in ("codex", "openrouter", "opencode", "hermes"):
+        sys.stderr.write(
+            f"[polykit] warning: vendor '{args.vendor}' không nhận cờ --effort, "
+            "cờ này chỉ đi vào policy/resolver, không tới vendor.\n"
+        )
 
     # Prompt: từ --prompt-file nếu có, không thì stdin.
     # stdin không dùng được cho prompt dài — quoting, xuống dòng và dấu tiếng Việt
@@ -322,12 +422,24 @@ def main():
             workdir=args.workdir,
             sandbox=args.sandbox,
             stream=args.stream_diagnose,
-            effort=args.effort,
+            effort=resolved_effort,
+            provider=resolved_provider,
+            profile=args.profile,
+            source=resolved_source,
+            attachments=args.files if args.files else None,
+            synthetic_vision=args.synthetic_vision,
+            allow_sensitive_vision=args.allow_sensitive_vision,
+            allow_unknown=args.allow_unknown_model,
+            data_class=args.data_class,
         )
     except Exception as e:
         # BUG-18 (Codex review): lỗi bất ngờ vẫn phải để lại dấu vết + thời gian đã chạy.
         _ghi_evidence(args.vendor, resolved_model, "error", f"exception: {type(e).__name__}: {e}", None, _t0)
         raise
+
+    for w in reversed(res_warnings):
+        if w not in result.warnings:
+            result.warnings.insert(0, w)
 
     _ghi_evidence(result.vendor, result.model, result.status, result.reason, result.served_model, _t0)
 

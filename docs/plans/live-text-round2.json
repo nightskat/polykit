@@ -1,0 +1,275 @@
+[
+  {
+    "name": "opencode_deepseek",
+    "argv": [
+      "python3",
+      "bin/dispatch.py",
+      "opencode",
+      "--data-class",
+      "code-nopii",
+      "--prompt",
+      "Synthetic code-only test. Do not read files or use tools. Reply exactly LIVE_OK.",
+      "--timeout",
+      "180",
+      "--result-json",
+      "--no-traps"
+    ],
+    "exit_code": 1,
+    "elapsed": 4.12,
+    "stdout": "{\n  \"status\": \"error\",\n  \"vendor\": \"opencode\",\n  \"model\": \"deepseek-v4.1-flash\",\n  \"summary\": \"opencode failed with exit code 1\",\n  \"warnings\": [\n    \"[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'deepseek-v4.1-flash'\",\n    \"auth ch\\u01b0a x\\u00e1c minh \\u0111\\u01b0\\u1ee3c cho opencode (kh\\u00f4ng r\\u00f5 l\\u00fd do) \\u2014 v\\u1eabn dispatch, l\\u1ed7i th\\u1eadt (n\\u1ebfu c\\u00f3) s\\u1ebd do vendor t\\u1ef1 b\\u00e1o\",\n    \"\\u001b[91m\\u001b[1mError: \\u001b[0mUnexpected error\",\n    \"\",\n    \"database is locked\"\n  ],\n  \"stdout\": \"\",\n  \"exit_code\": 1,\n  \"reason\": \"vendor_exit_nonzero\",\n  \"served_model\": null,\n  \"unsandboxed\": true,\n  \"data_class\": \"code-nopii\"\n}\n",
+    "stderr": "[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'deepseek-v4.1-flash'\nWARNING: auth chưa xác minh được cho opencode (không rõ lý do) — vẫn dispatch, lỗi thật (nếu có) sẽ do vendor tự báo\n",
+    "result": {
+      "status": "error",
+      "vendor": "opencode",
+      "model": "deepseek-v4.1-flash",
+      "summary": "opencode failed with exit code 1",
+      "warnings": [
+        "[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'deepseek-v4.1-flash'",
+        "auth chưa xác minh được cho opencode (không rõ lý do) — vẫn dispatch, lỗi thật (nếu có) sẽ do vendor tự báo",
+        "\u001b[91m\u001b[1mError: \u001b[0mUnexpected error",
+        "",
+        "database is locked"
+      ],
+      "stdout": "",
+      "exit_code": 1,
+      "reason": "vendor_exit_nonzero",
+      "served_model": null,
+      "unsandboxed": true,
+      "data_class": "code-nopii"
+    }
+  },
+  {
+    "name": "opencode_glm",
+    "argv": [
+      "python3",
+      "bin/dispatch.py",
+      "opencode",
+      "--model",
+      "glm-5.3-flash",
+      "--data-class",
+      "code-nopii",
+      "--prompt",
+      "Synthetic code-only test. Do not read files or use tools. Reply exactly LIVE_OK.",
+      "--timeout",
+      "180",
+      "--result-json",
+      "--no-traps"
+    ],
+    "exit_code": 0,
+    "elapsed": 18.39,
+    "stdout": "{\n  \"status\": \"ok\",\n  \"vendor\": \"opencode\",\n  \"model\": \"glm-5.3-flash\",\n  \"summary\": \"opencode completed successfully\",\n  \"warnings\": [\n    \"[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'glm-5.3-flash'\",\n    \"auth ch\\u01b0a x\\u00e1c minh \\u0111\\u01b0\\u1ee3c cho opencode (kh\\u00f4ng r\\u00f5 l\\u00fd do) \\u2014 v\\u1eabn dispatch, l\\u1ed7i th\\u1eadt (n\\u1ebfu c\\u00f3) s\\u1ebd do vendor t\\u1ef1 b\\u00e1o\",\n    \"\\u001b[0m\",\n    \"> build \\u00b7 glm-5.3-flash\",\n    \"\\u001b[0m\"\n  ],\n  \"stdout\": \"LIVE_OK\\n\",\n  \"exit_code\": 0,\n  \"reason\": null,\n  \"served_model\": null,\n  \"unsandboxed\": true,\n  \"data_class\": \"code-nopii\"\n}\n",
+    "stderr": "[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'glm-5.3-flash'\nWARNING: auth chưa xác minh được cho opencode (không rõ lý do) — vẫn dispatch, lỗi thật (nếu có) sẽ do vendor tự báo\n",
+    "result": {
+      "status": "ok",
+      "vendor": "opencode",
+      "model": "glm-5.3-flash",
+      "summary": "opencode completed successfully",
+      "warnings": [
+        "[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'glm-5.3-flash'",
+        "auth chưa xác minh được cho opencode (không rõ lý do) — vẫn dispatch, lỗi thật (nếu có) sẽ do vendor tự báo",
+        "\u001b[0m",
+        "> build · glm-5.3-flash",
+        "\u001b[0m"
+      ],
+      "stdout": "LIVE_OK\n",
+      "exit_code": 0,
+      "reason": null,
+      "served_model": null,
+      "unsandboxed": true,
+      "data_class": "code-nopii"
+    }
+  },
+  {
+    "name": "hermes_default",
+    "argv": [
+      "python3",
+      "bin/dispatch.py",
+      "hermes",
+      "--data-class",
+      "code-nopii",
+      "--prompt",
+      "Synthetic code-only test. Do not read files or use tools. Reply exactly LIVE_OK.",
+      "--timeout",
+      "180",
+      "--result-json",
+      "--no-traps"
+    ],
+    "exit_code": 0,
+    "elapsed": 15.23,
+    "stdout": "{\n  \"status\": \"ok\",\n  \"vendor\": \"hermes\",\n  \"model\": \"deepseek-v4.1-flash\",\n  \"summary\": \"hermes completed successfully\",\n  \"warnings\": [\n    \"[polykit] warning: model list for vendor 'hermes' is unknown, cannot validate 'deepseek-v4.1-flash'\",\n    \"auth ch\\u01b0a x\\u00e1c minh \\u0111\\u01b0\\u1ee3c cho hermes (kh\\u00f4ng r\\u00f5 l\\u00fd do) \\u2014 v\\u1eabn dispatch, l\\u1ed7i th\\u1eadt (n\\u1ebfu c\\u00f3) s\\u1ebd do vendor t\\u1ef1 b\\u00e1o\"\n  ],\n  \"stdout\": \"LIVE_OK\\n\",\n  \"exit_code\": 0,\n  \"reason\": null,\n  \"served_model\": null,\n  \"unsandboxed\": true,\n  \"data_class\": \"code-nopii\"\n}\n",
+    "stderr": "[polykit] warning: model list for vendor 'hermes' is unknown, cannot validate 'deepseek-v4.1-flash'\nWARNING: auth chưa xác minh được cho hermes (không rõ lý do) — vẫn dispatch, lỗi thật (nếu có) sẽ do vendor tự báo\n",
+    "result": {
+      "status": "ok",
+      "vendor": "hermes",
+      "model": "deepseek-v4.1-flash",
+      "summary": "hermes completed successfully",
+      "warnings": [
+        "[polykit] warning: model list for vendor 'hermes' is unknown, cannot validate 'deepseek-v4.1-flash'",
+        "auth chưa xác minh được cho hermes (không rõ lý do) — vẫn dispatch, lỗi thật (nếu có) sẽ do vendor tự báo"
+      ],
+      "stdout": "LIVE_OK\n",
+      "exit_code": 0,
+      "reason": null,
+      "served_model": null,
+      "unsandboxed": true,
+      "data_class": "code-nopii"
+    }
+  },
+  {
+    "name": "free_explicit",
+    "argv": [
+      "python3",
+      "bin/dispatch.py",
+      "opencode",
+      "--model",
+      "deepseek-v4.1-flash-free",
+      "--data-class",
+      "code-nopii",
+      "--prompt",
+      "Synthetic code-only test. Do not read files or use tools. Reply exactly LIVE_OK.",
+      "--timeout",
+      "180",
+      "--result-json",
+      "--no-traps"
+    ],
+    "exit_code": 1,
+    "elapsed": 5.1,
+    "stdout": "{\n  \"status\": \"error\",\n  \"vendor\": \"opencode\",\n  \"model\": \"deepseek-v4.1-flash-free\",\n  \"summary\": \"opencode failed with exit code 1\",\n  \"warnings\": [\n    \"[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'deepseek-v4.1-flash-free'\",\n    \"auth ch\\u01b0a x\\u00e1c minh \\u0111\\u01b0\\u1ee3c cho opencode (kh\\u00f4ng r\\u00f5 l\\u00fd do) \\u2014 v\\u1eabn dispatch, l\\u1ed7i th\\u1eadt (n\\u1ebfu c\\u00f3) s\\u1ebd do vendor t\\u1ef1 b\\u00e1o\",\n    \"\\u001b[91m\\u001b[1mError: \\u001b[0m{\",\n    \"  \\\"name\\\": \\\"UnknownError\\\",\",\n    \"  \\\"data\\\": {\",\n    \"    \\\"message\\\": \\\"Unexpected server error. Check server logs for details.\\\",\",\n    \"    \\\"ref\\\": \\\"err_6802fd82\\\"\",\n    \"  }\",\n    \"}\"\n  ],\n  \"stdout\": \"\",\n  \"exit_code\": 1,\n  \"reason\": \"vendor_exit_nonzero\",\n  \"served_model\": null,\n  \"unsandboxed\": true,\n  \"data_class\": \"code-nopii\"\n}\n",
+    "stderr": "[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'deepseek-v4.1-flash-free'\nWARNING: auth chưa xác minh được cho opencode (không rõ lý do) — vẫn dispatch, lỗi thật (nếu có) sẽ do vendor tự báo\n",
+    "result": {
+      "status": "error",
+      "vendor": "opencode",
+      "model": "deepseek-v4.1-flash-free",
+      "summary": "opencode failed with exit code 1",
+      "warnings": [
+        "[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'deepseek-v4.1-flash-free'",
+        "auth chưa xác minh được cho opencode (không rõ lý do) — vẫn dispatch, lỗi thật (nếu có) sẽ do vendor tự báo",
+        "\u001b[91m\u001b[1mError: \u001b[0m{",
+        "  \"name\": \"UnknownError\",",
+        "  \"data\": {",
+        "    \"message\": \"Unexpected server error. Check server logs for details.\",",
+        "    \"ref\": \"err_6802fd82\"",
+        "  }",
+        "}"
+      ],
+      "stdout": "",
+      "exit_code": 1,
+      "reason": "vendor_exit_nonzero",
+      "served_model": null,
+      "unsandboxed": true,
+      "data_class": "code-nopii"
+    }
+  },
+  {
+    "name": "contributor_block",
+    "argv": [
+      "python3",
+      "bin/dispatch.py",
+      "opencode",
+      "--model",
+      "gemini-4-argon-contributor",
+      "--data-class",
+      "code-nopii",
+      "--prompt",
+      "Synthetic code-only test. Do not read files or use tools. Reply exactly LIVE_OK.",
+      "--timeout",
+      "180",
+      "--result-json",
+      "--no-traps"
+    ],
+    "exit_code": 2,
+    "elapsed": 0.1,
+    "stdout": "{\n  \"status\": \"blocked\",\n  \"vendor\": \"opencode\",\n  \"model\": \"gemini-4-argon-contributor\",\n  \"summary\": \"dispatch blocked: Contributor models train on user data and are strictly forbidden.\",\n  \"warnings\": [\n    \"[polykit] error: Contributor models train on user data and are strictly forbidden.\",\n    \"[polykit] reason=contributor_model_blocked; requested='gemini-4-argon-contributor' source=explicit \\u2014 blocked tr\\u01b0\\u1edbc probe/spawn/network.\"\n  ],\n  \"stdout\": \"\",\n  \"exit_code\": 2,\n  \"reason\": \"contributor_model_blocked\",\n  \"served_model\": null,\n  \"unsandboxed\": false,\n  \"data_class\": null\n}\n",
+    "stderr": "[polykit] error: Contributor models train on user data and are strictly forbidden.\n[polykit] reason=contributor_model_blocked; requested='gemini-4-argon-contributor' source=explicit — blocked trước probe/spawn/network.\n",
+    "result": {
+      "status": "blocked",
+      "vendor": "opencode",
+      "model": "gemini-4-argon-contributor",
+      "summary": "dispatch blocked: Contributor models train on user data and are strictly forbidden.",
+      "warnings": [
+        "[polykit] error: Contributor models train on user data and are strictly forbidden.",
+        "[polykit] reason=contributor_model_blocked; requested='gemini-4-argon-contributor' source=explicit — blocked trước probe/spawn/network."
+      ],
+      "stdout": "",
+      "exit_code": 2,
+      "reason": "contributor_model_blocked",
+      "served_model": null,
+      "unsandboxed": false,
+      "data_class": null
+    }
+  },
+  {
+    "name": "no_flag",
+    "argv": [
+      "python3",
+      "bin/dispatch.py",
+      "opencode",
+      "--prompt",
+      "Synthetic code-only test. Do not read files or use tools. Reply exactly LIVE_OK.",
+      "--timeout",
+      "180",
+      "--result-json",
+      "--no-traps"
+    ],
+    "exit_code": 1,
+    "elapsed": 0.09,
+    "stdout": "{\n  \"status\": \"blocked\",\n  \"vendor\": \"opencode\",\n  \"model\": \"deepseek-v4.1-flash\",\n  \"summary\": \"vendor opencode blocked: sandbox_unsupported (no data_class opt-in)\",\n  \"warnings\": [\n    \"[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'deepseek-v4.1-flash'\",\n    \"Go adapter 'opencode' ch\\u1ec9 \\u0111\\u01b0\\u1ee3c ch\\u1ea1y unsandboxed khi khai b\\u00e1o t\\u01b0\\u1eddng minh --data-class code-nopii (code/d\\u1eef li\\u1ec7u kh\\u00f4ng PII). Kh\\u00f4ng c\\u00f3 c\\u1edd \\u21d2 ch\\u1eb7n (sandbox_unsupported, Plan m\\u1ee5c 83).\",\n    \"[polykit] reason=sandbox_unsupported; requested='deepseek-v4.1-flash' provider='opencode-go' effort='high' source='auto' \\u2014 KH\\u00d4NG probe, KH\\u00d4NG spawn, KH\\u00d4NG network.\",\n    \"[polykit] c\\u1edd h\\u1ee3p l\\u1ec7 duy nh\\u1ea5t: --data-class code-nopii; kh\\u00f4ng c\\u00f3 tham s\\u1ed1 bool/evidence_sandbox n\\u00e0o \\u0111\\u1ec3 b\\u1eadt.\"\n  ],\n  \"stdout\": \"\",\n  \"exit_code\": 1,\n  \"reason\": \"sandbox_unsupported\",\n  \"served_model\": null,\n  \"unsandboxed\": false,\n  \"data_class\": null\n}\n",
+    "stderr": "[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'deepseek-v4.1-flash'\n",
+    "result": {
+      "status": "blocked",
+      "vendor": "opencode",
+      "model": "deepseek-v4.1-flash",
+      "summary": "vendor opencode blocked: sandbox_unsupported (no data_class opt-in)",
+      "warnings": [
+        "[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'deepseek-v4.1-flash'",
+        "Go adapter 'opencode' chỉ được chạy unsandboxed khi khai báo tường minh --data-class code-nopii (code/dữ liệu không PII). Không có cờ ⇒ chặn (sandbox_unsupported, Plan mục 83).",
+        "[polykit] reason=sandbox_unsupported; requested='deepseek-v4.1-flash' provider='opencode-go' effort='high' source='auto' — KHÔNG probe, KHÔNG spawn, KHÔNG network.",
+        "[polykit] cờ hợp lệ duy nhất: --data-class code-nopii; không có tham số bool/evidence_sandbox nào để bật."
+      ],
+      "stdout": "",
+      "exit_code": 1,
+      "reason": "sandbox_unsupported",
+      "served_model": null,
+      "unsandboxed": false,
+      "data_class": null
+    }
+  },
+  {
+    "name": "sensitive_block",
+    "argv": [
+      "python3",
+      "bin/dispatch.py",
+      "hermes",
+      "--data-class",
+      "code-nopii",
+      "--allow-sensitive-vision",
+      "--prompt",
+      "Synthetic code-only test. Do not read files or use tools. Reply exactly LIVE_OK.",
+      "--timeout",
+      "180",
+      "--result-json",
+      "--no-traps"
+    ],
+    "exit_code": 1,
+    "elapsed": 0.09,
+    "stdout": "{\n  \"status\": \"blocked\",\n  \"vendor\": \"hermes\",\n  \"model\": \"deepseek-v4.1-flash\",\n  \"summary\": \"vendor hermes blocked: vision_blocked\",\n  \"warnings\": [\n    \"[polykit] warning: model list for vendor 'hermes' is unknown, cannot validate 'deepseek-v4.1-flash'\",\n    \"hermes: lane unsandboxed code-nopii kh\\u00f4ng nh\\u1eadn vision/attachment (allow_sensitive_vision). C\\u1ed5ng vision v\\u1edbi d\\u1eef li\\u1ec7u th\\u1eadt gi\\u1eef nguy\\u00ean ch\\u1eb7n.\",\n    \"[polykit] reason=vision_blocked; unsandboxed=false; data_class='code-nopii' \\u2014 KH\\u00d4NG probe, KH\\u00d4NG spawn, KH\\u00d4NG network.\"\n  ],\n  \"stdout\": \"\",\n  \"exit_code\": 1,\n  \"reason\": \"vision_blocked\",\n  \"served_model\": null,\n  \"unsandboxed\": false,\n  \"data_class\": \"code-nopii\"\n}\n",
+    "stderr": "[polykit] warning: model list for vendor 'hermes' is unknown, cannot validate 'deepseek-v4.1-flash'\n",
+    "result": {
+      "status": "blocked",
+      "vendor": "hermes",
+      "model": "deepseek-v4.1-flash",
+      "summary": "vendor hermes blocked: vision_blocked",
+      "warnings": [
+        "[polykit] warning: model list for vendor 'hermes' is unknown, cannot validate 'deepseek-v4.1-flash'",
+        "hermes: lane unsandboxed code-nopii không nhận vision/attachment (allow_sensitive_vision). Cổng vision với dữ liệu thật giữ nguyên chặn.",
+        "[polykit] reason=vision_blocked; unsandboxed=false; data_class='code-nopii' — KHÔNG probe, KHÔNG spawn, KHÔNG network."
+      ],
+      "stdout": "",
+      "exit_code": 1,
+      "reason": "vision_blocked",
+      "served_model": null,
+      "unsandboxed": false,
+      "data_class": "code-nopii"
+    }
+  }
+]

@@ -1,0 +1,182 @@
+{
+  "tested_commit": "8476ccbe383c54e7419b77f18a64b9577612484d",
+  "raw_evidence_archive": "/Users/nightskat/.hermes/cache/scratch/polykit-final-live-ptcxyn_d",
+  "doctor": {
+    "exit_code": 0,
+    "elapsed_seconds": 10.117,
+    "states": {
+      "codex": "ready",
+      "gemini": "ready",
+      "claude": "ready",
+      "grok": "ready",
+      "agy": "ready",
+      "openrouter": "ready",
+      "dsh": "ready",
+      "opencode": "auth_unverified",
+      "hermes": "auth_unverified"
+    }
+  },
+  "guards": [
+    {
+      "name": "opencode_default",
+      "result": {
+        "status": "blocked",
+        "vendor": "opencode",
+        "model": "deepseek-v4.1-flash",
+        "summary": "vendor opencode blocked: sandbox_unsupported (no proven confinement)",
+        "warnings": [
+          "[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'deepseek-v4.1-flash'",
+          "Go adapter 'opencode' has no proven sandbox isolation (sandbox_unsupported). Execution blocked for safety (Plan mục 83).",
+          "[polykit] reason=sandbox_unsupported; requested='deepseek-v4.1-flash' provider='opencode-go' effort='high' source='auto' — KHÔNG probe, KHÔNG spawn, KHÔNG network.",
+          "[polykit] mở khoá chỉ khi evidence confinement được commit (GO_SANDBOX_CONFINED); CLI/API không có tham số nào để bật."
+        ],
+        "stdout": "",
+        "exit_code": 1,
+        "reason": "sandbox_unsupported",
+        "served_model": null
+      },
+      "elapsed_seconds": 0.109
+    },
+    {
+      "name": "opencode_glm",
+      "result": {
+        "status": "blocked",
+        "vendor": "opencode",
+        "model": "glm-5.3-flash",
+        "summary": "vendor opencode blocked: sandbox_unsupported (no proven confinement)",
+        "warnings": [
+          "[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'glm-5.3-flash'",
+          "Go adapter 'opencode' has no proven sandbox isolation (sandbox_unsupported). Execution blocked for safety (Plan mục 83).",
+          "[polykit] reason=sandbox_unsupported; requested='glm-5.3-flash' provider='opencode-go' effort='max' source='explicit' — KHÔNG probe, KHÔNG spawn, KHÔNG network.",
+          "[polykit] mở khoá chỉ khi evidence confinement được commit (GO_SANDBOX_CONFINED); CLI/API không có tham số nào để bật."
+        ],
+        "stdout": "",
+        "exit_code": 1,
+        "reason": "sandbox_unsupported",
+        "served_model": null
+      },
+      "elapsed_seconds": 0.079
+    },
+    {
+      "name": "hermes_default",
+      "result": {
+        "status": "blocked",
+        "vendor": "hermes",
+        "model": "deepseek-v4.1-flash",
+        "summary": "vendor hermes blocked: sandbox_unsupported (no proven confinement)",
+        "warnings": [
+          "[polykit] warning: model list for vendor 'hermes' is unknown, cannot validate 'deepseek-v4.1-flash'",
+          "Go adapter 'hermes' has no proven sandbox isolation (sandbox_unsupported). Execution blocked for safety (Plan mục 83).",
+          "[polykit] reason=sandbox_unsupported; requested='deepseek-v4.1-flash' provider='opencode-go' effort='high' source='auto' — KHÔNG probe, KHÔNG spawn, KHÔNG network.",
+          "[polykit] mở khoá chỉ khi evidence confinement được commit (GO_SANDBOX_CONFINED); CLI/API không có tham số nào để bật."
+        ],
+        "stdout": "",
+        "exit_code": 1,
+        "reason": "sandbox_unsupported",
+        "served_model": null
+      },
+      "elapsed_seconds": 0.082
+    },
+    {
+      "name": "contributor",
+      "result": {
+        "status": "blocked",
+        "vendor": "opencode",
+        "model": "gemini-4-argon-contributor",
+        "summary": "dispatch blocked: Contributor models train on user data and are strictly forbidden.",
+        "warnings": [
+          "[polykit] error: Contributor models train on user data and are strictly forbidden.",
+          "[polykit] reason=contributor_model_blocked; requested='gemini-4-argon-contributor' source=explicit — blocked trước probe/spawn/network."
+        ],
+        "stdout": "",
+        "exit_code": 2,
+        "reason": "contributor_model_blocked",
+        "served_model": null
+      },
+      "elapsed_seconds": 0.079
+    },
+    {
+      "name": "synthetic_vision",
+      "result": {
+        "status": "blocked",
+        "vendor": "opencode",
+        "model": "deepseek-v4.1-flash",
+        "summary": "vision gate blocked: Vision adapter 'opencode' is not verified; blocked",
+        "warnings": [
+          "[polykit] warning: model list for vendor 'opencode' is unknown, cannot validate 'deepseek-v4.1-flash'",
+          "Vision adapter 'opencode' is not verified; blocked"
+        ],
+        "stdout": "",
+        "exit_code": 1,
+        "reason": "vision_blocked",
+        "served_model": null
+      },
+      "elapsed_seconds": 0.083
+    },
+    {
+      "name": "sensitive_without_confirmation",
+      "result": {
+        "status": "blocked",
+        "vendor": "opencode",
+        "model": "auto",
+        "summary": "dispatch blocked: attachments real/unknown blocked (sensitive vision unsupported without trusted UI confirmation)",
+        "warnings": [
+          "[polykit] error: sensitive or unknown attachments blocked before prompt-file read/attachment stat/probe.",
+          "Sensitive vision requires single-turn trusted UI confirmation (currently unsupported without transport sandbox).",
+          "Declare --synthetic-vision for synthetic test inputs."
+        ],
+        "stdout": "",
+        "exit_code": 2,
+        "reason": "vision_blocked",
+        "served_model": null
+      },
+      "elapsed_seconds": 0.077
+    },
+    {
+      "name": "free_implicit_api",
+      "result": {
+        "status": "blocked",
+        "vendor": "opencode",
+        "model": "deepseek-v4.1-flash-free",
+        "summary": "dispatch blocked: Free model 'deepseek-v4.1-flash-free' cannot be selected via 'auto'. Free models are limited to 200 req/day and must be chosen explicitly.",
+        "warnings": [
+          "Free model 'deepseek-v4.1-flash-free' cannot be selected via 'auto'. Free models are limited to 200 req/day and must be chosen explicitly.",
+          "[polykit] reason=free_model_not_explicit; requested='deepseek-v4.1-flash-free' source='auto' — blocked trước probe/spawn/network."
+        ],
+        "stdout": "",
+        "exit_code": 1,
+        "reason": "free_model_not_explicit",
+        "served_model": null
+      },
+      "probe_spawn_calls": []
+    }
+  ],
+  "text": [
+    {
+      "name": "codex_default",
+      "exit_code": 0,
+      "elapsed_seconds": 8.949,
+      "exact_answer_ok": true,
+      "result": {
+        "status": "ok",
+        "model": "gpt-6.1-sol",
+        "served_model": null,
+        "stdout": "LIVE_OK\n",
+        "reason": null
+      }
+    },
+    {
+      "name": "agy_default",
+      "exit_code": 0,
+      "elapsed_seconds": 15.717,
+      "exact_answer_ok": true,
+      "result": {
+        "status": "ok",
+        "model": "gemini-3.8-flash-high",
+        "served_model": null,
+        "stdout": "LIVE_OK\n",
+        "reason": null
+      }
+    }
+  ]
+}

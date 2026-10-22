@@ -2,10 +2,10 @@ from pathlib import Path
 from lib.dispatch_core import build_codex_cmd, build_grok_cmd, gemini_agy_tier
 
 def test_build_codex_cmd():
-    # Model auto, read-only sandbox, no workdir, text format
+    # Model auto, read-only sandbox, no workdir, text format (pin -m gpt-6.1-sol)
     cmd1 = build_codex_cmd(model="auto", sandbox="read-only", workdir=None, fmt="text")
     # Bench 20/08: PolyKit ghim effort `low` (codex mặc định `medium` = ô tệ nhất).
-    assert cmd1 == ["codex", "exec", "-c", "model_reasoning_effort=low",
+    assert cmd1 == ["codex", "exec", "-m", "gpt-6.1-sol", "-c", "model_reasoning_effort=low",
                     "-s", "read-only", "--skip-git-repo-check"]
 
     # Model specific, workspace-write, workdir present, json format
@@ -16,10 +16,11 @@ def test_build_codex_cmd():
 def test_build_grok_cmd():
     grok_bin = str(Path.home() / ".grok/bin/grok")
     
-    # Read-only sandbox
+    # Read-only sandbox (pin -m grok-4.6)
     cmd_ro = build_grok_cmd(model="auto", sandbox="read-only", workdir=None, fmt="text", prompt_file="/tmp/prompt")
     assert cmd_ro == [
         grok_bin, "--prompt-file", "/tmp/prompt",
+        "-m", "grok-4.6",
         "--tools", "read_file,grep,list_dir", "--always-approve"
     ]
 

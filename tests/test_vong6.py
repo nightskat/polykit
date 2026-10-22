@@ -40,8 +40,11 @@ def test_vong6_error_branch(fake_claude):
     res = run_cli(["claude", "--no-traps", "--result-json", "--allow-unknown-model"], env={"FAKE_OC_FAIL": "1"})
     data = json.loads(res.stdout)
     assert data["status"] == "error"
-    assert data["served_model"] == "claude-opus-5", f"Expected claude-opus-5, got {data['served_model']}"
+    # CLI plaintext: model "claude-opus-5" chỉ là REQUESTED, không phải served.
+    assert data["model"] == "claude-opus-5"
+    assert data["served_model"] is None
     assert not any("không nhận cờ model" in w for w in data["warnings"])
+    assert len(data["warnings"]) == len(set(data["warnings"])), data["warnings"]
     assert "không nhận cờ model" not in res.stderr
 
 def test_vong6_quota_branch(fake_claude):
@@ -49,16 +52,22 @@ def test_vong6_quota_branch(fake_claude):
     data = json.loads(res.stdout)
     assert data["status"] == "skipped"
     assert data["reason"] == "quota_capped"
-    assert data["served_model"] == "claude-opus-5", f"Expected claude-opus-5, got {data['served_model']}"
+    # CLI plaintext: model "claude-opus-5" chỉ là REQUESTED, không phải served.
+    assert data["model"] == "claude-opus-5"
+    assert data["served_model"] is None
     assert not any("không nhận cờ model" in w for w in data["warnings"])
+    assert len(data["warnings"]) == len(set(data["warnings"])), data["warnings"]
     assert "không nhận cờ model" not in res.stderr
 
 def test_vong6_ok_branch(fake_claude):
     res = run_cli(["claude", "--no-traps", "--result-json", "--allow-unknown-model"])
     data = json.loads(res.stdout)
     assert data["status"] == "ok"
-    assert data["served_model"] == "claude-opus-5", f"Expected claude-opus-5, got {data['served_model']}"
+    # CLI plaintext: model "claude-opus-5" chỉ là REQUESTED, không phải served.
+    assert data["model"] == "claude-opus-5"
+    assert data["served_model"] is None
     assert not any("không nhận cờ model" in w for w in data["warnings"])
+    assert len(data["warnings"]) == len(set(data["warnings"])), data["warnings"]
     assert "không nhận cờ model" not in res.stderr
 
 def test_vong7_text_duplicate_warning(fake_vendors, capsys):
@@ -71,10 +80,10 @@ def test_vong7_text_duplicate_warning(fake_vendors, capsys):
         return subprocess.CompletedProcess(args=args, returncode=1, stdout="", stderr="boom: fake fail")
         
     with patch.object(sys, 'argv', ["dispatch.py", "fakevendor_no_flag", "--no-traps", "--allow-unknown-model"]):
-        with patch('sys.exit'):
-            with patch('shutil.which', return_value='/usr/bin/true'):
-                with patch('sys.stdin.read', return_value="hi"):
-                    with patch('subprocess.run', side_effect=mock_runner):
+        with patch('shutil.which', return_value='/usr/bin/true'):
+            with patch('sys.stdin.read', return_value="hi"):
+                with patch('subprocess.run', side_effect=mock_runner):
+                    with pytest.raises(SystemExit):
                         dispatch.main()
                         
     out, err = capsys.readouterr()
@@ -87,7 +96,10 @@ def test_vong6_not_installed_branch(monkeypatch):
     data = json.loads(res.stdout)
     assert data["status"] == "skipped"
     assert data["reason"] == "not_installed"
-    assert data["served_model"] == "claude-opus-5", f"Expected claude-opus-5, got {data['served_model']}"
+    # Chưa spawn ⇒ chưa có model nào phục vụ. requested slug không được ghi
+    # thành served (chính là lỗi fallback Grok3: gpt-6.1-sol "served" dù skip).
+    assert data["served_model"] is None
+    assert data["model"] == "claude-opus-5"
 
 def test_vong12_dynamic_vendor_not_installed(fake_vendors, capsys):
     import sys
@@ -97,9 +109,9 @@ def test_vong12_dynamic_vendor_not_installed(fake_vendors, capsys):
     
     # 1. fakevendor_no_flag
     with patch.object(sys, 'argv', ["dispatch.py", "fakevendor_no_flag", "fake-model", "--result-json", "--allow-unknown-model"]):
-        with patch('sys.exit'):
-            with patch('shutil.which', return_value=None):
-                with patch('sys.stdin.read', return_value="hello"):
+        with patch('shutil.which', return_value=None):
+            with patch('sys.stdin.read', return_value="hello"):
+                with pytest.raises(SystemExit):
                     dispatch.main()
                     
     out1, err1 = capsys.readouterr()
@@ -112,15 +124,20 @@ def test_vong12_dynamic_vendor_not_installed(fake_vendors, capsys):
     
     # 2. fakevendor_with_flag
     with patch.object(sys, 'argv', ["dispatch.py", "fakevendor_with_flag", "fake-model", "--result-json", "--allow-unknown-model"]):
-        with patch('sys.exit'):
-            with patch('shutil.which', return_value=None):
-                with patch('sys.stdin.read', return_value="hello"):
+        with patch('shutil.which', return_value=None):
+            with patch('sys.stdin.read', return_value="hello"):
+                with pytest.raises(SystemExit):
                     dispatch.main()
                     
     out2, err2 = capsys.readouterr()
     data2 = json.loads(out2)
     assert data2["status"] == "skipped"
     assert data2["reason"] == "not_installed"
-    assert data2["served_model"] == "fake-model"
+    # With-flag KHÔNG phải bằng chứng: CLI có cờ model vẫn không xác nhận model
+    # đã phục vụ. skipped ⇒ served None, requested giữ ở "model".
+    assert data2["served_model"] is None
+    assert data2["model"] == "fake-model"
     assert not any("không nhận cờ model" in w for w in data2["warnings"])
+    assert any("served_model=None" in w for w in data2["warnings"]), data2["warnings"]
+    assert len(data2["warnings"]) == len(set(data2["warnings"])), data2["warnings"]
     assert "không nhận cờ model" not in err2

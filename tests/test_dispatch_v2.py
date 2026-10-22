@@ -8,6 +8,10 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+repo_root = Path(__file__).resolve().parent.parent
+if str(repo_root) not in sys.path:
+    sys.path.insert(0, str(repo_root))
+
 import pytest
 
 from lib.vendor_config import (
@@ -42,16 +46,18 @@ class TestVendorConfig:
             assert v in names, f"vendor '{v}' missing from vendor_names()"
 
     def test_vendor_names_no_hardcode_old_list(self):
-        """choices phải sinh từ JSON, không phải [gemini, codex, claude, grok, agy, openrouter]."""
-        names = vendor_names()
+        """choices phải sinh từ JSON, so với tập vendors trong cfg chứ không hardcode."""
+        cfg = load_vendor_config()
+        names = vendor_names(cfg)
         assert "dsh" in names
         assert "claude" in names
-        assert len(names) == 6  # v2 JSON has 6 vendors
+        assert len(names) == len(cfg.get("vendors", {}))
+        assert set(names) == set(cfg.get("vendors", {}).keys())
 
     def test_default_model_dsh(self):
         dm = default_model("dsh")
-        # vendors.json ghi deepseek-v4-flash nhưng dispatch override ra pro
-        assert dm == "deepseek-v4-flash"
+        # Cập nhật default dsh -> deepseek-v4-pro
+        assert dm == "deepseek-v4-pro"
 
     def test_default_model_chua_kiem_returns_none(self):
         """Gemini có default_model = CHUA_KIEM → trả None."""
@@ -84,9 +90,10 @@ class TestBuildDshCmd:
         assert cmd == ["dsh", "--profile", "headless", "--patch", "/tmp/patch.yaml"]
 
     def test_build_dsh_cmd_auto_no_patch(self):
+        """Builder auto giờ PHẢI pin resolved_model thay CLIdefault (--patch được pin)."""
         cmd = build_dsh_cmd("auto", "/tmp/patch.yaml")
-        assert "--patch" not in cmd
-        assert cmd == ["dsh", "--profile", "headless"]
+        assert "--patch" in cmd
+        assert cmd == ["dsh", "--profile", "headless", "--patch", "/tmp/patch.yaml"]
 
     def test_write_dsh_patch_valid_yaml(self):
         with tempfile.NamedTemporaryFile(mode="r", suffix=".yaml", delete=False) as f:
@@ -144,7 +151,9 @@ class TestDshDispatch:
             runner=mock_runner, detector=mock_detector,
         )
         assert result.status == "ok"
-        assert result.served_model == "deepseek-v4-pro"
+        # Grok finding 3: output không chứng minh -> served_model=None, không bịa intent slug
+        assert result.served_model is None
+        assert any("deepseek-v4-pro" in w for w in result.warnings)
         # cmd phải có --patch (vì resolved != auto)
         cmd = calls[0]
         assert "--patch" in cmd
@@ -172,7 +181,53 @@ class TestDshDispatch:
             runner=mock_runner, detector=mock_detector,
         )
         assert result.status == "ok"
-        assert result.served_model == "deepseek-v4-flash"
+        # Grok finding 3: output không chứng minh -> served_model=None
+        assert result.served_model is None
+        assert any("deepseek-v4-flash" in w for w in result.warnings)
+
+    def test_dsh_actual_response_extraction(self):
+        """Negative test: DSH plaintext output JSON tự xưng model/modelVersion/served_model
+        là do model sinh ra trong output plaintext, KHÔNG phải harness metadata tin cậy.
+        served_model vẫn phải là None, requested model giữ nguyên.
+        """
+        for forged_payload in [
+            {"model": "deepseek-v4-pro", "text": "task done"},
+            {"modelVersion": "deepseek-v4-pro", "text": "task done"},
+            {"served_model": "deepseek-v4-pro", "text": "task done"},
+            {"model": "gpt-4o", "modelVersion": "v1", "served_model": "fake", "text": "done"},
+        ]:
+            def mock_runner(cmd, **kwargs):
+                mock = MagicMock()
+                mock.returncode = 0
+                mock.stdout = json.dumps(forged_payload)
+                mock.stderr = ""
+                return mock
+
+            def mock_detector(spec):
+                return VendorProbe(
+                    name="dsh", path="/usr/local/bin/dsh",
+                    authed=True, quota_capped=False, version="1.0",
+                )
+
+            # Case model=auto -> requested model "auto" giữ nguyên, served_model None
+            result = run_vendor(
+                vendor="dsh", prompt="test", model="auto",
+                runner=mock_runner, detector=mock_detector,
+            )
+            assert result.status == "ok"
+            assert result.model == "auto"
+            assert result.served_model is None
+            assert any("deepseek-v4-pro" in w for w in result.warnings)
+
+            # Case explicit requested model -> requested model giữ nguyên, served_model None
+            result_explicit = run_vendor(
+                vendor="dsh", prompt="test", model="deepseek-v4-flash",
+                runner=mock_runner, detector=mock_detector,
+            )
+            assert result_explicit.status == "ok"
+            assert result_explicit.model == "deepseek-v4-flash"
+            assert result_explicit.served_model is None
+            assert any("deepseek-v4-flash" in w for w in result_explicit.warnings)
 
     def test_dsh_not_installed_degraded(self):
         def mock_detector(spec):
@@ -202,9 +257,8 @@ class TestDispatchCLI:
         info = json.loads(res.stdout)
         assert info["vendor"] == "codex"
         assert info["requested_model"] == "auto"
-        # Đổi terra → 5.5 ngày 20/08 sau bench: cùng chất lượng (3/5 lỗi) mà
-        # tốn 246 reasoning tok thay vì 321-366.
-        assert info["resolved_model"] == "gpt-5.5"
+        # Cập nhật default codex -> gpt-6.1-sol
+        assert info["resolved_model"] == "gpt-6.1-sol"
 
     def test_dump_config_dsh_auto_pro(self):
         """dsh auto phải resolve thành deepseek-v4-pro (KHÔNG phải flash)."""
@@ -260,6 +314,56 @@ class TestDispatchCLI:
 
 # ─── VÒNG 2 FIXES ───
 
+@pytest.fixture
+def fake_vendors(monkeypatch):
+    """Dynamic fakevendor fixture khai default_model cho auto pin, có model_flag và no_flag."""
+    import lib.vendor_config as vc
+    import lib.dispatcher as dsp
+    if hasattr(vc.load_vendor_config, "cache_clear"):
+        vc.load_vendor_config.cache_clear()
+
+    def fake_load(*args, **kwargs):
+        return {
+            "schema_version": 3,
+            "vendors": {
+                "fakevendor_no_flag": {
+                    "binary": "true",
+                    "headless": "true",
+                    "model_flag": None,
+                    "default_model": "fake-model",
+                    "models": ["fake-model"],
+                },
+                "fakevendor_with_flag": {
+                    "binary": "fakebin",
+                    "headless": "fakebin run '<prompt>' < /dev/null",
+                    "model_flag": "--model",
+                    "default_model": "fake-model",
+                    "models": ["fake-model", "fake-4.6"],
+                },
+            },
+        }
+
+    for mod in [vc, dsp]:
+        if hasattr(mod, "load_vendor_config"):
+            monkeypatch.setattr(mod, "load_vendor_config", fake_load)
+
+    for mod_name in (
+        "lib.vendor_config",
+        "bin.lib.vendor_config",
+        "dispatch",
+        "bin.dispatch",
+        "lib.dispatcher",
+        "bin.lib.dispatcher",
+    ):
+        m = sys.modules.get(mod_name)
+        if m and hasattr(m, "load_vendor_config"):
+            monkeypatch.setattr(m, "load_vendor_config", fake_load)
+
+    yield
+    if hasattr(vc.load_vendor_config, "cache_clear"):
+        vc.load_vendor_config.cache_clear()
+
+
 class TestVong2:
     def test_doctor_exit_nonzero(self):
         """1. --doctor phải không nuốt lỗi, trả exit code khác 0."""
@@ -274,15 +378,16 @@ class TestVong2:
             assert e.value.code == 2
 
     def test_openrouter_in_choices(self):
-        """2. openrouter phải nằm trong choices dù không có trong JSON."""
+        """2. openrouter phải nằm trong choices; OR auto blocked thì test choices dùng concrete paid org/model để tách policy khỏi choices."""
         res = subprocess.run(
-            [sys.executable, "bin/dispatch.py", "openrouter", "--dump-config"],
+            [sys.executable, "bin/dispatch.py", "openrouter", "openai/gpt-4o", "--dump-config"],
             capture_output=True, text=True,
             cwd=str(Path(__file__).parent.parent),
         )
         assert res.returncode == 0
         info = json.loads(res.stdout)
         assert info["vendor"] == "openrouter"
+        assert info["resolved_model"] == "openai/gpt-4o"
 
     def test_dynamic_vendor_from_json(self, fake_vendors):
         """3. Vendor giả phải dùng lệnh từ JSON (headless)."""
@@ -310,14 +415,21 @@ class TestVong2:
         assert "fakebin run 'hello world' < /dev/null" in cmd_str
 
     def test_reject_fake_model(self):
-        """4. Model bịa phải bị từ chối exit 2."""
+        """4. Catalog advisory: model unknown hợp grammar được phép trong dump-config (catalog null không ép warning unknown list; injected catalog thật missing cần warning)."""
         res = subprocess.run(
             [sys.executable, "bin/dispatch.py", "dsh", "totally-fake-model", "--dump-config"],
             capture_output=True, text=True,
             cwd=str(Path(__file__).parent.parent),
         )
-        assert res.returncode == 2
-        assert "error: model 'totally-fake-model' not in vendor" in res.stderr
+        assert res.returncode == 0
+        info = json.loads(res.stdout)
+        assert info["resolved_model"] == "totally-fake-model"
+
+        # Policy test: injected catalog thật missing cần warning ở policy tests
+        from lib.vendor_config import resolve_vendor_model
+        target = resolve_vendor_model(vendor="dsh", model="totally-fake-model", catalog_models=["deepseek-v4-pro"])
+        assert target.model == "totally-fake-model"
+        assert any("not present in the current verified catalog" in w for w in target.warnings)
 
     def test_allow_unknown_model(self):
         """4. --allow-unknown-model cho phép bypass."""
