@@ -202,6 +202,11 @@ OPENCODE_DEFAULT_EFFORT = "high"
 HERMES_DEFAULT_MODEL = "deepseek-v4.1-flash"
 HERMES_DEFAULT_EFFORT = "high"
 
+# opencode/hermes chưa có bằng chứng cách ly filesystem/process trong repo này.
+# Fail-closed tuyệt đối ở cả builder public lẫn helper private cho tới khi
+# GO_SANDBOX_CONFINED có evidence được commit. Không có tham số caller bool override.
+GO_SANDBOX_CONFINED: bool = False
+
 
 def _enforce_builder_policy(
     vendor: str,
@@ -305,14 +310,13 @@ def _enforce_builder_policy(
 def build_codex_cmd(model: str, sandbox: str, workdir: str | None, fmt: str,
                     stream: bool = False, effort: str | None = None,
                     source: str = "explicit") -> list[str]:
-    # Chốt chặn policy trước khi xây argv
-    _enforce_builder_policy("codex", model, effort=effort, source=source)
+    # Chốt chặn policy trước khi xây argv; auto resolve qua resolver chung
+    selector = _enforce_builder_policy("codex", model, effort=effort, source=source)
 
     cmd = ["codex", "exec"]
-    if model != "auto":
-        cmd.extend(["-m", model])
+    cmd.extend(["-m", selector.model])
     # codex KHÔNG có cờ --effort; chỉnh qua -c model_reasoning_effort=<mức>.
-    muc = effort or CODEX_EFFORT_MAC_DINH
+    muc = selector.variant or effort or CODEX_EFFORT_MAC_DINH
     if muc not in CODEX_EFFORT_HOP_LE:
         raise DispatchError(
             f"effort phải là một trong {', '.join(CODEX_EFFORT_HOP_LE)}, got: {muc!r}")
@@ -332,13 +336,12 @@ def build_codex_cmd(model: str, sandbox: str, workdir: str | None, fmt: str,
 
 
 def build_claude_cmd(model: str, prompt: str, source: str = "explicit") -> list[str]:
-    # Chốt chặn policy trước khi xây argv
-    _enforce_builder_policy("claude", model, source=source)
+    # Chốt chặn policy trước khi xây argv; auto resolve qua resolver chung
+    selector = _enforce_builder_policy("claude", model, source=source)
 
     cmd = ["claude"]
-    if model != "auto":
-        cmd.extend(["--model", model])
-    # Mandatory ToS-bounded options (P3)
+    cmd.extend(["--model", selector.model])
+    # Mandatory ToS-bounded options (P3) - không đổi effort Claude bounded
     cmd.extend([
         "--effort", "low",
         "--no-session-persistence",
@@ -352,13 +355,12 @@ def build_claude_cmd(model: str, prompt: str, source: str = "explicit") -> list[
 
 def build_grok_cmd(model: str, sandbox: str, workdir: str | None, fmt: str,
                    prompt_file: str, stream: bool = False, source: str = "explicit") -> list[str]:
-    # Chốt chặn policy trước khi xây argv
-    _enforce_builder_policy("grok", model, source=source)
+    # Chốt chặn policy trước khi xây argv; auto resolve qua resolver chung
+    selector = _enforce_builder_policy("grok", model, source=source)
 
     grok_bin = str(Path.home() / ".grok/bin/grok")
     cmd = [grok_bin, "--prompt-file", prompt_file]
-    if model != "auto":
-        cmd.extend(["-m", model])
+    cmd.extend(["-m", selector.model])
     # streaming-json là chế độ stream ĐÃ LIVE TEST (4790 byte khi bị giết 20s).
     # json là --format json thường. Stream diagnose ưu tiên streaming-json.
     if stream:
@@ -445,26 +447,27 @@ def build_dsh_cmd(model: str, patch_file: str, source: str = "explicit") -> list
     patch_file do caller tạo (tempfile) với nội dung:
     - id: agent-default-model
       config: {provider: deepseek-official, model: <slug>}
+    DSH auto phải pin patch command chứ không CLI auto, caller phải viết đúng modelpatch.
     """
     # Chốt chặn policy trước khi xây argv
     _enforce_builder_policy("dsh", model, source=source)
 
     cmd = ["dsh", "--profile", "headless"]
-    if model != "auto":
-        cmd.extend(["--patch", patch_file])
+    cmd.extend(["--patch", patch_file])
     return cmd
 
 
-def write_dsh_patch(model_slug: str, path: str, source: str = "explicit") -> None:
+def write_dsh_patch(model_slug: str, path: str, source: str = "explicit", effort: str | None = None) -> None:
     """Ghi file YAML patch cho dsh --patch. Chỉ dùng stdlib (yaml đơn giản).
     Chặn policy TRƯỚC KHI ghi file để không để lại artifacts vi phạm.
     """
     # Chốt chặn policy TRƯỚC KHI mở file hay ghi; auto resolve qua resolver chung
-    selector = _enforce_builder_policy("dsh", model_slug, source=source)
+    selector = _enforce_builder_policy("dsh", model_slug, effort=effort, source=source)
+    provider_name = selector.provider or "deepseek-official"
 
     content = (
         f"- id: agent-default-model\n"
-        f"  config: {{provider: deepseek-official, model: {selector.model}}}\n"
+        f"  config: {{provider: {provider_name}, model: {selector.model}}}\n"
     )
     with open(path, "w", encoding="utf-8") as f:
         f.write(content)
@@ -499,6 +502,8 @@ def _build_opencode_argv(
     KHÔNG gọi shell. Giữ prompt nguyên vẹn vị trí cuối (positional).
     -f dùng cho danh sách attachment (synthetic validation lô vision sau).
     Dùng selector chuẩn hoá từ policy/resolver thay vì chuỗi thô.
+    Failclosed khi chưa có evidence confinement trong repo (GO_SANDBOX_CONFINED=False).
+    Không có tham số caller bool override.
     """
     selector = _enforce_builder_policy(
         vendor="opencode",
@@ -507,15 +512,25 @@ def _build_opencode_argv(
         source=source,
     )
 
+    if not GO_SANDBOX_CONFINED:
+        raise DispatchError(
+            "Go adapter opencode has no proven sandbox isolation (sandbox_unsupported). "
+            "Execution is blocked for safety (Plan mục 83).",
+            reason="sandbox_unsupported",
+            model=selector.model,
+            provider=selector.provider or GO_PROVIDER,
+        )
+
     bin_path = get_opencode_bin()
     norm_model = selector.model
     norm_effort = selector.variant or OPENCODE_DEFAULT_EFFORT
+    provider_name = selector.provider or GO_PROVIDER
 
     cmd = [
         bin_path,
         "run",
         "--model",
-        f"opencode-go/{norm_model}",
+        f"{provider_name}/{norm_model}",
         "--variant",
         norm_effort,
     ]
@@ -536,6 +551,8 @@ def _build_hermes_argv(
 
     KHÔNG gọi shell. Giữ prompt Unicode/quote/multiline nguyên vẹn sau cờ -z.
     Dùng selector chuẩn hoá từ policy/resolver thay vì chuỗi thô.
+    Failclosed khi chưa có evidence confinement trong repo (GO_SANDBOX_CONFINED=False).
+    Không có tham số caller bool override.
     """
     selector = _enforce_builder_policy(
         vendor="hermes",
@@ -544,16 +561,26 @@ def _build_hermes_argv(
         source=source,
     )
 
+    if not GO_SANDBOX_CONFINED:
+        raise DispatchError(
+            "Go adapter hermes has no proven sandbox isolation (sandbox_unsupported). "
+            "Execution is blocked for safety (Plan mục 83).",
+            reason="sandbox_unsupported",
+            model=selector.model,
+            provider=selector.provider or GO_PROVIDER,
+        )
+
     bin_path = get_hermes_bin()
     norm_model = selector.model
     norm_effort = selector.variant or HERMES_DEFAULT_EFFORT
+    provider_name = selector.provider or GO_PROVIDER
 
     cmd = [
         bin_path,
         "-z",
         prompt,
         "--provider",
-        selector.provider or GO_PROVIDER,
+        provider_name,
         "-m",
         norm_model,
         "--reasoning",
@@ -579,22 +606,12 @@ def build_opencode_cmd(
     Caller KHÔNG được bật bypass (xoá evidence_sandbox theo chốt an toàn).
     """
     validate_sandbox(sandbox)
-
-    # 1. Chốt chặn policy trước
-    _enforce_builder_policy(
-        vendor="opencode",
+    return _build_opencode_argv(
         model=model,
+        prompt=prompt,
         effort=effort,
+        attachments=attachments,
         source=source,
-    )
-
-    # 2. Chốt chặn sandbox: fail-closed tuyệt đối (Plan mục 83)
-    raise DispatchError(
-        "Go adapter opencode has no proven sandbox isolation (sandbox_unsupported). "
-        "Execution is blocked for safety (Plan mục 83).",
-        reason="sandbox_unsupported",
-        model=model,
-        provider=GO_PROVIDER,
     )
 
 
@@ -615,22 +632,11 @@ def build_hermes_cmd(
     Caller KHÔNG được bật bypass (xoá evidence_sandbox theo chốt an toàn).
     """
     validate_sandbox(sandbox)
-
-    # 1. Chốt chặn policy trước
-    _enforce_builder_policy(
-        vendor="hermes",
+    return _build_hermes_argv(
         model=model,
+        prompt=prompt,
         effort=effort,
         source=source,
-    )
-
-    # 2. Chốt chặn sandbox: fail-closed tuyệt đối (Plan mục 83)
-    raise DispatchError(
-        "Go adapter hermes has no proven sandbox isolation (sandbox_unsupported). "
-        "Execution is blocked for safety (Plan mục 83).",
-        reason="sandbox_unsupported",
-        model=model,
-        provider=GO_PROVIDER,
     )
 
 

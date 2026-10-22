@@ -37,6 +37,7 @@ from lib.dispatch_core import (
     DispatchPolicyViolation,
     DispatchUnapprovedProfile,
     DispatchUnapprovedProvider,
+    GO_SANDBOX_CONFINED,
     HERMES_DEFAULT_EFFORT,
     HERMES_DEFAULT_MODEL,
     OPENCODE_DEFAULT_EFFORT,
@@ -65,6 +66,13 @@ from lib.model_policy import (
 # 1. OpenCode Builder Tests
 # ===========================================================================
 
+@pytest.fixture
+def confined_go(monkeypatch):
+    """Mô phỏng môi trường sau khi có bằng chứng cách ly (GO_SANDBOX_CONFINED=True)."""
+    import lib.dispatch_core as dc
+    monkeypatch.setattr(dc, "GO_SANDBOX_CONFINED", True)
+
+
 class TestOpenCodeBuilder:
     def test_opencode_blocked_by_default_with_sandbox_unsupported(self):
         """Builder opencode phải bị BLOCKED mặc định với DispatchError reason sandbox_unsupported."""
@@ -80,15 +88,26 @@ class TestOpenCodeBuilder:
             build_opencode_cmd("deepseek-v4.1-flash", "Prompt", sandbox="read-only")
         assert exc_info.value.reason == "sandbox_unsupported"
 
-    def test_opencode_pure_argv_helper_builds_valid_cmd(self):
-        """Helper nội bộ pure private _build_opencode_argv trả về argv hợp lệ."""
-        cmd = _build_opencode_argv("deepseek-v4.1-flash", "Nội dung task")
-        assert isinstance(cmd, list)
-        assert cmd[0] == get_opencode_bin()
-        assert cmd[1:3] == ["run", "--model"]
-        assert cmd[3] == "opencode-go/deepseek-v4.1-flash"
-        assert cmd[4:6] == ["--variant", "high"]
-        assert cmd[6] == "Nội dung task"
+    def test_opencode_helper_failclosed_unverified_negative_spy_runner0(self):
+        """Helper nội bộ _build_opencode_argv fail-closed khi chưa evidence confinement; negative spy runner=0."""
+        assert GO_SANDBOX_CONFINED is False, "Default production state must be unconfined"
+        class SpyRunner:
+            def __init__(self):
+                self.called = False
+                self.call_count = 0
+            def __call__(self, *args, **kwargs):
+                self.called = True
+                self.call_count += 1
+                return None
+
+        spy = SpyRunner()
+        with pytest.raises(DispatchError) as exc_info:
+            cmd = _build_opencode_argv("deepseek-v4.1-flash", "Nội dung task")
+            spy(cmd)
+        assert exc_info.value.reason == "sandbox_unsupported"
+        assert "sandbox_unsupported" in str(exc_info.value)
+        assert spy.called is False
+        assert spy.call_count == 0
 
     def test_opencode_public_builder_no_evidence_sandbox_bypass(self):
         """Public builder build_opencode_cmd KHÔNG có tham số evidence_sandbox và luôn raise sandbox_unsupported."""
@@ -105,7 +124,7 @@ class TestOpenCodeBuilder:
             build_opencode_cmd("deepseek-v4.1-flash", "Nội dung task")
         assert exc_info.value.reason == "sandbox_unsupported"
 
-    def test_opencode_normalize_slug_and_variant(self):
+    def test_opencode_normalize_slug_and_variant(self, confined_go):
         """Chuẩn hoá slug và effort thật đưa vào argv thay vì truyền raw."""
         # 1. Truyền có provider prefix -> không bị lặp opencode-go/opencode-go/
         cmd1 = _build_opencode_argv("opencode-go/deepseek-v4.1-flash", "Prompt")
@@ -130,7 +149,7 @@ class TestOpenCodeBuilder:
         assert bin_path == expected
         assert bin_path.startswith("/")
 
-    def test_opencode_default_model_and_effort(self):
+    def test_opencode_default_model_and_effort(self, confined_go):
         """Model auto resolve thành deepseek-v4.1-flash với variant high."""
         cmd = _build_opencode_argv("auto", "Prompt")
         assert cmd[0] == get_opencode_bin()
@@ -138,18 +157,18 @@ class TestOpenCodeBuilder:
         assert cmd[4:6] == ["--variant", "high"]
         assert cmd[6] == "Prompt"
 
-    def test_opencode_glm_defaults_to_effort_max(self):
+    def test_opencode_glm_defaults_to_effort_max(self, confined_go):
         """GLM-5.3-flash mặc định nhận effort max theo hồ sơ duyệt."""
         cmd = _build_opencode_argv("glm-5.3-flash", "Prompt")
         assert cmd[3] == "opencode-go/glm-5.3-flash"
         assert cmd[4:6] == ["--variant", "max"]
 
-    def test_opencode_explicit_effort_override(self):
+    def test_opencode_explicit_effort_override(self, confined_go):
         """Caller truyền effort tường minh phải được tôn trọng."""
         cmd = _build_opencode_argv("deepseek-v4.1-flash", "Prompt", effort="medium")
         assert cmd[4:6] == ["--variant", "medium"]
 
-    def test_opencode_prompt_unicode_quotes_multiline_intact(self):
+    def test_opencode_prompt_unicode_quotes_multiline_intact(self, confined_go):
         """Prompt Unicode, ngoặc kép, nháy đơn, xuống dòng phải giữ nguyên vẹn positional."""
         complex_prompt = (
             "Dòng 1: Tiếng Việt có dấu 'nháy đơn' và \"nháy kép\"\n"
@@ -159,7 +178,7 @@ class TestOpenCodeBuilder:
         cmd = _build_opencode_argv("deepseek-v4.1-flash", complex_prompt)
         assert cmd[-1] == complex_prompt
 
-    def test_opencode_attachments_flag_f(self):
+    def test_opencode_attachments_flag_f(self, confined_go):
         """Cờ -f chỉ chèn cho attachments phục vụ validation vision sau."""
         files = ["/tmp/img1.png", "/tmp/doc.pdf"]
         cmd = _build_opencode_argv("deepseek-v4.1-flash", "Prompt", attachments=files)
@@ -194,16 +213,26 @@ class TestHermesBuilder:
             build_hermes_cmd("deepseek-v4.1-flash", "Prompt", sandbox="read-only")
         assert exc_info.value.reason == "sandbox_unsupported"
 
-    def test_hermes_pure_argv_helper_builds_valid_cmd(self):
-        """Helper nội bộ pure private _build_hermes_argv trả về argv hợp lệ."""
-        cmd = _build_hermes_argv("deepseek-v4.1-flash", "Nội dung task")
-        assert isinstance(cmd, list)
-        assert cmd[0] == get_hermes_bin()
-        assert cmd[1] == "-z"
-        assert cmd[2] == "Nội dung task"
-        assert cmd[3:5] == ["--provider", "opencode-go"]
-        assert cmd[5:7] == ["-m", "deepseek-v4.1-flash"]
-        assert cmd[7:9] == ["--reasoning", "high"]
+    def test_hermes_helper_failclosed_unverified_negative_spy_runner0(self):
+        """Helper nội bộ _build_hermes_argv fail-closed khi chưa evidence confinement; negative spy runner=0."""
+        assert GO_SANDBOX_CONFINED is False, "Default production state must be unconfined"
+        class SpyRunner:
+            def __init__(self):
+                self.called = False
+                self.call_count = 0
+            def __call__(self, *args, **kwargs):
+                self.called = True
+                self.call_count += 1
+                return None
+
+        spy = SpyRunner()
+        with pytest.raises(DispatchError) as exc_info:
+            cmd = _build_hermes_argv("deepseek-v4.1-flash", "Nội dung task")
+            spy(cmd)
+        assert exc_info.value.reason == "sandbox_unsupported"
+        assert "sandbox_unsupported" in str(exc_info.value)
+        assert spy.called is False
+        assert spy.call_count == 0
 
     def test_hermes_public_builder_no_evidence_sandbox_bypass(self):
         """Public builder build_hermes_cmd KHÔNG có tham số evidence_sandbox và luôn raise sandbox_unsupported."""
@@ -220,7 +249,7 @@ class TestHermesBuilder:
             build_hermes_cmd("deepseek-v4.1-flash", "Nội dung task")
         assert exc_info.value.reason == "sandbox_unsupported"
 
-    def test_hermes_normalize_slug_and_reasoning(self):
+    def test_hermes_normalize_slug_and_reasoning(self, confined_go):
         """Chuẩn hoá slug và reasoning effort thật đưa vào argv thay vì truyền raw."""
         # 1. Truyền có provider prefix -> tách slug sạch vào -m
         cmd1 = _build_hermes_argv("opencode-go/deepseek-v4.1-flash", "Prompt")
@@ -243,7 +272,7 @@ class TestHermesBuilder:
         else:
             assert bin_path == "hermes"
 
-    def test_hermes_default_model_and_effort(self):
+    def test_hermes_default_model_and_effort(self, confined_go):
         """Model auto resolve thành deepseek-v4.1-flash với reasoning high."""
         cmd = _build_hermes_argv("auto", "Prompt")
         assert cmd[0] == get_hermes_bin()
@@ -252,18 +281,18 @@ class TestHermesBuilder:
         assert cmd[5:7] == ["-m", "deepseek-v4.1-flash"]
         assert cmd[7:9] == ["--reasoning", "high"]
 
-    def test_hermes_glm_defaults_to_effort_max(self):
+    def test_hermes_glm_defaults_to_effort_max(self, confined_go):
         """GLM-5.3-flash mặc định nhận reasoning max theo hồ sơ duyệt."""
         cmd = _build_hermes_argv("glm-5.3-flash", "Prompt")
         assert cmd[5:7] == ["-m", "glm-5.3-flash"]
         assert cmd[7:9] == ["--reasoning", "max"]
 
-    def test_hermes_explicit_effort_override(self):
+    def test_hermes_explicit_effort_override(self, confined_go):
         """Caller truyền effort tường minh phải được tôn trọng."""
         cmd = _build_hermes_argv("deepseek-v4.1-flash", "Prompt", effort="low")
         assert cmd[7:9] == ["--reasoning", "low"]
 
-    def test_hermes_prompt_unicode_quotes_multiline_intact(self):
+    def test_hermes_prompt_unicode_quotes_multiline_intact(self, confined_go):
         """Prompt Unicode, ngoặc kép, nháy đơn, xuống dòng phải giữ nguyên sau -z."""
         complex_prompt = (
             "Dòng 1: Tiếng Việt có dấu 'nháy đơn' và \"nháy kép\"\n"
@@ -336,7 +365,7 @@ class TestBuilderPolicyEnforcement:
         assert isinstance(exc_info.value, DispatchError)
         assert isinstance(exc_info.value, FreeModelBlocked)
 
-    def test_free_model_allowed_when_selected_explicitly_on_go(self):
+    def test_free_model_allowed_when_selected_explicitly_on_go(self, confined_go):
         """Model free được phép chọn TƯỜNG MINH (source=explicit) trên Go adapter (Tuan chốt 22/10)."""
         cmd_oc = _build_opencode_argv("deepseek-v4.1-flash-free", "Prompt", source="explicit")
         assert "opencode-go/deepseek-v4.1-flash-free" in cmd_oc
@@ -375,6 +404,7 @@ class TestBuilderPolicyEnforcement:
     def test_claude_bounded_flags_preserved(self):
         """Tất cả cờ ToS-bounded bắt buộc của Claude phải giữ nguyên vẹn."""
         cmd = build_claude_cmd("auto", "Prompt")
+        assert "--model" in cmd and cmd[cmd.index("--model") + 1] == "claude-opus-5"
         assert "--effort" in cmd and cmd[cmd.index("--effort") + 1] == "low"
         assert "--no-session-persistence" in cmd
         assert "--disable-slash-commands" in cmd
@@ -390,8 +420,8 @@ class TestBuilderPolicyEnforcement:
 class TestAutoBuildersResolver:
     """Kiểm tra auto builders dùng resolver chung thay cho safe_defaults hardcoded."""
 
-    def test_auto_builders_resolve_configured_defaults(self, tmp_path):
-        """Auto builders cho opencode, hermes, agy, dsh giải quyết qua resolver chung."""
+    def test_auto_builders_resolve_configured_defaults(self, confined_go, tmp_path):
+        """Auto builders cho opencode, hermes, agy, dsh, codex, claude, grok giải quyết qua resolver chung."""
         # OpenCode auto
         oc_cmd = _build_opencode_argv("auto", "Prompt")
         assert oc_cmd[3] == "opencode-go/deepseek-v4.1-flash"
@@ -407,10 +437,33 @@ class TestAutoBuildersResolver:
         idx = agy_cmd.index("--model")
         assert agy_cmd[idx + 1] == "gemini-3.8-flash-high"
 
+        # Codex auto - Finding 7: pin -m gpt-6.1-sol
+        codex_cmd = build_codex_cmd("auto", "read-only", None, "text")
+        assert "-m" in codex_cmd
+        assert codex_cmd[codex_cmd.index("-m") + 1] == "gpt-6.1-sol"
+        assert "-c" in codex_cmd
+        assert codex_cmd[codex_cmd.index("-c") + 1] == "model_reasoning_effort=low"
+
+        # Claude auto - Finding 7: pin --model claude-opus-5 & bounded effort low
+        claude_cmd = build_claude_cmd("auto", "Prompt")
+        assert "--model" in claude_cmd
+        assert claude_cmd[claude_cmd.index("--model") + 1] == "claude-opus-5"
+        assert "--effort" in claude_cmd
+        assert claude_cmd[claude_cmd.index("--effort") + 1] == "low"
+
+        # Grok auto - Finding 7: pin -m grok-4.6
+        grok_cmd = build_grok_cmd("auto", "read-only", None, "text", "/tmp/p")
+        assert "-m" in grok_cmd
+        assert grok_cmd[grok_cmd.index("-m") + 1] == "grok-4.6"
+
+        # DSH auto cmd - Finding 7: DSH auto phải pin patch command
+        dsh_cmd = build_dsh_cmd("auto", "/tmp/dsh_patch.yaml")
+        assert "--patch" in dsh_cmd
+        assert dsh_cmd[dsh_cmd.index("--patch") + 1] == "/tmp/dsh_patch.yaml"
+
         # DSH auto patch
         patch_file = tmp_path / "dsh_patch.yaml"
         write_dsh_patch("auto", str(patch_file))
         assert patch_file.exists()
         content = patch_file.read_text(encoding="utf-8")
         assert "deepseek-v4-pro" in content
-
