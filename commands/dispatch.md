@@ -39,7 +39,7 @@ Parse `$ARGUMENTS`: token đầu = vendor, phần sau `--` = prompt (mặc đị
   - Model `*-free`: **Chỉ cho phép khi chọn tường minh** (`explicit-only`); cấm tuyệt đối dùng làm default, auto router, hoặc failover.
   - OpenRouter: Chặn các router generic chưa rõ đích (`auto`, `free`, `free-router`, `:free`) và model `:free` (`unresolved destination`).
   - Catalog models: Mang tính chất **khuyến cáo (advisory)**, không phải whitelist cứng chặn oan model mới.
-- *Ghi chú nghiệm thu*: Các live test với vendor thật **CHƯA chạy lúc này** nên không tự điền kết quả; trỏ `docs/plans/BAO-CAO-2026-10-22.md` cho kết quả cuối (điều phối sẽ ghi).
+- *Nghiệm thu 22/10/2026*: Codex/Agy default đã trả đúng `LIVE_OK`; các thử nghiệm Go/vision trả blocked, chưa có inference Go hay phép chấm OCR. Xem kết quả thật và việc còn chặn tại `docs/plans/BAO-CAO-2026-10-22.md`.
 
 ## Prompt NGẮN, một dòng → stdin
 ```

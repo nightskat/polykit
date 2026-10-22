@@ -82,7 +82,7 @@ Người dùng có thể thêm vendor mới bằng cách chỉnh sửa JSON sche
   - Go adapters (`opencode`, `hermes`) và Vision: Vẫn **bị chặn (blocked), chưa operational**. Cổng kiểm soát an toàn (gate) đã được tích hợp đầy đủ ở cả CLI và lib, không còn pending integration.
   - Go sandbox: Chưa được kiểm chứng cách ly an toàn (`no proven confinement`) → dispatch bị chặn fail-closed (`status=blocked`, reason `sandbox_unsupported`). Không coi Go dispatch hay vision là đang vận hành.
   - Cổng Vision: Dữ liệu nhạy cảm / sensitive vision mặc định **bị chặn** (`vision_blocked`) do **trustedUI chưa hỗ trợ** xác nhận mỗi lượt. Thỏa thuận ZDR (Zero Data Retention) **không thay thế** các cổng kiểm soát an toàn.
-  - **Live test**: Mọi kịch bản live test với vendor thật **CHƯA chạy lúc này** nên không tự điền kết quả; kết quả nghiệm thu cuối cùng trỏ về [docs/plans/BAO-CAO-2026-10-22.md](docs/plans/BAO-CAO-2026-10-22.md) (điều phối sẽ ghi).
+  - **Live test 22/10/2026**: Điều phối đã chạy Codex và Agy default, cả hai trả đúng `LIVE_OK`. Đã thử các đường Go/vision và ghi nhận blocked; chưa chạy inference Go hay đo chất lượng OCR. Kết quả và giới hạn nằm trong [docs/plans/BAO-CAO-2026-10-22.md](docs/plans/BAO-CAO-2026-10-22.md).
 - Docs không phải nguồn sự thật về model/version — `/polykit:doctor` mới là. Số trong docs chỉ
   là snapshot có ghi ngày.
 - **"Vendor được gọi" ≠ "vendor phục vụ" & Bằng chứng xác thực (`served_model`)**:
