@@ -160,7 +160,7 @@ class TestOpenCodeBuilder:
         assert cmd[0] == get_opencode_bin()
         assert cmd[1:4] == ["run", "--model", "opencode-go/deepseek-v4.1-flash"]
         assert cmd[4:6] == ["--variant", "high"]
-        assert cmd[6] == "Prompt"
+        assert cmd[6:] == ["--", "Prompt"]
 
     def test_opencode_glm_defaults_to_effort_max(self, confined_go):
         """GLM-5.3-flash mặc định nhận effort max theo hồ sơ duyệt."""

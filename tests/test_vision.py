@@ -47,6 +47,8 @@ Kiểm tra:
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 import subprocess
 from pathlib import Path
@@ -56,6 +58,8 @@ import pytest
 
 from bin.lib.vision import (
     DEFAULT_MAX_FILE_BYTES,
+    EXPECTED_MANIFEST_GENERATOR,
+    EXPECTED_MANIFEST_SCHEMA_VERSION,
     JPEG_MAGIC,
     PDF_MAGIC,
     PNG_MAGIC,
@@ -75,6 +79,7 @@ from bin.lib.vision import (
     get_model_capabilities,
     prepare_vision_input,
     validate_file_format,
+    validate_synthetic_gate,
     verify_adapter,
 )
 
@@ -84,6 +89,62 @@ from bin.lib.vision import (
 # ===========================================================================
 
 TEST_ADAPTER_NAME = "test_verified_adapter"
+
+# Payload cố định => hash fixture deterministic, KHÔNG nhận file bất kỳ.
+FIXTURE_PNG_PAYLOAD = PNG_MAGIC + b"polykit-synthetic-vision-fixture-png"
+FIXTURE_PDF_PAYLOAD = PDF_MAGIC + b"-1.7\npolykit-synthetic-vision-fixture-pdf\n"
+
+
+def sha256_hex(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def build_synthetic_repo(root: Path) -> dict:
+    """Dựng cây repo giả tối thiểu: bench/vision/synthetic + manifest + registry khớp hash."""
+    synth = root / "bench" / "vision" / "synthetic"
+    synth.mkdir(parents=True)
+
+    specs = {
+        "fixture_page.png": ("PNG", FIXTURE_PNG_PAYLOAD),
+        "fixture_doc.pdf": ("PDF", FIXTURE_PDF_PAYLOAD),
+    }
+    registry: dict[str, dict] = {}
+    entries: list[dict] = []
+
+    for name, (fmt, payload) in specs.items():
+        (synth / name).write_bytes(payload)
+        rel_path = f"bench/vision/synthetic/{name}"
+        registry[name] = {
+            "sha256": sha256_hex(payload),
+            "bytes": len(payload),
+            "format": fmt,
+            "rel_path": rel_path,
+        }
+        entries.append(
+            {
+                "path": name,
+                "rel_path": rel_path,
+                "format": fmt,
+                "bytes": len(payload),
+                "sha256": sha256_hex(payload),
+            }
+        )
+
+    manifest = {
+        "schema_version": EXPECTED_MANIFEST_SCHEMA_VERSION,
+        "generator": EXPECTED_MANIFEST_GENERATOR,
+        "files": entries,
+    }
+    (synth / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+    return {
+        "root": root,
+        "synth": synth,
+        "registry": registry,
+        "manifest": manifest,
+        "png": synth / "fixture_page.png",
+        "pdf": synth / "fixture_doc.pdf",
+    }
 
 
 @pytest.fixture
@@ -102,6 +163,20 @@ def test_adapter(monkeypatch: pytest.MonkeyPatch) -> str:
         frozenset({TEST_ADAPTER_NAME}),
     )
     return TEST_ADAPTER_NAME
+
+
+@pytest.fixture
+def synthetic_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict:
+    """Repo root + registry tin cậy do test dựng, monkeypatch thẳng constant module.
+
+    Hash sinh từ payload cố định nên deterministic; file lạ không tự động hợp lệ.
+    """
+    root = (tmp_path / "repo_root").resolve()
+    root.mkdir()
+    repo = build_synthetic_repo(root)
+    monkeypatch.setattr("bin.lib.vision.REAL_REPO_ROOT", root)
+    monkeypatch.setattr("bin.lib.vision.TRUSTED_SYNTHETIC_REGISTRY", repo["registry"])
+    return repo
 
 
 def create_sample_png(path: Path, content: bytes = b"sample image data") -> Path:
@@ -156,14 +231,14 @@ class TestSensitiveVisionGateSpy:
             mock_subprocess.assert_not_called()
 
     def test_allow_sensitive_alone_not_sufficient(self, workspace: Path):
-        """Cờ --allow-sensitive-vision một mình không đủ nếu thiếu confirmation."""
+        """Cờ --allow-sensitive-vision luôn bị chặn fail-closed, kể cả khi thiếu confirmation."""
         sensitive_file = workspace / "id_card.png"
         create_sample_png(sensitive_file)
 
         with patch("builtins.open") as mock_open, \
              patch("subprocess.run") as mock_subprocess:
 
-            with pytest.raises(VisionBlockedError, match="--allow-sensitive-vision alone is not sufficient"):
+            with pytest.raises(VisionBlockedError, match="--allow-sensitive-vision is blocked fail-closed"):
                 check_vision_gate(
                     files=[sensitive_file],
                     model="deepseek-v4.1-flash",
@@ -176,6 +251,20 @@ class TestSensitiveVisionGateSpy:
             mock_open.assert_not_called()
             mock_subprocess.assert_not_called()
 
+    def test_sensitive_flags_block_even_without_files(self):
+        """Cờ sensitive/confirmation luôn blocked fail-closed ngay cả khi không có file nào."""
+        with patch("builtins.open") as mock_open, \
+             patch("subprocess.run") as mock_subprocess:
+
+            with pytest.raises(VisionBlockedError, match="--allow-sensitive-vision is blocked fail-closed"):
+                check_vision_gate(files=[], model="deepseek-v4.1-flash", allow_sensitive=True)
+
+            with pytest.raises(VisionBlockedError, match="(--allow-sensitive-vision is blocked fail-closed|Sensitive vision confirmation is blocked)"):
+                check_vision_gate(files=[], model="deepseek-v4.1-flash", confirmation="anything")
+
+            mock_open.assert_not_called()
+            mock_subprocess.assert_not_called()
+
     def test_arbitrary_string_consent_rejected(self, workspace: Path):
         """KHÔNG nhận chuỗi string bất kỳ làm consent (ví dụ 'yes', 'Tuan', 'confirm')."""
         sensitive_file = workspace / "passport.jpg"
@@ -183,7 +272,7 @@ class TestSensitiveVisionGateSpy:
 
         for fake_string in ["yes", "confirm", "I agree", "Tuan approved", "true", "1"]:
             with patch("builtins.open") as mock_open:
-                with pytest.raises(VisionBlockedError, match="Arbitrary string consent is rejected"):
+                with pytest.raises(VisionBlockedError, match="(--allow-sensitive-vision is blocked fail-closed|Sensitive vision confirmation is blocked)"):
                     check_vision_gate(
                         files=[sensitive_file],
                         model="deepseek-v4.1-flash",
@@ -208,7 +297,7 @@ class TestSensitiveVisionGateSpy:
         )
 
         with patch("builtins.open") as mock_open:
-            with pytest.raises(VisionBlockedError, match="trusted UI confirmation is not supported yet"):
+            with pytest.raises(VisionBlockedError, match="(--allow-sensitive-vision is blocked fail-closed|Sensitive vision confirmation is blocked)"):
                 check_vision_gate(
                     files=[sensitive_file],
                     model="deepseek-v4.1-flash",
@@ -221,7 +310,7 @@ class TestSensitiveVisionGateSpy:
             mock_open.assert_not_called()
 
     def test_confirmation_cannot_inherit_across_retry_or_failover(self, workspace: Path):
-        """Confirmation không được kế thừa qua retry hoặc failover."""
+        """Confirmation không được kế thừa qua retry hoặc failover: mọi confirmation đều bị chặn."""
         sensitive_file = workspace / "contract.png"
         create_sample_png(sensitive_file)
 
@@ -234,7 +323,7 @@ class TestSensitiveVisionGateSpy:
         )
 
         # Retry check
-        with pytest.raises(VisionBlockedError, match="Confirmation cannot be inherited"):
+        with pytest.raises(VisionBlockedError, match="(--allow-sensitive-vision is blocked fail-closed|Sensitive vision confirmation is blocked)"):
             check_vision_gate(
                 files=[sensitive_file],
                 model="deepseek-v4.1-flash",
@@ -247,7 +336,7 @@ class TestSensitiveVisionGateSpy:
             )
 
         # Failover check
-        with pytest.raises(VisionBlockedError, match="Confirmation cannot be inherited"):
+        with pytest.raises(VisionBlockedError, match="(--allow-sensitive-vision is blocked fail-closed|Sensitive vision confirmation is blocked)"):
             check_vision_gate(
                 files=[sensitive_file],
                 model="deepseek-v4.1-flash",
@@ -260,7 +349,7 @@ class TestSensitiveVisionGateSpy:
             )
 
     def test_confirmation_mismatched_scope_rejected(self, workspace: Path):
-        """Confirmation bị từ chối nếu không khớp exact files, model hoặc provider."""
+        """Confirmation lệch files/model/provider vẫn bị chặn (mọi confirmation bị từ chối)."""
         f1 = workspace / "page1.png"
         f2 = workspace / "page2.png"
         create_sample_png(f1)
@@ -275,7 +364,7 @@ class TestSensitiveVisionGateSpy:
         )
 
         # Mismatch files
-        with pytest.raises(VisionBlockedError, match="files do not match"):
+        with pytest.raises(VisionBlockedError, match="(--allow-sensitive-vision is blocked fail-closed|Sensitive vision confirmation is blocked)"):
             check_vision_gate(
                 files=[f1, f2],
                 model="deepseek-v4.1-flash",
@@ -287,7 +376,7 @@ class TestSensitiveVisionGateSpy:
             )
 
         # Mismatch model
-        with pytest.raises(VisionBlockedError, match="model does not match"):
+        with pytest.raises(VisionBlockedError, match="(--allow-sensitive-vision is blocked fail-closed|Sensitive vision confirmation is blocked)"):
             check_vision_gate(
                 files=[f1],
                 model="glm-5.3-flash",
@@ -299,7 +388,7 @@ class TestSensitiveVisionGateSpy:
             )
 
         # Mismatch provider
-        with pytest.raises(VisionBlockedError, match="provider does not match"):
+        with pytest.raises(VisionBlockedError, match="(--allow-sensitive-vision is blocked fail-closed|Sensitive vision confirmation is blocked)"):
             check_vision_gate(
                 files=[f1],
                 model="deepseek-v4.1-flash",
@@ -324,7 +413,7 @@ class TestSensitiveVisionGateSpy:
             consumed=True,
         )
 
-        with pytest.raises(VisionBlockedError, match="Confirmation has already been consumed"):
+        with pytest.raises(VisionBlockedError, match="(--allow-sensitive-vision is blocked fail-closed|Sensitive vision confirmation is blocked)"):
             check_vision_gate(
                 files=[f1],
                 model="deepseek-v4.1-flash",
@@ -351,7 +440,7 @@ class TestSensitiveVisionGateSpy:
 
         with patch("builtins.open") as mock_open, \
              patch("os.stat") as mock_stat:
-            with pytest.raises(VisionBlockedError, match="Sensitive or undeclared synthetic vision data is blocked"):
+            with pytest.raises(VisionBlockedError, match="--allow-sensitive-vision is blocked fail-closed"):
                 check_vision_gate(
                     files=[f1],
                     model="deepseek-v4.1-flash",
@@ -371,99 +460,95 @@ class TestSensitiveVisionGateSpy:
 # ===========================================================================
 
 class TestSyntheticPathSecurity:
-    """Kiểm tra path thường, cấm symlink, cấm path outside workspace, hỗ trợ khoảng trắng."""
+    """Cổng synthetic chỉ mở cho file trong bench/vision/synthetic dưới REAL_REPO_ROOT,
+    khớp manifest + registry; mọi path lạ/symlink/traversal bị chặn."""
 
-    def test_valid_synthetic_regular_file(self, workspace: Path, test_adapter: str):
-        """File hợp lệ trong workspace và tuyên bố synthetic."""
-        img = create_sample_png(workspace / "test.png")
+    def test_valid_synthetic_regular_file(self, synthetic_repo: dict, test_adapter: str):
+        """File fixture khớp manifest + registry đi qua cổng."""
         res = check_vision_gate(
-            files=[img],
+            files=[synthetic_repo["png"]],
             model="deepseek-v4.1-flash",
             adapter=test_adapter,
             is_synthetic=True,
-            workspace_root=workspace,
         )
         assert len(res) == 1
         assert res[0].mime_type == "image/png"
         assert res[0].is_synthetic is True
 
-    def test_symlink_blocked(self, workspace: Path, test_adapter: str):
-        """Symlink bị chặn tuyệt đối (VisionSecurityError)."""
-        real_img = create_sample_png(workspace / "real.png")
-        link_img = workspace / "symlink_to_real.png"
+    def test_arbitrary_workspace_file_blocked(self, workspace: Path, test_adapter: str):
+        """File synthetic tự tạo ngoài bench/vision/synthetic bị chặn (VisionSecurityError)."""
+        img = create_sample_png(workspace / "test.png")
+        with pytest.raises(VisionSecurityError, match="outside fixed synthetic directory"):
+            check_vision_gate(
+                files=[img],
+                model="deepseek-v4.1-flash",
+                adapter=test_adapter,
+                is_synthetic=True,
+                workspace_root=workspace,
+            )
+
+    def test_symlink_blocked(self, synthetic_repo: dict, test_adapter: str):
+        """Symlink (kể cả trỏ tới file hợp lệ trong synthetic dir) bị chặn tuyệt đối."""
+        link_img = synthetic_repo["synth"] / "symlink_to_real.png"
         try:
-            link_img.symlink_to(real_img)
+            link_img.symlink_to(synthetic_repo["png"])
         except OSError:
             pytest.skip("Filesystem does not support symlinks")
 
-        with pytest.raises(VisionSecurityError, match="Symlinks are blocked"):
+        with pytest.raises(VisionSecurityError, match="Symlink detected"):
             check_vision_gate(
                 files=[link_img],
                 model="deepseek-v4.1-flash",
                 adapter=test_adapter,
                 is_synthetic=True,
-                workspace_root=workspace,
             )
 
-    def test_path_outside_workspace_blocked(self, workspace: Path, tmp_path: Path, test_adapter: str):
-        """Path nằm ngoài workspace root được chỉ định bị chặn (VisionSecurityError)."""
-        outside_dir = tmp_path / "outside"
-        outside_dir.mkdir()
-        outside_file = create_sample_png(outside_dir / "external.png")
+    def test_path_outside_synthetic_dir_blocked(self, synthetic_repo: dict, tmp_path: Path, test_adapter: str):
+        """Path ngoài synthetic dir (kể cả trong repo) bị chặn (VisionSecurityError)."""
+        outside_file = create_sample_png(synthetic_repo["root"] / "outside" / "external.png")
 
-        with pytest.raises(VisionSecurityError, match="outside allowed workspace"):
+        with pytest.raises(VisionSecurityError, match="outside fixed synthetic directory"):
             check_vision_gate(
                 files=[outside_file],
                 model="deepseek-v4.1-flash",
                 adapter=test_adapter,
                 is_synthetic=True,
-                workspace_root=workspace,
             )
 
-    def test_path_traversal_blocked(self, workspace: Path, test_adapter: str):
-        """Thử dùng traversal ../.. thoát khỏi workspace."""
-        traversal_path = workspace / "sub" / ".." / ".." / "escape.png"
-        with pytest.raises(VisionSecurityError):
+    def test_path_traversal_blocked(self, synthetic_repo: dict, test_adapter: str):
+        """Thử dùng traversal ../.. thoát khỏi synthetic dir."""
+        traversal_path = synthetic_repo["synth"] / ".." / "escape.png"
+        with pytest.raises(VisionSecurityError, match="Path traversal"):
             check_vision_gate(
                 files=[traversal_path],
                 model="deepseek-v4.1-flash",
                 adapter=test_adapter,
                 is_synthetic=True,
-                workspace_root=workspace,
             )
 
-    def test_path_with_whitespace_supported(self, workspace: Path, test_adapter: str):
-        """Đường dẫn có khoảng trắng (spaces) được hỗ trợ nguyên vẹn, không bị tách từ."""
-        spaced_dir = workspace / "my synthetic documents"
-        spaced_dir.mkdir()
-        spaced_file = create_sample_png(spaced_dir / "diagram draft v1.png")
+    def test_path_with_whitespace_supported(self, workspace: Path):
+        """validate_file_format độc lập xử lý path có khoảng trắng nguyên vẹn (không tách từ)."""
+        spaced_file = create_sample_png(workspace / "my synthetic documents" / "diagram draft v1.png")
 
-        res = check_vision_gate(
-            files=[spaced_file],
-            model="deepseek-v4.1-flash",
-            adapter=test_adapter,
-            is_synthetic=True,
-            workspace_root=workspace,
-        )
-        assert len(res) == 1
-        assert res[0].path == spaced_file.resolve()
-        assert "diagram draft v1.png" in str(res[0].path)
+        att = validate_file_format(spaced_file, workspace)
+        assert att.mime_type == "image/png"
+        assert att.path == spaced_file.resolve()
+        assert "diagram draft v1.png" in str(att.path)
 
-    def test_missing_file_rejected(self, workspace: Path, test_adapter: str):
-        """File không tồn tại bị từ chối (VisionFormatError)."""
-        missing = workspace / "non_existent.png"
-        with pytest.raises(VisionFormatError, match="File not found"):
+    def test_missing_file_rejected(self, synthetic_repo: dict, test_adapter: str):
+        """File không tồn tại trong synthetic dir bị từ chối (VisionFormatError)."""
+        missing = synthetic_repo["synth"] / "non_existent.png"
+        with pytest.raises(VisionFormatError, match="Synthetic file not found"):
             check_vision_gate(
                 files=[missing],
                 model="deepseek-v4.1-flash",
                 adapter=test_adapter,
                 is_synthetic=True,
-                workspace_root=workspace,
             )
 
-    def test_directory_rejected(self, workspace: Path, test_adapter: str):
+    def test_directory_rejected(self, synthetic_repo: dict, test_adapter: str):
         """Thư mục truyền vào làm attachment bị từ chối (VisionFormatError)."""
-        d = workspace / "some_dir.png"
+        d = synthetic_repo["synth"] / "some_dir.png"
         d.mkdir()
         with pytest.raises(VisionFormatError, match="Not a regular file"):
             check_vision_gate(
@@ -471,36 +556,54 @@ class TestSyntheticPathSecurity:
                 model="deepseek-v4.1-flash",
                 adapter=test_adapter,
                 is_synthetic=True,
-                workspace_root=workspace,
             )
 
-    def test_empty_file_rejected(self, workspace: Path, test_adapter: str):
+    def test_empty_file_rejected(self, synthetic_repo: dict, test_adapter: str):
         """File 0 bytes bị từ chối (VisionFormatError)."""
-        empty_file = workspace / "empty.png"
+        empty_file = synthetic_repo["synth"] / "empty.png"
         empty_file.touch()
-        with pytest.raises(VisionFormatError, match="File is empty"):
+        with pytest.raises(VisionFormatError, match="Synthetic file is empty"):
             check_vision_gate(
                 files=[empty_file],
                 model="deepseek-v4.1-flash",
                 adapter=test_adapter,
                 is_synthetic=True,
-                workspace_root=workspace,
             )
 
-    def test_quota_size_limit_exceeded(self, workspace: Path, test_adapter: str):
+    def test_quota_size_limit_exceeded(self, synthetic_repo: dict, test_adapter: str):
         """File vượt hạn dung lượng bị chặn (VisionQuotaError)."""
-        oversized = workspace / "oversized.png"
-        with oversized.open("wb") as f:
-            f.write(PNG_MAGIC + b"X" * 1024)
-
-        with pytest.raises(VisionQuotaError, match="exceeds maximum limit"):
+        with pytest.raises(VisionQuotaError, match="exceeds max size"):
             check_vision_gate(
-                files=[oversized],
+                files=[synthetic_repo["png"]],
                 model="deepseek-v4.1-flash",
                 adapter=test_adapter,
                 is_synthetic=True,
-                workspace_root=workspace,
-                max_bytes=500,  # Limit nhỏ hơn 1024
+                max_bytes=10,
+            )
+
+    def test_registry_file_not_declared_in_manifest_blocked(
+        self, synthetic_repo: dict, test_adapter: str, monkeypatch: pytest.MonkeyPatch
+    ):
+        """File có trong registry nhưng manifest không khai báo vẫn bị chặn (danh sách đóng)."""
+        orphan = "orphan_page.png"
+        payload = PNG_MAGIC + b"orphan page outside manifest"
+        (synthetic_repo["synth"] / orphan).write_bytes(payload)
+
+        registry = dict(synthetic_repo["registry"])
+        registry[orphan] = {
+            "sha256": sha256_hex(payload),
+            "bytes": len(payload),
+            "format": "PNG",
+            "rel_path": f"bench/vision/synthetic/{orphan}",
+        }
+        monkeypatch.setattr("bin.lib.vision.TRUSTED_SYNTHETIC_REGISTRY", registry)
+
+        with pytest.raises(VisionBlockedError, match="not declared in the synthetic manifest"):
+            check_vision_gate(
+                files=[synthetic_repo["synth"] / orphan],
+                model="deepseek-v4.1-flash",
+                adapter=test_adapter,
+                is_synthetic=True,
             )
 
 
@@ -525,62 +628,69 @@ class TestMimeSignatures:
         assert att.is_image is True
         assert att.is_pdf is False
 
-    def test_png_suffix_with_fake_content_rejected(self, workspace: Path, test_adapter: str):
-        """Đuôi .png nhưng nội dung là text rác bị từ chối."""
+    def test_validate_file_format_png_suffix_with_fake_content_rejected(self, workspace: Path):
+        """Đuôi .png nhưng nội dung là text rác: validate_file_format từ chối theo magic bytes."""
         fake_png = workspace / "fake.png"
         fake_png.write_text("This is not a real PNG file, just text")
 
         with pytest.raises(VisionFormatError, match="magic bytes do not match"):
-            check_vision_gate(
-                files=[fake_png],
-                model="deepseek-v4.1-flash",
-                adapter=test_adapter,
-                is_synthetic=True,
-                workspace_root=workspace,
-            )
+            validate_file_format(fake_png, workspace)
 
-    def test_pdf_suffix_without_pdf_magic_rejected(self, workspace: Path, test_adapter: str):
-        """Đuôi .pdf nhưng thiếu magic %PDF bị từ chối."""
+    def test_validate_file_format_pdf_suffix_without_magic_rejected(self, workspace: Path):
+        """Đuôi .pdf nhưng thiếu magic %PDF: validate_file_format từ chối."""
         fake_pdf = workspace / "fake.pdf"
         fake_pdf.write_bytes(b"NOT_A_PDF_CONTENT_HEADER")
 
         with pytest.raises(VisionFormatError, match="magic bytes do not match"):
-            check_vision_gate(
-                files=[fake_pdf],
-                model="glm-5.3-flash",
-                adapter=test_adapter,
-                is_synthetic=True,
-                workspace_root=workspace,
-            )
+            validate_file_format(fake_pdf, workspace)
 
-    def test_jpeg_suffix_with_png_content_mismatch_rejected(self, workspace: Path, test_adapter: str):
+    def test_validate_file_format_suffix_mime_mismatch_rejected(self, workspace: Path):
         """Nội dung là PNG magic nhưng đuôi lại đặt là .jpg."""
         mismatch_file = workspace / "wrong_extension.jpg"
-        with mismatch_file.open("wb") as f:
-            f.write(PNG_MAGIC + b"some png content")
+        mismatch_file.write_bytes(PNG_MAGIC + b"some png content")
 
         with pytest.raises(VisionFormatError, match="does not match file suffix"):
-            check_vision_gate(
-                files=[mismatch_file],
-                model="deepseek-v4.1-flash",
-                adapter=test_adapter,
-                is_synthetic=True,
-                workspace_root=workspace,
-            )
+            validate_file_format(mismatch_file, workspace)
 
-    def test_unsupported_extension_rejected(self, workspace: Path, test_adapter: str):
-        """Đuôi không nằm trong danh mục hỗ trợ (.gif, .exe, .sh) bị từ chối."""
+    def test_validate_file_format_unsupported_extension_rejected(self, workspace: Path):
+        """Đuôi không nằm trong danh mục hỗ trợ (.gif) bị từ chối."""
         gif_file = workspace / "anim.gif"
         gif_file.write_bytes(b"GIF89a...")
 
         with pytest.raises(VisionFormatError, match="Unsupported file extension"):
-            check_vision_gate(
-                files=[gif_file],
-                model="deepseek-v4.1-flash",
-                adapter=test_adapter,
-                is_synthetic=True,
-                workspace_root=workspace,
-            )
+            validate_file_format(gif_file, workspace)
+
+    @pytest.mark.parametrize(
+        "name,payload",
+        [
+            ("fake.png", b"This is not a real PNG file, just text"),
+            ("fake.pdf", b"NOT_A_PDF_CONTENT_HEADER"),
+            ("anim.gif", b"GIF89a..."),
+        ],
+    )
+    def test_gate_blocks_fake_media_without_io(
+        self,
+        workspace: Path,
+        test_adapter: str,
+        name: str,
+        payload: bytes,
+    ):
+        """Cổng synthetic luôn chặn media giả/tự tạo, không mở file, không spawn."""
+        fake = workspace / name
+        fake.write_bytes(payload)
+
+        with patch("bin.lib.vision.validate_synthetic_gate", side_effect=VisionBlockedError("synthetic gate")) as mock_gate, \
+             patch("subprocess.run") as mock_subprocess:
+            with pytest.raises(VisionBlockedError):
+                check_vision_gate(
+                    files=[fake],
+                    model="deepseek-v4.1-flash",
+                    adapter=test_adapter,
+                    is_synthetic=True,
+                    workspace_root=workspace,
+                )
+            mock_gate.assert_called_once()
+            mock_subprocess.assert_not_called()
 
 
 # ===========================================================================
@@ -642,11 +752,13 @@ class TestCapabilitiesAndAdapters:
             verify_adapter("   ")
 
     def test_unverified_adapter_blocked_before_file_io(self, workspace: Path):
-        """Adapter chưa verified bị blocked mặc định fail-closed trước bất kỳ file I/O nào."""
+        """Adapter chưa verified (hermes giữ block) bị chặn fail-closed trước bất kỳ file I/O nào."""
         img = create_sample_png(workspace / "img.png")
 
-        for unverified in ["hermes", "codex", "agy", "gemini", "grok", "opencode", "random_adapter"]:
-            with patch("builtins.open") as mock_open:
+        for unverified in ["hermes", "codex", "agy", "gemini", "grok", "random_adapter"]:
+            with patch("builtins.open") as mock_open, \
+                 patch("subprocess.run") as mock_subprocess, \
+                 patch("shutil.which") as mock_which:
                 with pytest.raises(VisionBlockedError, match="is not verified; blocked"):
                     check_vision_gate(
                         files=[img],
@@ -656,6 +768,8 @@ class TestCapabilitiesAndAdapters:
                         workspace_root=workspace,
                     )
                 mock_open.assert_not_called()
+                mock_subprocess.assert_not_called()
+                mock_which.assert_not_called()
 
     def test_caller_cannot_self_certify_adapters(self, workspace: Path):
         """Caller không thể tự chứng nhận adapter qua verified_adapters param hay flag."""
@@ -672,58 +786,68 @@ class TestCapabilitiesAndAdapters:
                 verified_adapters={"opencode"},  # type: ignore[call-arg]
             )
 
-    def test_registry_frozen_and_empty_by_default(self):
-        """Hằng registry là frozenset và mặc định rỗng hoàn toàn."""
+    def test_registry_frozen_and_pinned(self):
+        """Hằng registry là frozenset, chỉ ghim đúng adapter đã xác minh (opencode)."""
         assert isinstance(VERIFIED_VISION_ADAPTERS, frozenset)
-        assert len(VERIFIED_VISION_ADAPTERS) == 0
+        assert VERIFIED_VISION_ADAPTERS == frozenset({"opencode"})
+        assert "hermes" not in VERIFIED_VISION_ADAPTERS
 
-    def test_test_only_monkeypatched_adapter_allowed(self, workspace: Path, monkeypatch: pytest.MonkeyPatch):
+    def test_no_repo_root_or_override_hooks_exposed(self):
+        """Không có tham số repo_root hay hook override mutable nào trong public API."""
+        import inspect
+
+        import bin.lib.vision as vision_module
+
+        for func in (
+            vision_module.check_vision_gate,
+            vision_module.prepare_vision_input,
+            vision_module.validate_synthetic_gate,
+        ):
+            assert "repo_root" not in inspect.signature(func).parameters
+
+        assert not hasattr(vision_module, "_OVERRIDE")
+        assert not hasattr(vision_module, "set_repo_root")
+        assert not hasattr(vision_module, "set_trusted_registry")
+
+    def test_test_only_monkeypatched_adapter_allowed(self, synthetic_repo: dict, monkeypatch: pytest.MonkeyPatch):
         """Trong isolated unit test, monkeypatch hằng registry cho phép qua gate an toàn."""
-        img = create_sample_png(workspace / "img.png")
         monkeypatch.setattr("bin.lib.vision.VERIFIED_VISION_ADAPTERS", frozenset({"opencode"}))
 
         res = check_vision_gate(
-            files=[img],
+            files=[synthetic_repo["png"]],
             model="deepseek-v4.1-flash",
             adapter="opencode",
             is_synthetic=True,
-            workspace_root=workspace,
         )
         assert len(res) == 1
 
-    def test_image_rejected_when_model_does_not_support_images(self, workspace: Path, test_adapter: str):
+    def test_image_rejected_when_model_does_not_support_images(self, synthetic_repo: dict, test_adapter: str):
         """Gửi ảnh cho model có image=false (ví dụ deepseek-v4-pro) bị chặn."""
-        img = create_sample_png(workspace / "test.png")
         with pytest.raises(VisionBlockedError, match="does not support image input"):
             check_vision_gate(
-                files=[img],
+                files=[synthetic_repo["png"]],
                 model="deepseek-v4-pro",
                 adapter=test_adapter,
                 is_synthetic=True,
-                workspace_root=workspace,
             )
 
-    def test_pdf_rejected_when_model_supports_neither_pdf_nor_image(self, workspace: Path, test_adapter: str):
+    def test_pdf_rejected_when_model_supports_neither_pdf_nor_image(self, synthetic_repo: dict, test_adapter: str):
         """Gửi PDF cho model không hỗ trợ cả PDF lẫn image bị chặn."""
-        pdf = create_sample_pdf(workspace / "doc.pdf")
         with pytest.raises(VisionBlockedError, match="supports neither PDF nor image input"):
             check_vision_gate(
-                files=[pdf],
+                files=[synthetic_repo["pdf"]],
                 model="deepseek-v4-pro",
                 adapter=test_adapter,
                 is_synthetic=True,
-                workspace_root=workspace,
             )
 
-    def test_pdf_allowed_for_glm_flash_direct(self, workspace: Path, test_adapter: str):
+    def test_pdf_allowed_for_glm_flash_direct(self, synthetic_repo: dict, test_adapter: str):
         """GLM Flash hỗ trợ cả hai (image=true, pdf=true), PDF qua gate trực tiếp."""
-        pdf = create_sample_pdf(workspace / "direct.pdf")
         res = check_vision_gate(
-            files=[pdf],
+            files=[synthetic_repo["pdf"]],
             model="glm-5.3-flash",
             adapter=test_adapter,
             is_synthetic=True,
-            workspace_root=workspace,
         )
         assert len(res) == 1
         assert res[0].is_pdf is True
@@ -771,26 +895,25 @@ class TestDeepSeekPdfConversion:
                 )
 
     def test_subprocess_argv_timeout_and_full_res_flags(self, workspace: Path):
-        """Kiểm tra lệnh gọi subprocess argv list (không shell=True), timeout, full res."""
+        """Kiểm tra lệnh gọi subprocess argv list (không shell=True), timeout, full res.
+
+        Output luôn nằm trong private dir mới do helper tự tạo (TMPDIR), nên
+        pdftoppm giả phải ghi trang vào đúng ``out_prefix`` trong argv.
+        """
         pdf = create_sample_pdf(workspace / "doc.pdf")
-        out_dir = workspace / "out_pages"
-        out_dir.mkdir()
+        written_dirs: list[Path] = []
 
-        # Tạo file ảnh giả để hàm tìm thấy output
-        p1 = out_dir / "doc-1.png"
-        create_sample_png(p1)
-
-        fake_proc = MagicMock()
-        fake_proc.returncode = 0
-        fake_proc.stdout = b""
-        fake_proc.stderr = b""
+        def fake_run(cmd, **kwargs):
+            out_prefix = Path(cmd[-1])
+            written_dirs.append(out_prefix.parent)
+            create_sample_png(out_prefix.parent / f"{out_prefix.name}-1.png")
+            return MagicMock(returncode=0, stdout=b"", stderr=b"")
 
         with patch("shutil.which", return_value="/usr/local/bin/pdftoppm"), \
-             patch("subprocess.run", return_value=fake_proc) as mock_run:
+             patch("subprocess.run", side_effect=fake_run) as mock_run:
 
             res = _convert_pdf_to_images(
                 pdf_path=pdf,
-                output_dir=out_dir,
                 prefix="doc",
                 dpi=200,
                 timeout=25,
@@ -810,30 +933,32 @@ class TestDeepSeekPdfConversion:
             assert "-r" in cmd
             assert "200" in cmd
             assert "-contact-sheet" not in cmd
-            assert res == [p1]
+
+            assert [p.name for p in res] == ["doc-1.png"]
+            assert len(written_dirs) == 1
+            conv_dir = written_dirs[0]
+            assert conv_dir.name.startswith("polykit-vision-")
+            assert res[0].parent == conv_dir
+            assert not str(conv_dir).startswith(str(workspace.resolve()))
 
     def test_numeric_order_sorting(self, workspace: Path):
         """Đảm bảo thứ tự trang theo số tự nhiên (1, 2, ..., 10, 11),
         không bị xếp sai thứ tự theo bảng chữ cái (1, 10, 11, 2)."""
         pdf = create_sample_pdf(workspace / "multi.pdf")
-        out_dir = workspace / "multi_pages"
-        out_dir.mkdir()
+        page_nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
-        # Tạo các trang từ 1 đến 12
-        page_nums = [1, 2, 3, 9, 10, 11, 12]
-        created_pages = []
-        for n in page_nums:
-            p = create_sample_png(out_dir / f"page-{n}.png")
-            created_pages.append(p)
-
-        fake_proc = MagicMock(returncode=0)
+        def fake_run(cmd, **kwargs):
+            out_prefix = Path(cmd[-1])
+            # Ghi lộn xộn để chắc chắn thứ tự do code sắp, không do thứ tự ghi.
+            for n in sorted(page_nums, reverse=True):
+                create_sample_png(out_prefix.parent / f"{out_prefix.name}-{n}.png")
+            return MagicMock(returncode=0)
 
         with patch("shutil.which", return_value="/usr/bin/pdftoppm"), \
-             patch("subprocess.run", return_value=fake_proc):
+             patch("subprocess.run", side_effect=fake_run):
 
             res = _convert_pdf_to_images(
                 pdf_path=pdf,
-                output_dir=out_dir,
                 prefix="page",
             )
 
@@ -855,7 +980,6 @@ class TestDeepSeekPdfConversion:
             with pytest.raises(VisionConversionError, match="pdftoppm exited with nonzero"):
                 _convert_pdf_to_images(
                     pdf_path=pdf,
-                    output_dir=workspace / "pages",
                 )
 
     def test_converter_timeout_failure(self, workspace: Path):
@@ -868,7 +992,6 @@ class TestDeepSeekPdfConversion:
             with pytest.raises(VisionConversionError, match="timed out"):
                 _convert_pdf_to_images(
                     pdf_path=pdf,
-                    output_dir=workspace / "pages",
                     timeout=5,
                 )
 
@@ -883,7 +1006,6 @@ class TestDeepSeekPdfConversion:
             with pytest.raises(VisionConversionError, match="produced no image pages"):
                 _convert_pdf_to_images(
                     pdf_path=pdf,
-                    output_dir=workspace / "pages",
                 )
 
 
@@ -913,7 +1035,7 @@ class TestPrepareVisionInput:
             mock_subprocess.assert_not_called()
 
     def test_prepare_vision_input_unverified_adapter_blocked(self, workspace: Path):
-        """prepare_vision_input với adapter chưa verified bị chặn fail-closed."""
+        """prepare_vision_input với adapter chưa verified (hermes) bị chặn fail-closed."""
         pdf = create_sample_pdf(workspace / "doc.pdf")
 
         with patch("builtins.open") as mock_open:
@@ -921,11 +1043,101 @@ class TestPrepareVisionInput:
                 prepare_vision_input(
                     files=[pdf],
                     model="deepseek-v4.1-flash",
-                    adapter="opencode",
+                    adapter="hermes",
                     is_synthetic=True,
                     workspace_root=workspace,
                 )
             mock_open.assert_not_called()
+
+    def test_prepare_vision_input_actual_repo_trusted_pdf_split(self, tmp_path: Path):
+        """PDF trusted thật trong repo: DeepSeek tách trang qua prepare (helper nội bộ)."""
+        from bin.lib import vision as vision_module
+
+        repo_pdf = vision_module.REAL_REPO_ROOT / "bench" / "vision" / "synthetic" / "multipage_contract.pdf"
+        assert repo_pdf.is_file(), "repo synthetic PDF phải tồn tại để test dương tính"
+
+        written_dirs: list[Path] = []
+
+        def fake_run(cmd, **kwargs):
+            out_prefix = Path(cmd[-1])
+            written_dirs.append(out_prefix.parent)
+            for n in (1, 2):
+                create_sample_png(out_prefix.parent / f"{out_prefix.name}-{n}.png")
+            return MagicMock(returncode=0)
+
+        with patch("shutil.which", return_value="/usr/bin/pdftoppm"), \
+             patch("subprocess.run", side_effect=fake_run):
+            result_paths = prepare_vision_input(
+                files=[repo_pdf],
+                model="deepseek-v4.1-flash",
+                adapter="opencode",
+                is_synthetic=True,
+            )
+
+        assert [p.name for p in result_paths] == [
+            "multipage_contract-1.png",
+            "multipage_contract-2.png",
+        ]
+        # Page nằm trong private dir mới (TMPDIR), không nằm trong repo/tmp_path.
+        conv_dir = written_dirs[0]
+        assert conv_dir.name.startswith("polykit-vision-")
+        assert {p.parent for p in result_paths} == {conv_dir}
+        assert not str(conv_dir).startswith(str(tmp_path.resolve()))
+
+    def test_prepare_vision_input_rejects_repo_root_bypass(self):
+        """Không có tham số repo_root để trỏ cổng sang repo khác."""
+        with pytest.raises(TypeError):
+            prepare_vision_input(
+                files=["page_01_narrow_table.png"],
+                model="deepseek-v4.1-flash",
+                adapter="opencode",
+                is_synthetic=True,
+                repo_root=Path("/tmp/fake-repo"),  # type: ignore[call-arg]
+            )
+
+    def test_prepare_vision_input_deepseek_converts_pdf(self, synthetic_repo: dict, test_adapter: str):
+        """DeepSeek V4.1 Flash không nhận trực tiếp PDF, tự động gọi helper tách trang sau gate."""
+        written_dirs: list[Path] = []
+
+        def fake_run(cmd, **kwargs):
+            out_prefix = Path(cmd[-1])
+            written_dirs.append(out_prefix.parent)
+            for n in (1, 2):
+                create_sample_png(out_prefix.parent / f"{out_prefix.name}-{n}.png")
+            return MagicMock(returncode=0)
+
+        with patch("shutil.which", return_value="/usr/bin/pdftoppm"), \
+             patch("subprocess.run", side_effect=fake_run):
+
+            result_paths = prepare_vision_input(
+                files=[synthetic_repo["pdf"]],
+                model="deepseek-v4.1-flash",
+                adapter=test_adapter,
+                is_synthetic=True,
+            )
+
+            assert len(result_paths) == 2
+            assert result_paths[0].name == "fixture_doc-1.png"
+            assert result_paths[1].name == "fixture_doc-2.png"
+            # Không ghi vào repo fixture: mọi page nằm trong private TMPDIR.
+            conv_dir = written_dirs[0]
+            assert conv_dir.name.startswith("polykit-vision-")
+            assert {p.parent for p in result_paths} == {conv_dir}
+            assert synthetic_repo["root"] not in conv_dir.parents
+
+    def test_prepare_vision_input_glm_keeps_pdf_direct(self, synthetic_repo: dict, test_adapter: str):
+        """GLM Flash nhận PDF trực tiếp, không gọi pdftoppm."""
+        with patch("subprocess.run") as mock_subprocess:
+            result_paths = prepare_vision_input(
+                files=[synthetic_repo["pdf"]],
+                model="glm-5.3-flash",
+                adapter=test_adapter,
+                is_synthetic=True,
+            )
+
+            mock_subprocess.assert_not_called()
+            assert len(result_paths) == 1
+            assert result_paths[0] == synthetic_repo["pdf"].resolve()
 
     def test_prepare_vision_input_rejects_bypass_params(self, workspace: Path):
         """prepare_vision_input từ chối các tham số tự chứng nhận hoặc pdftoppm_bin."""
@@ -948,49 +1160,6 @@ class TestPrepareVisionInput:
                 is_synthetic=True,
                 pdftoppm_bin="/fake/bin",  # type: ignore[call-arg]
             )
-
-    def test_prepare_vision_input_deepseek_converts_pdf(self, workspace: Path, test_adapter: str):
-        """DeepSeek V4.1 Flash không nhận trực tiếp PDF, tự động gọi helper tách trang sau gate."""
-        pdf = create_sample_pdf(workspace / "invoice.pdf")
-        conv_dir = workspace / "converted_out"
-        conv_dir.mkdir()
-        p1 = create_sample_png(conv_dir / "invoice-1.png")
-        p2 = create_sample_png(conv_dir / "invoice-2.png")
-
-        fake_proc = MagicMock(returncode=0)
-
-        with patch("shutil.which", return_value="/usr/bin/pdftoppm"), \
-             patch("subprocess.run", return_value=fake_proc):
-
-            result_paths = prepare_vision_input(
-                files=[pdf],
-                model="deepseek-v4.1-flash",
-                adapter=test_adapter,
-                is_synthetic=True,
-                workspace_root=workspace,
-                output_dir=conv_dir,
-            )
-
-            assert len(result_paths) == 2
-            assert result_paths[0].name == "invoice-1.png"
-            assert result_paths[1].name == "invoice-2.png"
-
-    def test_prepare_vision_input_glm_keeps_pdf_direct(self, workspace: Path, test_adapter: str):
-        """GLM Flash nhận PDF trực tiếp, không gọi pdftoppm."""
-        pdf = create_sample_pdf(workspace / "report.pdf")
-
-        with patch("subprocess.run") as mock_subprocess:
-            result_paths = prepare_vision_input(
-                files=[pdf],
-                model="glm-5.3-flash",
-                adapter=test_adapter,
-                is_synthetic=True,
-                workspace_root=workspace,
-            )
-
-            mock_subprocess.assert_not_called()
-            assert len(result_paths) == 1
-            assert result_paths[0] == pdf.resolve()
 
     def test_prepare_vision_input_sensitive_blocks_before_conversion(self, workspace: Path, test_adapter: str):
         """Khi gọi prepare_vision_input với file sensitive, gate chặn ngay trước khi mở hay chuyển đổi."""
