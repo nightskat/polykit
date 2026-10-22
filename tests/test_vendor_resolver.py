@@ -502,3 +502,210 @@ class TestResolverHelperFunctions:
         zdr_oc = vendor_zdr("opencode")
         assert zdr_oc is not None
         assert zdr_oc.get("expiry") == "2026-10-31"
+
+
+# ===========================================================================
+# 8. Deterministic Resolution cho 2 Go Adapters (opencode & hermes)
+# ===========================================================================
+
+class TestGoAdaptersDeterministicResolution:
+    @pytest.mark.parametrize("vendor", ["opencode", "hermes"])
+    def test_glm_flash_bare_and_prefixed_deterministic_max(self, vendor):
+        """Bare glm-5.3-flash và opencode-go/glm-5.3-flash cùng cho effort max."""
+        res_bare = resolve_vendor_model(vendor, "glm-5.3-flash")
+        res_pref = resolve_vendor_model(vendor, "opencode-go/glm-5.3-flash")
+
+        assert res_bare.effort == "max"
+        assert res_pref.effort == "max"
+        assert res_bare.model == "glm-5.3-flash"
+        assert res_pref.model == "glm-5.3-flash"
+        assert res_bare.provider == "opencode-go"
+        assert res_pref.provider == "opencode-go"
+        assert res_bare.canonical_name == "opencode-go/glm-5.3-flash"
+        assert res_pref.canonical_name == "opencode-go/glm-5.3-flash"
+        assert res_bare.full_target == "opencode-go/glm-5.3-flash:max"
+        assert res_pref.full_target == "opencode-go/glm-5.3-flash:max"
+        assert res_bare.canonical_name == res_pref.canonical_name
+        assert res_bare.full_target == res_pref.full_target
+
+    @pytest.mark.parametrize("vendor", ["opencode", "hermes"])
+    def test_deepseek_flash_bare_and_prefixed_deterministic_high(self, vendor):
+        """Bare deepseek-v4.1-flash và opencode-go/deepseek-v4.1-flash cùng cho effort high."""
+        res_bare = resolve_vendor_model(vendor, "deepseek-v4.1-flash")
+        res_pref = resolve_vendor_model(vendor, "opencode-go/deepseek-v4.1-flash")
+
+        assert res_bare.effort == "high"
+        assert res_pref.effort == "high"
+        assert res_bare.model == "deepseek-v4.1-flash"
+        assert res_pref.model == "deepseek-v4.1-flash"
+        assert res_bare.provider == "opencode-go"
+        assert res_pref.provider == "opencode-go"
+        assert res_bare.canonical_name == "opencode-go/deepseek-v4.1-flash"
+        assert res_pref.canonical_name == "opencode-go/deepseek-v4.1-flash"
+        assert res_bare.full_target == "opencode-go/deepseek-v4.1-flash:high"
+        assert res_pref.full_target == "opencode-go/deepseek-v4.1-flash:high"
+
+    @pytest.mark.parametrize("vendor", ["opencode", "hermes"])
+    def test_case_insensitivity_bare_and_prefixed(self, vendor):
+        """Không phân biệt hoa thường với cả bare lẫn prefixed slug."""
+        res_upper_bare = resolve_vendor_model(vendor, "GLM-5.3-FLASH")
+        res_upper_pref = resolve_vendor_model(vendor, "OPENCODE-GO/GLM-5.3-FLASH")
+        res_mixed_pref = resolve_vendor_model(vendor, "OpEnCoDe-Go/GlM-5.3-FlAsH")
+
+        for r in (res_upper_bare, res_upper_pref, res_mixed_pref):
+            assert r.model == "glm-5.3-flash"
+            assert r.provider == "opencode-go"
+            assert r.effort == "max"
+            assert r.canonical_name == "opencode-go/glm-5.3-flash"
+            assert r.full_target == "opencode-go/glm-5.3-flash:max"
+
+    @pytest.mark.parametrize("vendor", ["opencode", "hermes"])
+    def test_variant_suffix_in_selector_string(self, vendor):
+        """Variant suffix (:high, :max, :low) trong selector string được tôn trọng."""
+        res_high_bare = resolve_vendor_model(vendor, "glm-5.3-flash:high")
+        res_high_pref = resolve_vendor_model(vendor, "opencode-go/glm-5.3-flash:high")
+        assert res_high_bare.effort == "high"
+        assert res_high_pref.effort == "high"
+        assert res_high_bare.full_target == "opencode-go/glm-5.3-flash:high"
+        assert res_high_pref.full_target == "opencode-go/glm-5.3-flash:high"
+
+        res_max_bare = resolve_vendor_model(vendor, "glm-5.3-flash:max")
+        res_max_pref = resolve_vendor_model(vendor, "opencode-go/glm-5.3-flash:max")
+        assert res_max_bare.effort == "max"
+        assert res_max_pref.effort == "max"
+        assert res_max_bare.full_target == "opencode-go/glm-5.3-flash:max"
+        assert res_max_pref.full_target == "opencode-go/glm-5.3-flash:max"
+
+        res_low_bare = resolve_vendor_model(vendor, "glm-5.3-flash:low")
+        res_low_pref = resolve_vendor_model(vendor, "opencode-go/glm-5.3-flash:low")
+        assert res_low_bare.effort == "low"
+        assert res_low_pref.effort == "low"
+        assert res_low_bare.full_target == "opencode-go/glm-5.3-flash:low"
+        assert res_low_pref.full_target == "opencode-go/glm-5.3-flash:low"
+
+        # Mixed case kèm variant
+        res_mixed = resolve_vendor_model(vendor, "OpEnCoDe-Go/GlM-5.3-FlAsH:HiGh")
+        assert res_mixed.effort == "high"
+        assert res_mixed.full_target == "opencode-go/glm-5.3-flash:high"
+
+    @pytest.mark.parametrize("vendor", ["opencode", "hermes"])
+    def test_explicit_effort_override_valid(self, vendor):
+        """Explicit --effort vẫn ưu tiên hợp lệ đối với cả bare và prefixed."""
+        res_bare_low = resolve_vendor_model(vendor, "glm-5.3-flash", effort="low")
+        assert res_bare_low.effort == "low"
+
+        res_pref_low = resolve_vendor_model(vendor, "opencode-go/glm-5.3-flash", effort="low")
+        assert res_pref_low.effort == "low"
+
+        res_bare_high = resolve_vendor_model(vendor, "glm-5.3-flash", effort="high")
+        assert res_bare_high.effort == "high"
+
+        res_pref_high = resolve_vendor_model(vendor, "opencode-go/glm-5.3-flash", effort="high")
+        assert res_pref_high.effort == "high"
+
+        res_ds_low = resolve_vendor_model(vendor, "deepseek-v4.1-flash", effort="low")
+        assert res_ds_low.effort == "low"
+
+        res_ds_pref_max = resolve_vendor_model(vendor, "opencode-go/deepseek-v4.1-flash", effort="max")
+        assert res_ds_pref_max.effort == "max"
+
+    @pytest.mark.parametrize("vendor", ["opencode", "hermes"])
+    def test_variant_suffix_conflict_raises_malformed(self, vendor):
+        """Variant suffix và explicit --effort mâu thuẫn phải raise conflict rõ ràng."""
+        with pytest.raises(MalformedSelectorError) as exc_bare:
+            resolve_vendor_model(vendor, "glm-5.3-flash:high", effort="low")
+        assert "Conflicting variant" in str(exc_bare.value)
+
+        with pytest.raises(MalformedSelectorError) as exc_pref:
+            resolve_vendor_model(vendor, "opencode-go/glm-5.3-flash:high", effort="low")
+        assert "Conflicting variant" in str(exc_pref.value)
+
+        with pytest.raises(MalformedSelectorError) as exc_max_low:
+            resolve_vendor_model(vendor, "opencode-go/glm-5.3-flash:max", effort="low")
+        assert "Conflicting variant" in str(exc_max_low.value)
+
+        with pytest.raises(MalformedSelectorError) as exc_bare_max_high:
+            resolve_vendor_model(vendor, "glm-5.3-flash:max", effort="high")
+        assert "Conflicting variant" in str(exc_bare_max_high.value)
+
+    @pytest.mark.parametrize("vendor", ["opencode", "hermes"])
+    def test_variant_suffix_matching_explicit_effort_succeeds(self, vendor):
+        """Variant suffix và explicit --effort khớp nhau thì thành công."""
+        res_high = resolve_vendor_model(vendor, "opencode-go/glm-5.3-flash:high", effort="high")
+        assert res_high.effort == "high"
+
+        res_max = resolve_vendor_model(vendor, "glm-5.3-flash:max", effort="max")
+        assert res_max.effort == "max"
+
+    @pytest.mark.parametrize("vendor", ["opencode", "hermes"])
+    def test_default_config_altered_does_not_bypass_policy(self, vendor):
+        """Cấu hình default bị thay đổi không được vượt policy."""
+        # 1. Unapproved model trong default_model bị chặn
+        bad_cfg_model = {
+            "schema_version": 3,
+            "vendors": {
+                vendor: {
+                    "provider": "opencode-go",
+                    "default_model": "qwen-72b",
+                }
+            },
+        }
+        with pytest.raises(UnapprovedProfileError):
+            resolve_vendor_model(vendor, cfg=bad_cfg_model)
+
+        # 2. Unapproved provider trong config bị chặn
+        bad_cfg_provider = {
+            "schema_version": 3,
+            "vendors": {
+                vendor: {
+                    "provider": "openrouter",
+                    "default_model": "deepseek-v4.1-flash",
+                }
+            },
+        }
+        with pytest.raises(UnapprovedProviderError):
+            resolve_vendor_model(vendor, cfg=bad_cfg_provider)
+
+        # 3. Default model là free model bị chặn (fail-closed)
+        bad_cfg_free = {
+            "schema_version": 3,
+            "vendors": {
+                vendor: {
+                    "provider": "opencode-go",
+                    "default_model": "glm-5.3-flash-free",
+                }
+            },
+        }
+        with pytest.raises(FreeModelBlocked):
+            resolve_vendor_model(vendor, cfg=bad_cfg_free)
+
+        # 4. Default model là contributor model bị chặn
+        bad_cfg_contrib = {
+            "schema_version": 3,
+            "vendors": {
+                vendor: {
+                    "provider": "opencode-go",
+                    "default_model": "glm-5.3-flash-contributor",
+                }
+            },
+        }
+        with pytest.raises(ContributorModelBlocked):
+            resolve_vendor_model(vendor, cfg=bad_cfg_contrib)
+
+        # 5. Default model đổi sang glm-5.3-flash nhưng default_effort là high
+        # Profile default max theo model canonical phải đi trước vendor default high
+        altered_cfg_glm_default = {
+            "schema_version": 3,
+            "vendors": {
+                vendor: {
+                    "provider": "opencode-go",
+                    "default_model": "glm-5.3-flash",
+                    "default_effort": "high",
+                }
+            },
+        }
+        res = resolve_vendor_model(vendor, cfg=altered_cfg_glm_default)
+        assert res.model == "glm-5.3-flash"
+        assert res.effort == "max"
+        assert res.provider == "opencode-go"
+

@@ -352,6 +352,16 @@ def resolve_vendor_model(
                 matched_prof = (k, v)
                 break
 
+        # Nếu chưa khớp trực tiếp và model có prefix provider tương đương (vd: opencode-go/glm-5.3-flash)
+        if not matched_prof and "/" in clean_m and ":" not in clean_m:
+            p_cand, m_cand = clean_m.split("/", 1)
+            eff_p = (provider or cfg_provider or (GO_PROVIDER if v_clean in GO_VENDORS else "")).lower()
+            if eff_p and p_cand == eff_p:
+                for k, v in cfg_profiles.items():
+                    if k.lower() == m_cand:
+                        matched_prof = (k, v)
+                        break
+
         if matched_prof:
             prof_k, prof_v = matched_prof
             if isinstance(prof_v, str):
@@ -372,7 +382,7 @@ def resolve_vendor_model(
         # model is None hoặc 'auto'
         is_default_resolution = True
         target_model = cfg_default_model
-        target_effort = cfg_default_effort
+        target_effort = None
         is_profile_resolution = False
 
     # 2. CHỐT CHẶN: Fail-closed default config chứa free/contributor
@@ -429,13 +439,27 @@ def resolve_vendor_model(
         effective_provider = GO_PROVIDER
 
     # 6. Xác định effort hiệu lực
-    effective_effort = effort or target_effort or cfg_default_effort
-    if v_clean in GO_VENDORS or effective_provider == GO_PROVIDER:
+    # Ưu tiên:
+    # 1. Explicit effort (--effort)
+    # 2. Target effort từ profile được chỉ định
+    # 3. Profile default của model canonical (vd: glm-5.3-flash -> max, deepseek-v4.1-flash -> high)
+    # 4. Vendor default effort (vd: opencode -> high) làm fallback
+    canonical_model_effort: str | None = None
+    if target_model:
         clean_base = target_model.split(":")[0].split("/")[-1].strip().lower()
         if clean_base.endswith("-free"):
             clean_base = clean_base[:-5]
-        if clean_base in GO_APPROVED_PROFILES and not effective_effort:
-            effective_effort = GO_APPROVED_PROFILES[clean_base]
+        if v_clean in GO_VENDORS or effective_provider == GO_PROVIDER:
+            if clean_base in GO_APPROVED_PROFILES:
+                canonical_model_effort = GO_APPROVED_PROFILES[clean_base]
+        if not canonical_model_effort and clean_base:
+            for k, v in cfg_profiles.items():
+                if k.lower() == clean_base:
+                    if isinstance(v, dict) and v.get("effort"):
+                        canonical_model_effort = v.get("effort")
+                    break
+
+    effective_effort = effort or target_effort or canonical_model_effort or cfg_default_effort
 
     # 7. Phân tích cú pháp selector bằng parse_model_selector
     selector = parse_model_selector(
