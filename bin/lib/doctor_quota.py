@@ -10,8 +10,28 @@ Quy tắc cốt lõi:
 - quota_capped chỉ có hiệu lực trong một cửa sổ thời gian (cap có RESET) —
   bản ghi cũ quá hạn không được đóng băng vendor.
 - status=ok xuất hiện SAU quota_capped nghĩa là cap đã hết → không báo capped.
+
+Chính sách bằng chứng auth (BUG-14) — hai quyết định phải giữ nguyên, không nới:
+
+1. Mốc thời gian TƯƠNG LAI (`evaluate_auth_evidence`):
+   - Cửa sổ lệch đồng hồ cho phép: AUTH_FUTURE_SKEW = 5s. Quá ±skew → BỎ bản ghi.
+     Bỏ (không kết luận) là cố ý: một ts rác ở tương lai xa sẽ "thắng" mọi bằng chứng
+     thật mãi mãi và ghim vendor vào not_authed vĩnh viễn — poison không tự hết.
+   - Trong skew: thành công ở tương lai KHÔNG BAO GIỜ promote (không có bằng chứng
+     tương lai nào đáng nâng trạng thái); lỗi auth tường minh trong skew thì TÍNH và
+     fail-closed (thắng ok hợp lệ cũ) — thà báo not_authed còn hơn báo ready rồi chết.
+   - Không có "future hơi hơi thì ok": chỉ đúng một ngưỡng 5s, không nới rộng.
+
+2. Bản ghi legacy KHÔNG có metadata provider/quota_group (đúng shape
+   `lib.evidence.make_record` hiện tại: ts/vendor/model/served_model/status/reason/
+   latency_ms): bằng chứng THÀNH CÔNG chỉ được tính khi `model` thuộc catalog Go đang
+   cấu hình (GO_APPROVED_PROFILES + config/vendors.json). Model lạ/thiếu model →
+   không promote. Có metadata thì metadata phải là chuỗi khác rỗng, đúng giá trị;
+   metadata sai kiểu là bản ghi hỏng → từ chối, không crash.
 """
 from __future__ import annotations
+from functools import lru_cache
+import re
 from typing import Any
 from datetime import datetime, timedelta, timezone
 
@@ -20,6 +40,10 @@ QUOTA_CAP_WINDOW = timedelta(hours=5)
 
 # TTL cho bằng chứng auth từ live dispatch thành công gần đây (BUG-14)
 AUTH_PROBE_TTL: timedelta = timedelta(hours=1)
+
+# Độ lệch đồng hồ tối đa còn tin được một bản ghi có ts ở TƯƠNG LAI (xem docstring
+# module). Đây là ngưỡng DUY NHẤT — không có "future nhưng gần đúng thì ok".
+AUTH_FUTURE_SKEW: timedelta = timedelta(seconds=5)
 
 # MỘT cửa sổ cho mọi vendor là SAI — ba kiểu quota khác hẳn nhau (Codex review 20/08):
 #   • codex  : hẹn mốc tuyệt đối ("try again at Aug 20th 10:58") — thường trong ngày.
@@ -272,23 +296,152 @@ def quota_capped_since(
     return result
 
 
-def is_explicit_auth_failure_record(record: dict) -> bool:
-    """Kiểm tra bản ghi có phải lỗi auth tường minh hay không.
+# ---------------------------------------------------------------------------
+# Bằng chứng auth: nhận diện lỗi auth + khớp metadata bản ghi
+# ---------------------------------------------------------------------------
 
-    Bao gồm các dấu hiệu: unauthenticated, unauthorized, login required, not logged in.
+# Dấu hiệu lỗi auth, viết dạng CỤM TỪ. `_` và `-` được coi là dấu phân cách nên
+# "login_required", "login-required", "login required" cùng khớp MỘT mẫu — đây đúng
+# là lỗi Grok finding 1: bản ghi reason "login required" (có dấu cách) bị bỏ qua vì
+# code cũ so sánh CHUỖI BẰNG NHAU với marker "login_required".
+_AUTH_FAILURE_PHRASES: tuple[tuple[str, ...], ...] = (
+    ("auth", "failure"),
+    ("auth", "failed"),
+    ("authentication", "failure"),
+    ("authentication", "failed"),
+    ("authentication", "required"),
+    ("auth", "required"),
+    ("unauthenticated",),
+    ("unauthorized",),
+    ("login", "required"),
+    ("not", "logged", "in"),
+    ("not", "authenticated"),
+)
+
+# Từ phủ định đứng NGAY TRƯỚC một marker khẳng định ("not unauthorized",
+# "no unauthorized access") → câu phủ định, không phải bằng chứng lỗi auth.
+_NEGATION_BEFORE_RE = re.compile(r"(?:\bnot|\bno|\bnever|\bwithout)\s+$")
+
+_SEPARATOR_RE = re.compile(r"[_\-]+")
+_WHITESPACE_RE = re.compile(r"\s+")
+
+# \b ở hai đầu = BIÊN TỪ, không phải substring tuỳ tiện: "preauthorized" hay
+# "unauthorizedness" không khớp "unauthorized"; "not_unauthorized" khớp marker
+# nhưng bị luật phủ định ở trên loại.
+_AUTH_FAILURE_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
+    re.compile(r"\b" + r"\s+".join(words) + r"\b") for words in _AUTH_FAILURE_PHRASES
+)
+
+# Các trường tự do có thể chứa thông điệp lỗi auth của CLI/vendor.
+_AUTH_TEXT_FIELDS = ("status", "reason", "error", "stderr", "summary")
+
+
+def _normalize_auth_text(value) -> str:
+    """Chuẩn hoá text để so marker: lowercase, `_`/`-` → dấu cách, gộp khoảng trắng.
+
+    Không phải chuỗi (None, số, list, bytes…) → "" (bỏ qua, không crash).
+    """
+    if not isinstance(value, str):
+        return ""
+    s = _SEPARATOR_RE.sub(" ", value.strip().lower())
+    return _WHITESPACE_RE.sub(" ", s).strip()
+
+
+def _text_has_auth_failure(text: str) -> bool:
+    if not text:
+        return False
+    for pat in _AUTH_FAILURE_PATTERNS:
+        for match in pat.finditer(text):
+            if _NEGATION_BEFORE_RE.search(text[:match.start()]):
+                continue  # "not unauthorized" / "no unauthorized access"
+            return True
+    return False
+
+
+def is_explicit_auth_failure_record(record: dict) -> bool:
+    """Bản ghi có phải lỗi auth TƯỜNG MINH hay không.
+
+    Quét cả 5 trường mà CLI/vendor thật sự dùng: status, reason, error, stderr,
+    summary — với marker dạng cụm từ, biên từ, chấp nhận `_`/`-`/dấu cách làm dấu
+    phân cách. Nhờ vậy "login required", "login_required", "unauthorized: token
+    expired", "Auth error: not_logged_in" đều nhận; còn "preauthorized",
+    "unauthorizedness", "not unauthorized" thì không.
+
+    Bất kỳ trường nào khớp → coi là lỗi auth (fail-closed): thà báo not_authed còn
+    hơn promote vendor lên ready bằng một bản ghi tự mâu thuẫn.
     """
     if not isinstance(record, dict):
         return False
-    status = str(record.get("status") or "").lower()
-    reason = str(record.get("reason") or "").lower()
-    explicit_markers = ("auth_failure", "unauthenticated", "unauthorized", "login_required", "not_logged_in")
-    if status in explicit_markers or reason in explicit_markers:
-        return True
-    for field in ("error", "stderr", "summary"):
-        val = str(record.get(field) or "").lower()
-        if val and any(m in val for m in ("unauthenticated", "unauthorized", "not logged in", "login required")):
+    for field in _AUTH_TEXT_FIELDS:
+        if _text_has_auth_failure(_normalize_auth_text(record.get(field))):
             return True
     return False
+
+
+def _clean_meta(value) -> str | None:
+    """Metadata chuỗi (vendor/provider/quota_group/model): rỗng hoặc sai kiểu → None.
+
+    Metadata evidence là JSON máy ghi; gặp `provider: 42` hay `quota_group: []` thì
+    đó là bản ghi HỎNG, phải từ chối — không được `.strip()` trên int/list (crash).
+    """
+    if not isinstance(value, str):
+        return None
+    s = value.strip().lower()
+    return s or None
+
+
+def _base_model_slug(value) -> str:
+    """Slug model đã bỏ provider prefix, variant (`:high`) và hậu tố `-free`."""
+    if not isinstance(value, str):
+        return ""
+    s = value.strip().lower()
+    if ":" in s:
+        s = s.split(":", 1)[0].strip()
+    if "/" in s:
+        s = s.rsplit("/", 1)[-1].strip()
+    if s.endswith("-free"):
+        s = s[:-5]
+    return s
+
+
+_GO_CATALOG_FALLBACK = frozenset({"deepseek-v4.1-flash", "glm-5.3-flash"})
+
+
+@lru_cache(maxsize=1)
+def _known_go_models() -> frozenset[str]:
+    """Catalog Go đang cấu hình: GO_APPROVED_PROFILES + config/vendors.json.
+
+    Dùng cho bản ghi legacy (không có provider/quota_group) — bằng chứng thành công
+    chỉ có giá trị nếu model là model Go thật, không phải model lạ do router/harness
+    khác ghi vào cùng file log.
+    """
+    slugs: set[str] = set()
+    try:
+        from lib.model_policy import GO_APPROVED_PROFILES
+
+        slugs.update(_base_model_slug(k) for k in GO_APPROVED_PROFILES)
+    except Exception:
+        pass
+    try:
+        from lib.vendor_config import load_vendor_config
+
+        vendors = (load_vendor_config() or {}).get("vendors") or {}
+        for name in ("opencode", "hermes"):
+            info = vendors.get(name) or {}
+            slugs.add(_base_model_slug(info.get("default_model")))
+            models_list = info.get("models")
+            if isinstance(models_list, list):
+                slugs.update(_base_model_slug(m) for m in models_list)
+            profiles = info.get("profiles")
+            if isinstance(profiles, dict):
+                for key, val in profiles.items():
+                    slugs.add(_base_model_slug(key))
+                    if isinstance(val, dict):
+                        slugs.add(_base_model_slug(val.get("model")))
+    except Exception:
+        pass
+    slugs.discard("")
+    return frozenset(slugs) or _GO_CATALOG_FALLBACK
 
 
 def matches_vendor_criteria(
@@ -298,42 +451,92 @@ def matches_vendor_criteria(
     quota_group: str | None = None,
     model: str | None = None,
 ) -> bool:
-    """Kiểm tra bản ghi evidence có khớp đúng vendor/provider/model/quota group hay không.
+    """Bản ghi evidence có khớp đúng vendor/provider/model/quota group hay không.
 
-    Bản ghi sai vendor, sai provider, sai quota_group hoặc sai model họ provider
-    bị từ chối (không nhận vơ).
+    Luật (fail-closed, không nhận vơ, không crash trên metadata hỏng):
+    - `vendor` phải là chuỗi khác rỗng, khớp đúng tên vendor.
+    - `provider` / `quota_group`: CÓ khai thì phải là chuỗi khác rỗng và (nếu caller
+      có yêu cầu) đúng giá trị. Khai sai kiểu (int/list/dict) → từ chối bản ghi.
+    - `model`: có khai thì phải là chuỗi khác rỗng; sai kiểu → từ chối.
+    - Bản ghi LEGACY (không khai provider lẫn quota_group — shape dispatch hiện tại)
+      chỉ được tính khi `model` thuộc catalog Go đang cấu hình. Thiếu model hoặc model
+      lạ → từ chối, để log của harness/router khác không promote lane Go. Ngoại lệ có
+      chủ ý: bản ghi LỖI AUTH tường minh vẫn tính dù thiếu model — đó là bằng chứng
+      mức credential, khác mức model, và bỏ nó đi sẽ là nới lỏng theo hướng nguy hiểm.
     """
     if not isinstance(record, dict):
         return False
-    rec_vendor = record.get("vendor")
-    if not isinstance(rec_vendor, str) or rec_vendor.strip().lower() != vendor.strip().lower():
+    if not isinstance(vendor, str) or not vendor.strip():
+        return False
+    rec_vendor = _clean_meta(record.get("vendor"))
+    if rec_vendor is None or rec_vendor != vendor.strip().lower():
         return False
 
-    # Kiểm tra provider nếu bản ghi có khai
-    rec_provider = record.get("provider")
-    if rec_provider is not None and provider is not None:
-        if rec_provider.strip().lower() != provider.strip().lower():
+    expect_provider = None
+    if provider is not None:
+        expect_provider = _clean_meta(provider)
+        if expect_provider is None:
+            return False  # caller yêu cầu provider nhưng truyền giá trị không hợp lệ
+
+    rec_provider = None
+    if record.get("provider") is not None:
+        rec_provider = _clean_meta(record.get("provider"))
+        if rec_provider is None:
+            return False  # metadata sai kiểu/rỗng → bản ghi hỏng
+        if expect_provider is not None and rec_provider != expect_provider:
             return False
 
-    # Kiểm tra quota_group nếu bản ghi có khai
-    rec_qgroup = record.get("quota_group")
-    if rec_qgroup is not None and quota_group is not None:
-        if rec_qgroup.strip().lower() != quota_group.strip().lower():
+    expect_qgroup = None
+    if quota_group is not None:
+        expect_qgroup = _clean_meta(quota_group)
+        if expect_qgroup is None:
             return False
 
-    # Kiểm tra model
-    rec_model = record.get("model")
-    if model is not None and rec_model is not None:
-        if str(rec_model).strip().lower() != str(model).strip().lower():
+    rec_qgroup = None
+    if record.get("quota_group") is not None:
+        rec_qgroup = _clean_meta(record.get("quota_group"))
+        if rec_qgroup is None:
             return False
-    elif rec_model is not None and provider:
-        rec_m_str = str(rec_model).strip().lower()
-        if "/" in rec_m_str:
-            prefix = rec_m_str.split("/")[0]
-            if prefix != provider.lower() and prefix in ("openai", "anthropic", "google", "mistral"):
-                return False
+        if expect_qgroup is not None and rec_qgroup != expect_qgroup:
+            return False
+
+    expect_model = None
+    if model is not None:
+        expect_model = _clean_meta(model)
+        if expect_model is None:
+            return False
+
+    rec_model = None
+    if record.get("model") is not None:
+        rec_model = _clean_meta(record.get("model"))
+        if rec_model is None:
+            return False  # model sai kiểu (vd: 42) → từ chối
+
+    if expect_model is not None:
+        if rec_model is None:
+            return False
+        if rec_model != expect_model and _base_model_slug(rec_model) != _base_model_slug(expect_model):
+            return False
+        return True
+
+    # Model khai prefix provider khác họ đã biết → không phải model của lane này.
+    if rec_model is not None and rec_provider and "/" in rec_model:
+        prefix = rec_model.split("/")[0]
+        if prefix in ("openai", "anthropic", "google", "mistral") and prefix != rec_provider:
+            return False
+
+    # Legacy (không có provider/quota_group): phải là model Go thật.
+    if rec_provider is None and rec_qgroup is None:
+        # Lỗi auth tường minh là bằng chứng ở mức CREDENTIAL, dùng chung cho mọi
+        # model của lane → không đòi model Go ở đây. Bỏ nó đi mới là nới lỏng theo
+        # hướng nguy hiểm (vendor mất auth mà doctor vẫn để ready/auth_unverified).
+        if is_explicit_auth_failure_record(record):
+            return True
+        if rec_model is None or _base_model_slug(rec_model) not in _known_go_models():
+            return False
 
     return True
+
 
 
 def evaluate_auth_evidence(
@@ -349,8 +552,11 @@ def evaluate_auth_evidence(
 
     Quy tắc cốt lõi:
     1. Lọc các bản ghi khớp đúng vendor/provider/quota_group/model (không nhận vơ).
-    2. Bỏ qua bản ghi ts hỏng/thiếu hoặc ở tương lai (now < ts - clock drift).
+    2. Bỏ qua bản ghi ts hỏng/thiếu; bản ghi ở tương lai quá AUTH_FUTURE_SKEW → bỏ
+       (không kết luận, tránh ghim not_authed vĩnh viễn vì ts rác).
     3. Tín hiệu mới nhất thắng giữa {ok, explicit_auth_failure}.
+       - Thành công ở TƯƠNG LAI (dù trong skew) KHÔNG BAO GIỜ promote.
+       - Lỗi auth tường minh trong skew vẫn tính → fail-closed, thắng ok hợp lệ cũ.
     4. Bản ghi 'ok' chỉ có hiệu lực trong cửa sổ TTL (mặc định AUTH_PROBE_TTL=1h).
        Quá hạn -> unverified (stale).
     5. Explicit auth failure mới nhất -> authed=False (không bị override bởi ok cũ).
@@ -378,14 +584,19 @@ def evaluate_auth_evidence(
         ts_dt = parse_ts(rec.get("ts"))
         if ts_dt is None:
             continue
-        # Bỏ qua bản ghi ở tương lai (clock drift)
-        if ts_dt > now_dt:
+        lech = ts_dt - now_dt  # > 0: ts ở tương lai (lệch đồng hồ)
+        if lech > AUTH_FUTURE_SKEW:
+            # Lệch quá xa: bỏ hẳn. Giữ lại thì một ts rác tương lai sẽ luôn "mới nhất"
+            # và đóng băng trạng thái → poison không tự hết. Thà không kết luận.
             continue
 
         if is_explicit_auth_failure_record(rec):
-            # Ưu tiên auth_failure hơn ok khi cùng timestamp
+            # Ưu tiên auth_failure hơn ok khi cùng timestamp. Trong skew, lỗi auth
+            # vẫn tính: fail-closed (not_authed) hơn là ready rồi chết lúc dispatch.
             valid_events.append((ts_dt, 1, "auth_failure", rec))
         elif is_ok_record(rec):
+            if lech > timedelta(0):
+                continue  # thành công ở tương lai KHÔNG BAO GIỜ promote
             valid_events.append((ts_dt, 0, "ok", rec))
 
     if not valid_events:
