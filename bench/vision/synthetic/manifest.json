@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "generator": "bench/vision/generate.py",
+  "seed": 42,
+  "deterministic_bytes": true,
+  "pdf_fixed_epoch": 1700000000,
+  "resolved_font": "/System/Library/Fonts/Supplemental/Arial.ttf",
+  "files": [
+    {
+      "path": "page_01_narrow_table.png",
+      "rel_path": "bench/vision/synthetic/page_01_narrow_table.png",
+      "format": "PNG",
+      "page_count": 1,
+      "bytes": 83477,
+      "sha256": "8fff419916fed503b1053309281539c51ea4ab5043de19c600877d1c513001c2"
+    },
+    {
+      "path": "page_02_negative_numbers.png",
+      "rel_path": "bench/vision/synthetic/page_02_negative_numbers.png",
+      "format": "PNG",
+      "page_count": 1,
+      "bytes": 69862,
+      "sha256": "97592980dcd3236e573cd6d2326987d23ba57c96f810e8bae17bb77c21c6a462"
+    },
+    {
+      "path": "page_03_confusing_chars.png",
+      "rel_path": "bench/vision/synthetic/page_03_confusing_chars.png",
+      "format": "PNG",
+      "page_count": 1,
+      "bytes": 98024,
+      "sha256": "a4823849aecc7b22a3f6d9a899efe0b8f41b0dcdf0ee63d355288b96ceb92709"
+    },
+    {
+      "path": "page_04_degraded_scan.png",
+      "rel_path": "bench/vision/synthetic/page_04_degraded_scan.png",
+      "format": "PNG",
+      "page_count": 1,
+      "bytes": 346749,
+      "sha256": "859eb2fc864f24be1290fc8b3b6db5f38f7e6ba39945da829e62f2372dfbdaa0"
+    },
+    {
+      "path": "page_05_multipage_p1.png",
+      "rel_path": "bench/vision/synthetic/page_05_multipage_p1.png",
+      "format": "PNG",
+      "page_count": 1,
+      "bytes": 82318,
+      "sha256": "bf5a6a796fb11dcf8a83ba0d1e641bbb03cc459dd49a5547c9d468539e0f0971"
+    },
+    {
+      "path": "page_06_multipage_p2.png",
+      "rel_path": "bench/vision/synthetic/page_06_multipage_p2.png",
+      "format": "PNG",
+      "page_count": 1,
+      "bytes": 60473,
+      "sha256": "fc1f2612983f7a744868fbf697e651cb816e3a4041aa90d4348cdd966908a358"
+    },
+    {
+      "path": "multipage_contract.pdf",
+      "rel_path": "bench/vision/synthetic/multipage_contract.pdf",
+      "format": "PDF",
+      "page_count": 2,
+      "bytes": 191453,
+      "sha256": "e5769a2dc65b5d38f708b3e0df9e3b8c6f17635fcd543a6b35773af380344cc1",
+      "source_pages": [
+        "page_05_multipage_p1.png",
+        "page_06_multipage_p2.png"
+      ]
+    }
+  ],
+  "checksums": {
+    "page_01_narrow_table.png": "8fff419916fed503b1053309281539c51ea4ab5043de19c600877d1c513001c2",
+    "page_02_negative_numbers.png": "97592980dcd3236e573cd6d2326987d23ba57c96f810e8bae17bb77c21c6a462",
+    "page_03_confusing_chars.png": "a4823849aecc7b22a3f6d9a899efe0b8f41b0dcdf0ee63d355288b96ceb92709",
+    "page_04_degraded_scan.png": "859eb2fc864f24be1290fc8b3b6db5f38f7e6ba39945da829e62f2372dfbdaa0",
+    "page_05_multipage_p1.png": "bf5a6a796fb11dcf8a83ba0d1e641bbb03cc459dd49a5547c9d468539e0f0971",
+    "page_06_multipage_p2.png": "fc1f2612983f7a744868fbf697e651cb816e3a4041aa90d4348cdd966908a358",
+    "multipage_contract.pdf": "e5769a2dc65b5d38f708b3e0df9e3b8c6f17635fcd543a6b35773af380344cc1",
+    "bench/vision/synthetic/page_01_narrow_table.png": "8fff419916fed503b1053309281539c51ea4ab5043de19c600877d1c513001c2",
+    "bench/vision/synthetic/page_02_negative_numbers.png": "97592980dcd3236e573cd6d2326987d23ba57c96f810e8bae17bb77c21c6a462",
+    "bench/vision/synthetic/page_03_confusing_chars.png": "a4823849aecc7b22a3f6d9a899efe0b8f41b0dcdf0ee63d355288b96ceb92709",
+    "bench/vision/synthetic/page_04_degraded_scan.png": "859eb2fc864f24be1290fc8b3b6db5f38f7e6ba39945da829e62f2372dfbdaa0",
+    "bench/vision/synthetic/page_05_multipage_p1.png": "bf5a6a796fb11dcf8a83ba0d1e641bbb03cc459dd49a5547c9d468539e0f0971",
+    "bench/vision/synthetic/page_06_multipage_p2.png": "fc1f2612983f7a744868fbf697e651cb816e3a4041aa90d4348cdd966908a358",
+    "bench/vision/synthetic/multipage_contract.pdf": "e5769a2dc65b5d38f708b3e0df9e3b8c6f17635fcd543a6b35773af380344cc1"
+  }
+}

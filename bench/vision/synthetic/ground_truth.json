@@ -1,0 +1,244 @@
+{
+  "schema_version": 1,
+  "description": "Ground truth annotations for synthetic vision benchmark documents",
+  "seed": 42,
+  "generator": "bench/vision/generate.py",
+  "total_fields": 28,
+  "fields": [
+    {
+      "id": "p1_rev_q1",
+      "page": 1,
+      "document": "page_01_narrow_table.png",
+      "name": "Doanh thu bán hàng Quý 1",
+      "type": "amount",
+      "value": "1.234.567.890",
+      "numeric_value": 1234567890
+    },
+    {
+      "id": "p1_cogs_q1",
+      "page": 1,
+      "document": "page_01_narrow_table.png",
+      "name": "Giá vốn hàng bán Quý 1",
+      "type": "amount",
+      "value": "890.123.456",
+      "numeric_value": 890123456
+    },
+    {
+      "id": "p1_gross_profit_q1",
+      "page": 1,
+      "document": "page_01_narrow_table.png",
+      "name": "Lợi nhuận gộp Quý 1",
+      "type": "amount",
+      "value": "344.444.434",
+      "numeric_value": 344444434
+    },
+    {
+      "id": "p1_period_date",
+      "page": 1,
+      "document": "page_01_narrow_table.png",
+      "name": "Ngày kết thúc kỳ kế toán",
+      "type": "date",
+      "value": "2026-06-30"
+    },
+    {
+      "id": "p1_report_code",
+      "page": 1,
+      "document": "page_01_narrow_table.png",
+      "name": "Mã tài liệu báo cáo",
+      "type": "code",
+      "value": "BCTC-2026-NARROW"
+    },
+    {
+      "id": "p2_loss_carried",
+      "page": 2,
+      "document": "page_02_negative_numbers.png",
+      "name": "Lợi nhuận sau thuế chưa phân phối (âm)",
+      "type": "amount",
+      "value": "(12.345)",
+      "numeric_value": -12345
+    },
+    {
+      "id": "p2_cashflow_neg",
+      "page": 2,
+      "document": "page_02_negative_numbers.png",
+      "name": "Lưu chuyển tiền thuần kinh doanh (âm)",
+      "type": "amount",
+      "value": "(98.765.432)",
+      "numeric_value": -98765432
+    },
+    {
+      "id": "p2_reserve_neg",
+      "page": 2,
+      "document": "page_02_negative_numbers.png",
+      "name": "Dự phòng tổn thất tài chính (âm)",
+      "type": "amount",
+      "value": "(15.500.000)",
+      "numeric_value": -15500000
+    },
+    {
+      "id": "p2_balance_date",
+      "page": 2,
+      "document": "page_02_negative_numbers.png",
+      "name": "Ngày báo cáo cân đối",
+      "type": "date",
+      "value": "2026-09-30"
+    },
+    {
+      "id": "p2_report_code",
+      "page": 2,
+      "document": "page_02_negative_numbers.png",
+      "name": "Mã tài liệu kế toán",
+      "type": "code",
+      "value": "BC-AM-4212"
+    },
+    {
+      "id": "p3_contract_code",
+      "page": 3,
+      "document": "page_03_confusing_chars.png",
+      "name": "Mã hợp đồng chứa O0l1586B",
+      "type": "code",
+      "value": "HD-2026-O0l1586B"
+    },
+    {
+      "id": "p3_ref_code_2006",
+      "page": 3,
+      "document": "page_03_confusing_chars.png",
+      "name": "Mã tham chiếu hồ sơ năm 2006",
+      "type": "code",
+      "value": "REF-2006-0Ol1"
+    },
+    {
+      "id": "p3_serial_code",
+      "page": 3,
+      "document": "page_03_confusing_chars.png",
+      "name": "Số xê-ri thiết bị chứa 8568",
+      "type": "code",
+      "value": "SERIES-8568-2006"
+    },
+    {
+      "id": "p3_reconciliation_date",
+      "page": 3,
+      "document": "page_03_confusing_chars.png",
+      "name": "Ngày đối soát biên bản",
+      "type": "date",
+      "value": "2026-01-15"
+    },
+    {
+      "id": "p3_fee_amount",
+      "page": 3,
+      "document": "page_03_confusing_chars.png",
+      "name": "Số tiền phí đối soát dịch vụ",
+      "type": "amount",
+      "value": "8.568.015",
+      "numeric_value": 8568015
+    },
+    {
+      "id": "p4_trans_id",
+      "page": 4,
+      "document": "page_04_degraded_scan.png",
+      "name": "Mã giao dịch ngân hàng scan",
+      "type": "code",
+      "value": "TXN-882006-SCAN"
+    },
+    {
+      "id": "p4_posting_date",
+      "page": 4,
+      "document": "page_04_degraded_scan.png",
+      "name": "Ngày hạch toán giao dịch",
+      "type": "date",
+      "value": "2026-03-12"
+    },
+    {
+      "id": "p4_debit_amount",
+      "page": 4,
+      "document": "page_04_degraded_scan.png",
+      "name": "Số tiền ghi nợ",
+      "type": "amount",
+      "value": "56.810.000",
+      "numeric_value": 56810000
+    },
+    {
+      "id": "p4_description",
+      "page": 4,
+      "document": "page_04_degraded_scan.png",
+      "name": "Nội dung giao dịch bảo lãnh",
+      "type": "text",
+      "value": "Phí bảo lãnh thanh toán hợp đồng"
+    },
+    {
+      "id": "p5_contract_no",
+      "page": 5,
+      "document": "page_05_multipage_p1.png",
+      "name": "Số hiệu hợp đồng kinh tế",
+      "type": "code",
+      "value": "HĐ-2026/SK-HA/01"
+    },
+    {
+      "id": "p5_contract_date",
+      "page": 5,
+      "document": "page_05_multipage_p1.png",
+      "name": "Ngày ký kết hợp đồng",
+      "type": "date",
+      "value": "2026-04-18"
+    },
+    {
+      "id": "p5_client_name",
+      "page": 5,
+      "document": "page_05_multipage_p1.png",
+      "name": "Tên pháp nhân Bên A",
+      "type": "text",
+      "value": "Công ty Cổ phần Công nghệ Sao Kim"
+    },
+    {
+      "id": "p5_vendor_name",
+      "page": 5,
+      "document": "page_05_multipage_p1.png",
+      "name": "Tên pháp nhân Bên B",
+      "type": "text",
+      "value": "Công ty TNHH Phát triển Phần mềm Hải Âu"
+    },
+    {
+      "id": "p6_subtotal_amount",
+      "page": 6,
+      "document": "page_06_multipage_p2.png",
+      "name": "Giá trị hợp đồng trước thuế",
+      "type": "amount",
+      "value": "450.000.000",
+      "numeric_value": 450000000
+    },
+    {
+      "id": "p6_vat_amount",
+      "page": 6,
+      "document": "page_06_multipage_p2.png",
+      "name": "Tiền thuế GTGT 10%",
+      "type": "amount",
+      "value": "45.000.000",
+      "numeric_value": 45000000
+    },
+    {
+      "id": "p6_total_amount",
+      "page": 6,
+      "document": "page_06_multipage_p2.png",
+      "name": "Tổng giá trị thanh toán hợp đồng sau thuế",
+      "type": "amount",
+      "value": "495.000.000",
+      "numeric_value": 495000000
+    },
+    {
+      "id": "p6_effective_date",
+      "page": 6,
+      "document": "page_06_multipage_p2.png",
+      "name": "Ngày hiệu lực hợp đồng",
+      "type": "date",
+      "value": "2026-05-01"
+    },
+    {
+      "id": "p6_clause_title",
+      "page": 6,
+      "document": "page_06_multipage_p2.png",
+      "name": "Tiêu đề điều khoản thanh toán",
+      "type": "text",
+      "value": "Giá trị và phương thức thanh toán"
+    }
+  ]
+}
