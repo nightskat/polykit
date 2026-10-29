@@ -992,3 +992,9 @@ Live test 19/09 23:02: gọi grok **không** truyền `--timeout` → `ok`, 1391
 **Ghi chú môi trường**: 8 test sẵn đỏ trước lô này trên container Linux không có `gemini`/`agy` thật
 (`test_agy_vendor`, `test_openrouter`, `test_policy_entrypoints`, `test_served_model`, `test_stream_diagnose`
 — nhánh gemini lane) — phụ thuộc máy, không do lô này; chưa xử lý.
+
+## 2026-10-29 — codex dispatch chạy sandbox CHỈ ĐỌC nhưng trả status=ok (MỞ)
+- Lệnh: `(cd code && python3 bin/dispatch.py codex --prompt-file ../_raw/brief_b0.md --timeout 600 --result-json)` — brief yêu cầu tạo 3 file trong code/.
+- Đo được: result `status=ok exit_code=0`; stdout codex: "phiên này bị cấu hình filesystem chỉ đọc… không thể tạo ba file"; `code/` rỗng.
+- Thành công giả: caller tin `ok` là mất việc. Workaround: `codex exec --sandbox workspace-write -C <dir>` trực tiếp → tạo file OK.
+- Cần làm: cờ `--write-dir <path>` map sang workspace-write; hoặc phát hiện câu "read-only/chỉ đọc" trong stdout → status=failed.
