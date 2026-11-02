@@ -432,6 +432,7 @@ def run_vendor(
     is_failover: bool = False,
     allow_unknown: bool = False,
     data_class: str | None = None,
+    require_clean: bool = False,
 ) -> DispatchResult:
     """Cổng dispatch công khai. `stream=True` = --stream-diagnose: chạy vendor ở
     chế độ stream để khi timeout còn đọc được vendor đã đi tới đâu (BUG-6).
@@ -481,6 +482,7 @@ def run_vendor(
         is_failover=is_failover,
         allow_unknown=allow_unknown,
         data_class=data_class,
+        require_clean=require_clean,
     )
     extra = [w for w in (policy_warnings + probe_warnings) if w]
     if extra:
@@ -513,6 +515,7 @@ def _run_vendor(
     is_failover: bool = False,
     allow_unknown: bool = False,
     data_class: str | None = None,
+    require_clean: bool = False,
 ) -> DispatchResult:
     if probe_warnings is None:
         probe_warnings = []
@@ -562,6 +565,19 @@ def _run_vendor(
             warnings=[],
             reason="guard_violation",
         )
+
+    # 1b. --require-clean (opt-in): checker PII TRƯỚC policy/probe/detector/spawn.
+    if require_clean:
+        from lib.clean_gate import CleanGateBlocked, require_clean as _require_clean
+        try:
+            policy_warnings.extend(_require_clean(prompt))
+        except CleanGateBlocked as e:
+            return DispatchResult(
+                status="blocked", vendor=vendor, model=model,
+                summary=f"dispatch blocked: {e}",
+                warnings=[str(e), f"[polykit] reason={e.reason}; chưa probe/spawn."],
+                reason=e.reason, exit_code=1, served_model=None,
+            )
 
     # 2. MODEL POLICY + RESOLVER — TRƯỚC probe/detector/spawn/network.
     #    Dùng CHUNG resolver với CLI (resolve_dispatch_target) nên hai entrypoint

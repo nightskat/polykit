@@ -96,6 +96,10 @@ python3 bin/dispatch.py agy --sandbox workspace-write --cd <thư mục> \
 - File thiếu, hoặc có sẵn từ trước lượt (mtime cũ) ⇒ `status=error`, `reason=artifact_missing`, chi tiết trong `warnings`.
 - `--expect-artifact` mà không kèm `workspace-write` ⇒ chặn sớm (`blocked`, exit 2), chưa probe/spawn.
 
+## Cổng PII `--require-clean` (opt-in)
+`--require-clean` ⇒ prompt phải qua `pg-redact check` (hoặc `$POLYKIT_CLEAN_CHECKER`) exit 0 trước mọi probe/spawn.
+Thiếu checker / PII / lỗi ⇒ `blocked` (fail-closed), reason `clean_checker_missing|pii_detected|clean_check_failed`.
+
 ⚠️ Mã thoát của vendor CLI không đáng tin. Nghiệm thu bằng nội dung/kích thước kết quả,
 và bằng **dấu vết phụ** (file nó bảo đã ghi có thật không, chạy lại có ra đúng số không).
 

@@ -125,6 +125,14 @@ bằng máy, chỉ còn kỷ luật tay.
 ⇒ Nếu sau này vá pg-redact, đáng cân nhắc `dispatch --require-clean` gọi `pg-redact check`
 làm cổng cứng. **Chưa làm bây giờ** — luật 3 lần đau, đây mới là lần 1.
 
+**Cập nhật 02/11/2026 — `--require-clean` (opt-in) — fixture-verified, chưa live**:
+- `bin/lib/clean_gate.py` + cờ `dispatch.py --require-clean`: prompt phải qua `pg-redact check <file>`
+  (hoặc `$POLYKIT_CLEAN_CHECKER`) exit 0 **trước policy/probe/spawn**. Fail-closed: thiếu checker
+  (`clean_checker_missing`), exit≠0 (`pii_detected`), timeout/lỗi (`clean_check_failed`). Không lộ prompt/output checker.
+- Checker inject được: `_which`/`_checker_runner` (mock) hoặc env. Test `tests/test_require_clean.py`
+  (spy chứng minh 0 probe/0 spawn; CLI với checker giả + agy giả).
+- **Vẫn opt-in, không bật mặc định** — pg-redact thật còn hỏng với văn xuôi; QUAN SÁT-3 giữ MỞ.
+
 **Cập nhật 22/10/2026 (Lane VISION)**:
 - Đã triển khai cổng bảo vệ Vision trong `bin/lib/vision.py` và `tests/test_vision.py`:
   1. Kiểm tra MIME magic bytes thực tế (PNG, JPEG, PDF), không tin cậy đuôi mở rộng file đơn thuần.

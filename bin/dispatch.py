@@ -221,6 +221,9 @@ def _main():
                         help="Giao việc GHI FILE: file vendor phải tạo/ghi trong lượt này (lặp được). "
                              "Bắt buộc kèm --sandbox workspace-write. Đường dẫn tương đối tính từ --cd "
                              "(không có thì cwd). Thiếu/cũ ⇒ status=error, reason=artifact_missing.")
+    parser.add_argument("--require-clean", action="store_true",
+                        help="Opt-in: prompt phải qua checker PII (pg-redact check, hoặc $POLYKIT_CLEAN_CHECKER) "
+                             "exit 0 trước MỌI probe/spawn. Thiếu checker/lỗi/PII ⇒ blocked (fail-closed).")
     parser.add_argument("--result-json", action="store_true", help="Output the full DispatchResult as JSON instead of raw stdout")
     parser.add_argument("--doctor", action="store_true", help="Run verify_cmd for the vendor, print status")
     parser.add_argument("--no-traps", action="store_true", help="Suppress trap warnings on stderr")
@@ -481,6 +484,7 @@ def _main():
             allow_sensitive_vision=args.allow_sensitive_vision,
             allow_unknown=args.allow_unknown_model,
             data_class=args.data_class,
+            require_clean=args.require_clean,
         )
     except Exception as e:
         # BUG-18 (Codex review): lỗi bất ngờ vẫn phải để lại dấu vết + thời gian đã chạy.
