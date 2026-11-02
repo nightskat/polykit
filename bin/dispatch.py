@@ -467,6 +467,10 @@ def _main():
     # Dispatch task
     _t0 = time.monotonic()
     _t0_wall = time.time()
+    _artifact_before = None
+    if args.expect_artifacts:
+        from lib.artifacts import snapshot_artifacts
+        _artifact_before = snapshot_artifacts(args.expect_artifacts, args.workdir)
     try:
         result = run_vendor(
             vendor=args.vendor,
@@ -499,7 +503,8 @@ def _main():
 
     if args.expect_artifacts and result.status == "ok":
         from lib.artifacts import check_artifacts
-        ok_lines, bad_lines = check_artifacts(args.expect_artifacts, args.workdir, _t0_wall)
+        ok_lines, bad_lines = check_artifacts(args.expect_artifacts, args.workdir, _t0_wall,
+                                              before=_artifact_before)
         result.warnings.extend(ok_lines + bad_lines)
         if bad_lines:
             for line in bad_lines:

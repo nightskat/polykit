@@ -76,3 +76,19 @@ def test_auto_approve_la_mo_ta_thi_khong_noi_vao_lenh():
     import lib.dispatcher as d
     src = Path(d.__file__).read_text(encoding="utf-8")
     assert 'auto.startswith("-")' in src
+
+
+def test_file_co_san_mtime_khong_doi_la_stale_du_trong_slack(tmp_path):
+    """Snapshot trước lượt chạy: file vừa touch (trong slack 2s) nhưng vendor không ghi ⇒ stale."""
+    import time as _t
+    from lib.artifacts import check_artifacts, snapshot_artifacts
+    f = tmp_path / "out.txt"
+    f.write_text("cũ")
+    since = _t.time()
+    before = snapshot_artifacts(["out.txt"], str(tmp_path))
+    ok, bad = check_artifacts(["out.txt"], str(tmp_path), since, before=before)
+    assert ok == [] and "artifact_stale" in bad[0]
+    _t.sleep(0.01)
+    f.write_text("mới")
+    ok, bad = check_artifacts(["out.txt"], str(tmp_path), since, before=before)
+    assert bad == [] and "artifact ok" in ok[0]
