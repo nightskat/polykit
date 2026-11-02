@@ -40,6 +40,10 @@ Nguyên tắc: vendor nào Hermes cầm (openai-codex, xai-oauth, opencode-go, o
 | Merge "vào main" nhưng checkout đang ở `ship-prep` | `git branch --show-current` TRƯỚC mỗi merge |
 | Repo **PUBLIC**, evidence do agent sinh (raw call, log) | quét key/PII TRƯỚC push, không phải sau |
 | Merge từ worktree: file plan chưa track trùng tên | so nội dung rồi mới bỏ bản chưa track |
+| `opencode run` gọi THẲNG im 10 phút, log 0 byte, không làm gì (02/11) | gọi qua `hermes -z … --provider opencode-go -m deepseek-v4.1-flash` (02/11 chạy được 2 lượt, ~3 phút/lượt); bỏ lượt im >5 phút |
+| `codex exec` thiếu `< /dev/null` → treo "Reading additional input from stdin" | luôn `< /dev/null`; Hermes cũng vậy |
+| Vendor tự báo "byte-identical" nhưng chỉ so phần nó KHÔNG sửa (Codex 02/11 ghi lại DOCX bằng ElementTree) | Claude nghiệm thu bằng phép kiểm độc lập; mẫu Word: `pgbank/soat-ho-so/shared/references/GUIDE_VA_MAU_DOCX_THAY_CHUOI.md` |
+| Kiểm "sau 1 phút" (Tuan 02/11) | Monitor: `sleep 60` → `ps -p` + file mới tạo; rồi vòng chờ exit — đừng đợi stdout |
 
 ## 4. Quyết định đã chốt (đừng hỏi lại Tuan)
 
