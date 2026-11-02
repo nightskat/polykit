@@ -16,7 +16,7 @@ chạy macOS/Windows/Linux. Nguyên tắc: vendor thiếu = degrade, không cras
 | failover | pressure→ping trước, cap→ping reactive, lỗi lạ→im | 4 nhánh verify tay; `--dry-run` không gửi thật |
 | watcher | Đổi model/version → 1 alert; offline→skip; notify fail→retry | Verify tay: bump→1 alert, offline noop, retry |
 | ToS | Claude lane bounded, không spawn full-worker | Negative test khóa mọi cờ bounded |
-| Cross-platform | Chạy Python 3.9+; Mac launchd / Win schtasks | 4 entrypoint chạy trên 3.9.6 lẫn 3.14 |
+| Cross-platform | ~~Chạy Python 3.9+~~ → **3.11+ theo SPEC** (thống nhất 02/11/2026, entrypoint chặn <3.11); Mac launchd / Win schtasks | (lịch sử) 4 entrypoint từng chạy trên 3.9.6 lẫn 3.14 |
 
 ## Đã test LIVE (không chỉ unit test)
 - **79 unit test** pass (Python 3.11).

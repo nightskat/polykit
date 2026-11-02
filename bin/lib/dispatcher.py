@@ -1518,6 +1518,24 @@ def _dispatch_gemini(
     else:
         warnings.append("lane 3 failed: API key unavailable")
 
+    # P1 (smoke máy sạch 02/11): KHÔNG lane nào chạy được vì thiếu binary/key
+    # ⇒ vendor vắng mặt = skipped (degrade), không phải error.
+    _vang = ("lane 1 failed: model not supported by agy",
+             "lane 1 failed: agy.sh and agy unavailable",
+             "lane 2 failed: gemini-cli unavailable",
+             "lane 3 failed: API key unavailable")
+    lane_msgs = [w for w in warnings if w.startswith("lane ")]
+    if lane_msgs and all(w in _vang for w in lane_msgs):
+        return DispatchResult(
+            status="skipped",
+            vendor="gemini",
+            model=model,
+            summary="vendor gemini skipped: not_installed (không có agy/gemini-cli/API key)",
+            warnings=warnings,
+            stdout="",
+            reason="not_installed",
+        )
+
     # All failed
     return DispatchResult(
         status="error",

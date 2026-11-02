@@ -22,6 +22,8 @@ import json
 import shutil
 import subprocess
 import sys
+if sys.version_info < (3, 11):  # SPEC: Python 3.11+ cho mọi logic
+    sys.exit("PolyKit cần Python 3.11+ (đang chạy %d.%d)" % sys.version_info[:2])
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]

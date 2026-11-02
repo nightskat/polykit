@@ -934,3 +934,25 @@ Live test 19/09 23:02: gọi grok **không** truyền `--timeout` → `ok`, 1391
   2. `bin/lib/model_policy.py` & `bin/lib/vendor_config.py`: Cơ chế kiểm tra model catalog chuyển thành **khuyến cáo (advisory)** thay vì whitelist cứng. Model chưa có trong catalog chỉ phát cảnh báo `warning: model '...' not found in known catalog for vendor '...'`, không chặn thực thi (trừ model vi phạm chính sách cấm như `*-contributor`).
   3. Bằng chứng code/test: Kiểm chứng qua test suite (504 test trong `tests/test_vendor_resolver.py` và 816 test trong `tests/test_model_policy.py` xác minh phân giải selector, default `gpt-6.1-sol` low, và catalog advisory).
 - **Trạng thái**: **CHƯA LIVE TEST** — không bịa bằng chứng live test; điều phối sẽ chạy nghiệm thu live và ghi báo cáo riêng.
+
+---
+
+## Lô 02/11/2026 — 5 việc (fixture-verified, CHƯA LIVE)
+
+> Mọi bằng chứng dưới đây là **test với vendor giả/fixture** (`tests/fake_cli.py`), **không gọi vendor thật**.
+> Trạng thái chung: **fixture-verified, chưa live** — cần điều phối nghiệm thu live riêng.
+
+| # | Việc | Trạng thái | Test |
+|---|---|---|---|
+| 1 | Giao việc ghi file: `--sandbox workspace-write` opt-in + `--expect-artifact` (thiếu/cũ ⇒ `artifact_missing`) | fixture-verified, chưa live | `tests/test_expect_artifact.py` |
+| 2 | BUG-16 `--cd` nhất quán (cwd cho mọi vendor CLI; claude bounded bỏ qua có warning) | fixture-verified, chưa live | `tests/test_bug16_cd_nhat_quan.py` |
+| 3 | BUG-19 `--result-json` đúng một JSON, log → stderr | fixture-verified, chưa live | `tests/test_bug19_result_json_mot_json.py` |
+| 4 | `--require-clean` opt-in, checker inject được, chặn trước probe/spawn | fixture-verified, chưa live | `tests/test_require_clean.py` |
+| 5 | Python tối thiểu 3.11+ (README/requirements/entrypoint guard) + smoke máy sạch | fixture-verified, chưa live | `tests/test_smoke_may_sach.py` |
+
+**Phát hiện thêm khi smoke máy sạch**: `gemini` không có agy/gemini-cli/API key trả `status=error` (vi phạm P1).
+Đã sửa: mọi lane đều vắng mặt ⇒ `skipped`, `reason=not_installed`. Lane có chạy mà lỗi thì vẫn `error`.
+
+**Ghi chú môi trường**: 8 test sẵn đỏ trước lô này trên container Linux không có `gemini`/`agy` thật
+(`test_agy_vendor`, `test_openrouter`, `test_policy_entrypoints`, `test_served_model`, `test_stream_diagnose`
+— nhánh gemini lane) — phụ thuộc máy, không do lô này; chưa xử lý.
