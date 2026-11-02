@@ -541,6 +541,14 @@ def _run_vendor(
         if depth >= 3:
             raise DispatchError(f"depth {depth} >= 3, possible loop")
 
+        # BUG-16: --cd trỏ vào thư mục không tồn tại ⇒ chặn trước probe/spawn,
+        # không để vendor chạy ở chỗ khác rồi báo thành công.
+        if workdir:
+            wd = Path(workdir).expanduser()
+            if not wd.is_dir():
+                raise DispatchError(f"--cd không phải thư mục tồn tại: {workdir}")
+            workdir = str(wd.resolve())
+
         # Prompt empty guard
         if not prompt or not prompt.strip():
             raise DispatchError("Empty prompt. Pipe content via stdin.")
@@ -781,6 +789,28 @@ def _run_vendor(
             res.unsandboxed = True
             res.data_class = DATA_CLASS_CODE_NOPII
         return res
+
+    # BUG-16: `--cd` phải có hiệu lực NHẤT QUÁN. Trước đây chỉ codex (-C), grok
+    # (--cwd) và vendor có workdir_flag ăn cờ; agy/dsh/gemini... chạy ở cwd của
+    # tiến trình cha mà không một dòng cảnh báo (thành công giả). Giờ: mọi vendor
+    # spawn CLI đều chạy với cwd=workdir (cờ riêng của vendor vẫn giữ). Ngoại lệ
+    # có cảnh báo rõ: claude (lane bounded, no tools — P3, không đọc file nào nên
+    # không nhận thư mục làm việc) và openrouter (HTTP, không có tiến trình con).
+    if workdir:
+        if vendor in ("claude", "openrouter"):
+            ly_do = ("lane Claude bounded (plan-mode, no tools) không đọc file"
+                     if vendor == "claude" else "openrouter là HTTP API, không có tiến trình con")
+            policy_warnings.append(
+                f"[polykit] warning: --cd {workdir} KHÔNG áp dụng cho {vendor} ({ly_do}); "
+                f"đưa nội dung cần thiết vào prompt."
+            )
+            sys.stderr.write(policy_warnings[-1] + "\n")
+        else:
+            _runner_goc = runner
+
+            def runner(*args, **kwargs):  # noqa: F811 — bọc để ép cwd
+                kwargs.setdefault("cwd", workdir)
+                return _runner_goc(*args, **kwargs)
 
     def go_runner(*args, **kwargs):
         """Bọc runner để ghi bằng chứng spawn trước khi process có thể nổ."""

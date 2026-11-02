@@ -740,7 +740,13 @@ lượt 1 `OK` exit 0 (29,6s) · lượt 2 `OK` exit 0 (42,0s) · lượt 3 `OK`
 ---
 
 ## BUG-16 — `--cd` bị NUỐT IM LẶNG với vendor không có `workdir_flag` (agy, dsh, claude)
-📅 phát hiện 25/08/2026 · trạng thái: **ĐÃ GHI, CHƯA SỬA**
+📅 phát hiện 25/08/2026 · trạng thái: **✅ ĐÃ SỬA 02/11/2026 — fixture-verified, chưa live**
+
+> **Sửa (02/11/2026)**: `bin/lib/dispatcher.py` bọc runner ép `cwd=workdir` cho MỌI vendor spawn CLI
+> (agy/dsh/gemini/generic/Go; codex/grok giữ thêm cờ riêng). `--cd` không phải thư mục ⇒ `blocked`
+> trước probe/spawn. claude (bounded, `--tools ""` + plan-mode, P3) và openrouter (HTTP) bỏ qua `--cd`
+> **có warning**. Test: `tests/test_bug16_cd_nhat_quan.py` — agy GIẢ đọc file mốc trong cwd (subprocess).
+> **Chưa chạy với agy thật.**
 
 **Đau thật**: dispatch agy kèm `--cd <thư mục>` + prompt bảo "đọc `CONTEXT.md` trong thư mục làm việc".
 agy chạy ở cwd của tiến trình cha, báo *"Không tìm thấy CONTEXT.md ở đâu cả — mình tạm bỏ qua và tiếp tục"*,

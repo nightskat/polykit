@@ -186,7 +186,8 @@ def main():
     parser.add_argument("--prompt-file", dest="prompt_file", default=None,
                         help="Đọc prompt từ file thay vì stdin (dùng cho prompt dài / nhiều dòng / tiếng Việt)")
     parser.add_argument("--format", choices=["text", "json"], default="text", help="Output format (default: text)")
-    parser.add_argument("--cd", dest="workdir", default=None, help="Working directory (codex/grok)")
+    parser.add_argument("--cd", dest="workdir", default=None, help="Thư mục làm việc: mọi vendor CLI chạy với cwd này (codex/grok nhận thêm cờ riêng). "
+                             "claude (bounded, no tools) và openrouter (HTTP) bỏ qua kèm warning (BUG-16).")
     parser.add_argument("--sandbox", choices=["read-only", "workspace-write"], default="read-only", help="Sandbox mode (default: read-only)")
     parser.add_argument("--expect-artifact", dest="expect_artifacts", action="append", default=[],
                         metavar="PATH",
