@@ -848,7 +848,8 @@ def _run_vendor(
                     f"khác từ catalog."
                 )
             cmd = build_agy_cmd(resolved, prompt, stream=stream,
-                                timeout=validated_timeout, source=resolved_source)
+                                timeout=validated_timeout, source=resolved_source,
+                                auto_approve=(validated_sandbox == "workspace-write"))
             res = runner([shutil.which("agy") or "agy"] + cmd[1:],
                          capture_output=True, text=True,
                          timeout=validated_timeout, env=env)
@@ -1082,8 +1083,18 @@ def _run_vendor(
             if workdir and v_cfg.get("workdir_flag"):
                 cmd += f" {v_cfg['workdir_flag']} {shlex.quote(workdir)}"
                 
-            if validated_sandbox == "workspace-write" and v_cfg.get("auto_approve"):
-                cmd += f" {v_cfg['auto_approve']}"
+            if validated_sandbox == "workspace-write":
+                auto = v_cfg.get("auto_approve")
+                # vendors.json có chỗ ghi MÔ TẢ thay cho cờ (dsh: "Không có cờ. Dùng
+                # biến môi trường ..."; gemini: "-y | --yolo | ..."). Chỉ nối khi là
+                # MỘT cờ thật, không thì shell nhận rác. Không nối được ⇒ nói rõ.
+                if auto and auto.startswith("-") and " " not in auto.strip():
+                    cmd += f" {auto.strip()}"
+                else:
+                    ww = (f"vendor '{vendor}' không có cờ auto-approve dùng được "
+                          f"(auto_approve={auto!r}); workspace-write có thể bị vendor từ chối ghi.")
+                    if ww not in policy_warnings:
+                        policy_warnings.append(ww)
 
             res = runner(
                 cmd,

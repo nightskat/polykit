@@ -188,6 +188,11 @@ def main():
     parser.add_argument("--format", choices=["text", "json"], default="text", help="Output format (default: text)")
     parser.add_argument("--cd", dest="workdir", default=None, help="Working directory (codex/grok)")
     parser.add_argument("--sandbox", choices=["read-only", "workspace-write"], default="read-only", help="Sandbox mode (default: read-only)")
+    parser.add_argument("--expect-artifact", dest="expect_artifacts", action="append", default=[],
+                        metavar="PATH",
+                        help="Giao việc GHI FILE: file vendor phải tạo/ghi trong lượt này (lặp được). "
+                             "Bắt buộc kèm --sandbox workspace-write. Đường dẫn tương đối tính từ --cd "
+                             "(không có thì cwd). Thiếu/cũ ⇒ status=error, reason=artifact_missing.")
     parser.add_argument("--result-json", action="store_true", help="Output the full DispatchResult as JSON instead of raw stdout")
     parser.add_argument("--doctor", action="store_true", help="Run verify_cmd for the vendor, print status")
     parser.add_argument("--no-traps", action="store_true", help="Suppress trap warnings on stderr")
@@ -254,6 +259,16 @@ def main():
                 ],
                 reason="vision_blocked",
             )
+
+    # Giao việc ghi file là OPT-IN: --expect-artifact chỉ có nghĩa khi vendor
+    # được phép ghi. Đòi kiểm artifact mà vẫn read-only = chắc chắn fail, chặn sớm.
+    if args.expect_artifacts and args.sandbox != "workspace-write":
+        _chan_som(
+            args, resolved_model=raw_model or "auto",
+            summary="dispatch blocked: --expect-artifact cần --sandbox workspace-write (opt-in ghi file)",
+            warning_lines=["[polykit] error: --expect-artifact chỉ dùng với --sandbox workspace-write; "
+                           "mặc định read-only không cho vendor ghi file."],
+        )
 
     # BUG-18: không truyền --timeout → dùng trần RIÊNG của vendor
     if args.timeout is None:
@@ -412,6 +427,7 @@ def main():
 
     # Dispatch task
     _t0 = time.monotonic()
+    _t0_wall = time.time()
     try:
         result = run_vendor(
             vendor=args.vendor,
@@ -440,6 +456,18 @@ def main():
     for w in reversed(res_warnings):
         if w not in result.warnings:
             result.warnings.insert(0, w)
+
+    if args.expect_artifacts and result.status == "ok":
+        from lib.artifacts import check_artifacts
+        ok_lines, bad_lines = check_artifacts(args.expect_artifacts, args.workdir, _t0_wall)
+        result.warnings.extend(ok_lines + bad_lines)
+        if bad_lines:
+            for line in bad_lines:
+                sys.stderr.write(line + "\n")
+            result.status = "error"
+            result.reason = "artifact_missing"
+            result.summary = (f"{result.vendor} báo xong nhưng thiếu artifact kỳ vọng "
+                              f"({len(bad_lines)}/{len(args.expect_artifacts)})")
 
     _ghi_evidence(result.vendor, result.model, result.status, result.reason, result.served_model, _t0)
 
