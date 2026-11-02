@@ -27,6 +27,23 @@ from lib.vendor_config import (
 )
 from lib.model_policy import ModelPolicyViolation, SelectionSource
 
+# BUG-19: --result-json hứa stdout là ĐÚNG MỘT JSON. Mọi log/progress (doctor
+# in stdout của verify_cmd, trap, cảnh báo, print lạc của lib) phải sang stderr.
+# Giữ fd stdout THẬT ở đây; khi có --result-json, sys.stdout bị trỏ sang stderr
+# và chỉ _emit_json được ghi vào stdout thật — đúng một lần.
+_REAL_STDOUT = None
+_EMITTED = False
+
+
+def _emit_json(obj) -> None:
+    global _EMITTED
+    if _EMITTED:
+        return
+    _EMITTED = True
+    out = _REAL_STDOUT or sys.stdout
+    out.write(json.dumps(obj, indent=2) + "\n")
+    out.flush()
+
 
 def _run_doctor(vendor_name: str) -> int:
     """--doctor <vendor>: chạy verify_cmd, in trạng thái + model đang chạy.
@@ -104,12 +121,12 @@ class _ParserRaJson(argparse.ArgumentParser):
 
     def error(self, message):
         if "--result-json" in sys.argv:
-            print(json.dumps(DispatchResult(
+            _emit_json(DispatchResult(
                 status="blocked", vendor="?", model="?",
                 summary=f"dispatch blocked: sai tham số dòng lệnh: {message}",
                 warnings=[f"[polykit] {message}", self.format_usage().strip()],
                 stdout="", exit_code=2, reason="guard_violation",
-            ).to_dict(), indent=2))
+            ).to_dict())
         sys.stderr.write(f"[polykit] error: {message}\n")
         sys.stderr.write(self.format_usage())
         sys.exit(2)
@@ -118,14 +135,14 @@ class _ParserRaJson(argparse.ArgumentParser):
 def _doctor_ra_json(vendor: str, ma: int) -> None:
     """--doctor cũng phải tôn trọng --result-json (Codex review): trước đây nhánh
     này thoát với stdout 0 byte, đúng cái mà BUG-8 đang sửa."""
-    print(json.dumps(DispatchResult(
+    _emit_json(DispatchResult(
         status="ok" if ma == 0 else "error",
         vendor=vendor, model="-",
         summary=f"doctor {vendor}: {'đạt' if ma == 0 else 'không đạt'}",
         warnings=["[polykit] chi tiết doctor đã in ra stderr."],
         stdout="", exit_code=ma,
         reason=None if ma == 0 else "doctor_failed",
-    ).to_dict(), indent=2))
+    ).to_dict())
 
 
 def _chan_som(args, resolved_model: str, summary: str, warning_lines: list[str], reason: str = "guard_violation") -> None:
@@ -151,11 +168,21 @@ def _chan_som(args, resolved_model: str, summary: str, warning_lines: list[str],
             reason=reason,
             served_model=None,
         )
-        print(json.dumps(result.to_dict(), indent=2))
+        _emit_json(result.to_dict())
     sys.exit(2)
 
 
 def main():
+    global _REAL_STDOUT, _EMITTED
+    _REAL_STDOUT, _EMITTED = sys.stdout, False
+    try:
+        _main()
+    finally:
+        # Trả sys.stdout về như cũ (quan trọng khi main() được gọi in-process).
+        sys.stdout = _REAL_STDOUT
+
+
+def _main():
     cfg = load_vendor_config()
     names = vendor_names(cfg)
 
@@ -213,6 +240,9 @@ def main():
             names.append(k)
 
     args = parser.parse_args()
+    if args.result_json:
+        # Từ đây mọi print()/sys.stdout.write lạc đều ra stderr (BUG-19).
+        sys.stdout = sys.stderr
 
     # Model positional (tương thích cũ) vs --model alias: xung đột thì CHẶN,
     # không im lặng chọn một bên.
@@ -362,7 +392,10 @@ def main():
             info["profile"] = args.profile
         if res_warnings:
             info["warnings"] = list(res_warnings)
-        print(json.dumps(info, indent=2))
+        if args.result_json:
+            _emit_json(info)
+        else:
+            print(json.dumps(info, indent=2))
         sys.exit(0)
 
     # In traps ra stderr (trước khi dispatch)
@@ -483,7 +516,7 @@ def main():
         sys.stderr.write("[polykit] chế độ chẩn đoán stream đang bật — xem warnings qua --result-json để biết chi tiết.\n")
 
     if args.result_json:
-        print(json.dumps(result.to_dict(), indent=2))
+        _emit_json(result.to_dict())
     else:
         if result.status == "ok":
             sys.stdout.write(result.stdout)
@@ -503,4 +536,18 @@ def main():
     sys.exit(0 if result.status == "ok" else 1)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit:
+        raise
+    except BaseException as e:  # BUG-19: lỗi bất ngờ vẫn phải ra đúng một JSON
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        if "--result-json" in sys.argv:
+            _emit_json(DispatchResult(
+                status="error", vendor="?", model="?",
+                summary=f"dispatch crashed: {type(e).__name__}: {e}",
+                warnings=["[polykit] traceback đã in ra stderr."],
+                stdout="", exit_code=1, reason="exec_error",
+            ).to_dict())
+        sys.exit(1)
