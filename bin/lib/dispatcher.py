@@ -999,7 +999,7 @@ def _run_vendor(
 
         elif vendor == "gemini":
             return _dispatch_gemini(prompt, resolved_model, validated_timeout, runner, env,
-                                    stream=stream)
+                                    stream=stream, workdir=workdir)
 
         elif vendor == "openrouter":
             from lib.openrouter import or_dispatch
@@ -1351,6 +1351,7 @@ def _dispatch_gemini(
     runner,
     env: dict,
     stream: bool = False,
+    workdir: str | None = None,
 ) -> DispatchResult:
     # Strip 1 ký tự @ đầu prompt
     if prompt.startswith("@"):
@@ -1525,6 +1526,12 @@ def _dispatch_gemini(
             if stdout and stdout.strip():
                 deg_warnings = warnings.copy()
                 deg_warnings.append("degraded: succeeded on lane 3")
+                if workdir:
+                    # Lane 3 là HTTP, không có tiến trình con ⇒ không đọc được file trong --cd.
+                    deg_warnings.append(
+                        f"[polykit] warning: --cd {workdir} KHÔNG áp dụng cho gemini lane 3 "
+                        f"(HTTP API, không có tiến trình con); file trong thư mục đó không được đọc."
+                    )
                 # Chỉ đọc actual metadata từ HTTP Gemini API top-level response.modelVersion (không đọc candidate text)
                 raw_model = resp_data.get("modelVersion")
                 proven_model = raw_model.strip() if (isinstance(raw_model, str) and raw_model.strip()) else None
