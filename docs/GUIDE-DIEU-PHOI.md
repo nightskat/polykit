@@ -44,6 +44,16 @@ Nguyên tắc: vendor nào Hermes cầm (openai-codex, xai-oauth, opencode-go, o
 | `codex exec` thiếu `< /dev/null` → treo "Reading additional input from stdin" | luôn `< /dev/null`; Hermes cũng vậy |
 | Vendor tự báo "byte-identical" nhưng chỉ so phần nó KHÔNG sửa (Codex 02/11 ghi lại DOCX bằng ElementTree) | Claude nghiệm thu bằng phép kiểm độc lập; mẫu Word: `pgbank/soat-ho-so/shared/references/GUIDE_VA_MAU_DOCX_THAY_CHUOI.md` |
 | Kiểm "sau 1 phút" (Tuan 02/11) | Monitor: `sleep 60` → `ps -p` + file mới tạo; rồi vòng chờ exit — đừng đợi stdout |
+| `pgrep -f "hermes -z"` ra 0 dù đang chạy (02/11) | tiến trình thật là `~/.hermes/tools/python… -I -c …`; lấy PID từ `$!`/`jobs -p` lúc nohup, theo dõi bằng `kill -0 $PID` |
+| Rà repo trước khi giao cloud: vendor tìm thấy PII đã commit ở 3/5 repo (02/11) | brief rà LUÔN kèm câu "repo có PII đã commit không (file:dòng)"; có → KHÔNG giao cloud, ghi `docs/CANH-BAO-PII-*.md` |
+| `start_session target=cloud repository=…` từ phiên local báo "window needs reload" (02/11) | ghi brief ra file `CLOUD-<repo>.md`; Tuan mở New session → Cloud (env `default`: network Limited + package managers on, không secret) rồi dán |
+| Cloud session KHÔNG báo về | giao 1 session local theo dõi PR: chạy test local + soát diff (02/11 bắt được file rác `rel.txt` trong PR polykit) |
+| `dispatch.py agy --timeout 900` thoát ngay (02/11) | trần `--timeout` là 1–600 |
+| Rà "toàn Mac" bằng 5 vendor song song (02/11, ~6 phút) | brief chung cấm mdfind/find toàn ổ + cấm mở ~/Work ~/Data Cache Hub Mail OneDrive; chia VÙNG: deepseek=~/Developer · glm=~/Claude .md · codex=PII lịch sử git · grok=scripts/LaunchAgents (vai đập) · agy=tài nguyên RAM. Brief mẫu: scratchpad phiên 02/11 `ra-mac/` |
+| Grok suy "Mac cần LAN cơ quan" từ `scanbox.local` → SAI (Tuan: Mac không có LAN, sync tay) | ràng buộc offload thật = file local, Chrome profile thật, PII, GUI macOS; nghi phạm khi vendor nêu "cần LAN" |
+| agy vs grok kết luận NGƯỢC về Hermes lên VM (RAM vs phụ thuộc) | giữ Hermes ở Mac (cần file local + Chrome thật); thủ phạm RAM là ~11 phiên `claude` mở cùng lúc (swap 6,6/8GB) — đóng phiên trước khi mua VM |
+| Codex báo "CIF hard-code" trong test so-cai | mở xem: `'1234567890'` giả → giao được; regex hit ≠ PII, phải mở file |
+| Vertex AI Search pilot (02/11): 72% vs pg-hoi 92% top-8 (314 câu, cùng 100 file) | giữ pg-hoi; đừng nạp kho QĐ lên Vertex. Bẫy chấm: doc id ngẫu nhiên → chấm theo trường `title`. Báo cáo + guide: `/Volumes/Cache Hub/pgbank-dedup/PILOT-VERTEX-2026-11.md`. Bật Discovery Engine API = Tuan bấm (gcloud bị chặn quyền) |
 
 ## 4. Quyết định đã chốt (đừng hỏi lại Tuan)
 
@@ -67,3 +77,10 @@ Nguyên tắc: vendor nào Hermes cầm (openai-codex, xai-oauth, opencode-go, o
 - `served_model` chưa CLI nào xác nhận → luôn null.
 - Bench vision trên trang khó hơn (con dấu, chữ chồng, giấy thật mô phỏng).
 - Sandbox thật (container) cho lane Go nếu muốn mở với dữ liệu nhạy hơn.
+
+## Bắn việc code lên cloud từ phiên local (chốt 03/11/2026)
+- **Vòng:** việc thật → cần code → `start_session target:cloud repository:nightskat/<repo>` → session mở PR → CI xanh → Claude local nghiệm thu (CI + diff + chạy lại) → Tuan merge.
+- **Brief phải tự đủ:** cloud không đọc được scratchpad/file local → chép danh sách lỗi, tiêu chí "xong" đo được, "không merge", "ghi CHƯA CHẠY nếu chưa chạy".
+- **Trước khi bắn:** push branch nền (cloud chỉ thấy remote). Repo có PII (soan-ho-so, vat-excel, bao-cao-dinh-ky) → KHÔNG.
+- **Bẫy:** lần gọi đầu có thể báo "app không nhận được duyệt" → gọi lại khi Tuan đang mở app. Cloud không hiện trong `list_sessions`, không báo khi xong → Tuan ghé claude.ai/code.
+- **Đã chạy 03/11:** so-cai #1#2, docshift-core #26#27, vi-textmatch kind name, polykit CI 3-OS, vdub C3.
