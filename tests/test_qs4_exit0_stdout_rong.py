@@ -72,3 +72,9 @@ def test_cli_expect_artifact_im_lang_khong_file_la_artifact_missing(tmp_path):
     res = json.loads(r.stdout)
     assert r.returncode == 1
     assert res["reason"] == "artifact_missing"
+
+
+def test_classify_exit0_stdout_rong_ma_stderr_quota_la_quota_capped():
+    """Review: dấu hiệu quota phải thắng empty_output (failover cần reason đúng)."""
+    r = _classify_completed("agy", "m", _Res(0, "", "Error: quota exceeded for model\n"))
+    assert r.status == "skipped" and r.reason == "quota_capped"

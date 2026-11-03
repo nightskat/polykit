@@ -399,6 +399,11 @@ def _classify_completed(vendor: str, model: str, res, served_model: str | None =
         # dispatch.py gỡ lại thành ok rồi kiểm file (việc ghi file có thể im).
         warnings = tail_lines(stderr) if stderr.strip() else []
         warnings = ["[polykit] vendor thoát 0 nhưng stdout rỗng — không có kết quả để nghiệm thu."] + warnings
+        if is_quota_error(stderr, 0):
+            return DispatchResult(status="skipped", vendor=vendor, model=model,
+                                  summary=f"{vendor} quota-capped (stdout rỗng, stderr báo quota)",
+                                  warnings=warnings, stdout=stdout, exit_code=0,
+                                  reason="quota_capped", served_model=None)
         return DispatchResult(status="error", vendor=vendor, model=model,
                               summary=f"{vendor} exited 0 with empty stdout (no result)",
                               warnings=warnings, stdout=stdout, exit_code=0,
