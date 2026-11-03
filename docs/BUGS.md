@@ -29,6 +29,7 @@
 | BUG-18 | ✅ ĐÃ SỬA | `grok` bị trần chung `--timeout 120` giết oan (39% lượt timeout) + log không ghi `latency_ms` |
 | BUG-19 | ✅ ĐÃ SỬA 02/11 — fixture-verified, chưa live | `--result-json`: stdout từng có log/progress trước JSON (hermes 22/10; `--doctor` in stdout của verify_cmd). Sửa: khi `--result-json`, `sys.stdout`→stderr, chỉ `_emit_json` ghi stdout thật đúng 1 lần, kể cả crash. Test `tests/test_bug19_result_json_mot_json.py` (ok/lỗi/doctor/chặn sớm, agy giả). Chưa chạy lại với hermes thật |
 | BUG-20 | ✅ ĐÃ SỬA 03/11 — fixture-verified | `vision._convert_pdf_to_images` kiểm thiếu `pdftoppm` TRƯỚC gate output_dir/symlink → máy thiếu binary thì gate an ninh không chạy (vẫn fail-closed). Giờ gate trước. Test `tests/test_vision_gate_truoc_pdftoppm.py` (2/3 đỏ trước sửa) |
+| BUG-21 | ✅ ĐÃ SỬA 03/11 — fixture + CI Windows, chưa live | Windows: lane argv (`claude`…) không tìm `.cmd` (thiếu PATHEXT) ⇒ luôn `error`; `--doctor` chạy verify_cmd `shell=True` với nháy POSIX ⇒ vendor nhận `'/model'` nguyên dấu nháy. Sửa: `resolve_argv0` + `shlex.split`. Test `tests/test_bug21_argv_windows.py` |
 
 ---
 
@@ -62,6 +63,19 @@
 - Prompt bench vòng đầu có nhãn hàng ở name của ô số, gián tiếp gợi đáp án ô text cùng hàng. Không phải baseline OCR thuần không gợi ý. Thêm prompt hygiene chỉ tọa độ row/column, chạy lại dữ liệu thật synthetic; giữ vòng cũ làm evidence, không đổi số hồi tố thành pure OCR.
 
 ## 🔴 CÒN MỞ
+
+### ✅ BUG-21 — vendor không chạy được trên Windows (phát hiện CI 3 OS, sửa 03/11/2026)
+
+CI windows-latest (run trên PR #3): `test_vong6` ok/quota ra `error`; `--doctor agy` in `OK` thay vì
+stdout verify vì agy giả nhận prompt `'/model'` CÒN dấu nháy. Hai gốc (P5):
+1. `run_vendor` gọi `subprocess.run(["claude", ...])` không shell ⇒ CreateProcess không áp PATHEXT
+   ⇒ CLI cài bằng npm (`claude.cmd`, `codex.cmd`, `gemini.cmd`) = FileNotFound. Sửa: runner mặc định
+   bọc `resolving_run` → `shutil.which(argv[0], path=env PATH)`.
+2. `_run_doctor` chạy `verify_cmd`/`zero_quota_cmds` bằng `shell=True`; chuỗi viết nháy POSIX. Sửa:
+   `shlex.split` → argv → resolve. Test chốt vendors.json không dùng pipe/redirect.
+Test `tests/test_bug21_argv_windows.py` (đỏ trước sửa: thiếu `resolve_argv0`).
+⚠️ CHƯA KIỂM: gọi `.cmd` qua argv vẫn đi qua cmd.exe ⇒ prompt có `&`/`|`/`%` có thể bị cmd.exe
+diễn giải (kiểu "BatBadBut"). Chưa có test, chưa có máy Windows thật để đo.
 
 ### ✅ BUG-20 — gate an ninh PDF bị che bởi kiểm `pdftoppm` (phát hiện CI 3 OS, sửa 03/11/2026)
 

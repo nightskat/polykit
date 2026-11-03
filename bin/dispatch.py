@@ -47,6 +47,16 @@ def _emit_json(obj) -> None:
     out.flush()
 
 
+def _doctor_argv(line: str) -> list[str]:
+    """BUG-21: verify_cmd/zero_quota_cmds trong vendors.json viết cú pháp POSIX
+    (`agy -p '/model'`). Chạy shell=True trên Windows ⇒ cmd.exe truyền NGUYÊN dấu
+    nháy đơn cho vendor. Tách bằng shlex (POSIX) rồi chạy argv, resolve argv[0]
+    qua PATHEXT. Các lệnh hiện có không dùng pipe/redirect (test chốt)."""
+    import shlex
+    from lib.dispatcher import resolve_argv0
+    return resolve_argv0(shlex.split(line))
+
+
 def _run_doctor(vendor_name: str) -> int:
     """--doctor <vendor>: chạy verify_cmd, in trạng thái + model đang chạy.
     Ưu tiên zero_quota_cmds trước."""
@@ -67,7 +77,7 @@ def _run_doctor(vendor_name: str) -> int:
         sys.stderr.write(f"[polykit] doctor: running `{vcmd}` ...\n")
         try:
             res = subprocess.run(
-                vcmd, shell=True,
+                _doctor_argv(vcmd),
                 capture_output=True, text=True, timeout=30,
             )
             sys.stdout.write(res.stdout)
@@ -93,7 +103,7 @@ def _run_doctor(vendor_name: str) -> int:
         sys.stderr.write(f"[polykit] doctor: running zero-quota `{zqc}` ...\n")
         try:
             res = subprocess.run(
-                zqc, shell=True,
+                _doctor_argv(zqc),
                 capture_output=True, text=True, timeout=15,
             )
             sys.stdout.write(res.stdout)

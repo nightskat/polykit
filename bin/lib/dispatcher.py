@@ -360,6 +360,26 @@ def _apply_stream_diagnose(result: DispatchResult, vendor: str, stream: bool,
     return result
 
 
+
+def resolve_argv0(cmd, env: dict | None = None):
+    """BUG-21 (P5): argv list chạy KHÔNG qua shell ⇒ Windows CreateProcess không
+    áp PATHEXT, nên `claude`/`codex`/`gemini` (npm cài thành `.cmd`) luôn
+    FileNotFound. Resolve argv[0] bằng shutil.which theo PATH của env sẽ dùng.
+    POSIX: kết quả tương đương execvp, chỉ là đường dẫn tuyệt đối."""
+    if not isinstance(cmd, (list, tuple)) or not cmd:
+        return cmd
+    head = str(cmd[0])
+    if os.path.isabs(head) or os.sep in head or (os.altsep and os.altsep in head):
+        return cmd
+    path = (env or {}).get("PATH") if env else None
+    found = shutil.which(head, path=path)
+    return [found, *cmd[1:]] if found else cmd
+
+
+def resolving_run(cmd, **kwargs):
+    """subprocess.run nhưng resolve argv[0] trước (BUG-21)."""
+    return subprocess.run(resolve_argv0(cmd, kwargs.get("env")), **kwargs)
+
 def _classify_completed(vendor: str, model: str, res, served_model: str | None = None,
                         prompt: str | None = None) -> DispatchResult:
     """M2: map kết quả subprocess → DispatchResult. returncode!=0 kèm dấu hiệu
@@ -463,6 +483,8 @@ def run_vendor(
 
     Hậu xử lý stream áp cho MỌI kết quả nên tách ra lớp mỏng này, không đổi
     hành vi khi stream=False (mọi thứ y như cũ)."""
+    if runner is subprocess.run:
+        runner = resolving_run
     # BUG-15: cảnh báo sinh ra ở bước probe (vd auth chưa xác minh được nhưng
     # vẫn dispatch) phải sống sót tới result JSON — P4 cấm nuốt warning.
     probe_warnings: list[str] = []
