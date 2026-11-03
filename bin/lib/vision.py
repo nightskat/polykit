@@ -238,8 +238,11 @@ class SingleTurnConfirmation:
         if not self.is_trusted_ui:
             return False, "trusted UI confirmation is not supported yet"
 
+        # Chuẩn hoá CẢ HAI phía bằng cùng một hàm: trước đây chỉ `files` qua
+        # Path() nên trên Windows "/tmp/a.png" → "\\tmp\\a.png" ≠ exact_files
+        # (CI windows 2026-11-03). Vẫn so khớp chính xác, không nới lỏng.
         norm_files = tuple(str(Path(f)) for f in files)
-        if norm_files != self.exact_files:
+        if norm_files != tuple(str(Path(f)) for f in self.exact_files):
             return False, "Confirmation files do not match exact request files"
         if model != self.exact_model:
             return False, "Confirmation model does not match exact request model"

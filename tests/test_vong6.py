@@ -4,6 +4,15 @@ import subprocess
 import pytest
 import os
 
+# fake `claude` là script bash không đuôi (#!/bin/bash): Windows không chạy được
+# shebang và shutil.which cần PATHEXT (.exe/.cmd) → dispatch thấy not_installed.
+# Đây là giới hạn của FIXTURE, không phải của dispatch. Nhánh ok/error/quota vẫn
+# được phủ trên ubuntu+macos; trên Windows còn test unit mock runner.
+pytestmark = pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="fake claude là bash script (shebang) — Windows không thực thi được; phủ trên ubuntu/macos",
+)
+
 @pytest.fixture
 def fake_claude(tmp_path, monkeypatch):
     bin_dir = tmp_path / "bin"
@@ -24,7 +33,7 @@ exit 0
 """)
     fake_bin.chmod(0o755)
     
-    monkeypatch.setenv("PATH", f"{bin_dir}:{os.environ.get('PATH', '')}")
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
     return fake_bin
 
 def run_cli(args, env=None):

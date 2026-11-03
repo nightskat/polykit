@@ -177,6 +177,8 @@ class TestCallerOutputDirRejected:
         mock_mkdtemp.assert_not_called()
         assert snapshot(caller) == before, "folder caller bị đụng vào"
 
+    @pytest.mark.usefixtures("hermetic_vendors")  # pdftoppm giả: test gate, không convert thật
+
     def test_helper_rejects_caller_output_dir(self, repo: dict, tmp_path: Path):
         caller = make_caller_dir(tmp_path)
         before = snapshot(caller)
@@ -588,6 +590,8 @@ class TestSourceGateBlocksConversion:
         mock_mkdtemp.assert_not_called()
         mock_run.assert_not_called()
         assert result == [repo["pdf"].resolve()]
+
+    @pytest.mark.usefixtures("hermetic_vendors")  # pdftoppm giả: test gate, không convert thật
 
     def test_source_pdf_symlink_blocked(self, repo: dict, tmp_path: Path):
         link = tmp_path / "link_doc.pdf"
