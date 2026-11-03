@@ -27,7 +27,7 @@
 | BUG-14 | ✅ Go ĐÃ SỬA; lịch sử Agy/DSH giữ nguyên | doctor opencode/hermes dùng chung evidence probe với dispatch (vòng 3) |
 | BUG-17 | ✅ ĐÃ SỬA | `--timeout` KHÔNG xuống tới `--print-timeout` của `agy` → agy tự cắt ở mặc định 5m0s, mất trắng lượt |
 | BUG-18 | ✅ ĐÃ SỬA | `grok` bị trần chung `--timeout 120` giết oan (39% lượt timeout) + log không ghi `latency_ms` |
-| BUG-19 | 🔴 MỞ | `dispatch.py hermes --result-json`: stdout có dòng log/progress trước JSON → `json.load(stdout)` vỡ (22/10, Claude dogfood khi giao dọn docs/plans). Việc vẫn chạy đúng. Sửa: log ra stderr, stdout chỉ JSON |
+| BUG-19 | ✅ ĐÃ SỬA 02/11 — fixture-verified, chưa live | `--result-json`: stdout từng có log/progress trước JSON (hermes 22/10; `--doctor` in stdout của verify_cmd). Sửa: khi `--result-json`, `sys.stdout`→stderr, chỉ `_emit_json` ghi stdout thật đúng 1 lần, kể cả crash. Test `tests/test_bug19_result_json_mot_json.py` (ok/lỗi/doctor/chặn sớm, agy giả). Chưa chạy lại với hermes thật |
 
 ---
 
@@ -124,6 +124,14 @@ mà không có vendor result thì báo `status=protocol_error`, `exit_code!=0`, 
 bằng máy, chỉ còn kỷ luật tay.
 ⇒ Nếu sau này vá pg-redact, đáng cân nhắc `dispatch --require-clean` gọi `pg-redact check`
 làm cổng cứng. **Chưa làm bây giờ** — luật 3 lần đau, đây mới là lần 1.
+
+**Cập nhật 02/11/2026 — `--require-clean` (opt-in) — fixture-verified, chưa live**:
+- `bin/lib/clean_gate.py` + cờ `dispatch.py --require-clean`: prompt phải qua `pg-redact check <file>`
+  (hoặc `$POLYKIT_CLEAN_CHECKER`) exit 0 **trước policy/probe/spawn**. Fail-closed: thiếu checker
+  (`clean_checker_missing`), exit≠0 (`pii_detected`), timeout/lỗi (`clean_check_failed`). Không lộ prompt/output checker.
+- Checker inject được: `_which`/`_checker_runner` (mock) hoặc env. Test `tests/test_require_clean.py`
+  (spy chứng minh 0 probe/0 spawn; CLI với checker giả + agy giả).
+- **Vẫn opt-in, không bật mặc định** — pg-redact thật còn hỏng với văn xuôi; QUAN SÁT-3 giữ MỞ.
 
 **Cập nhật 22/10/2026 (Lane VISION)**:
 - Đã triển khai cổng bảo vệ Vision trong `bin/lib/vision.py` và `tests/test_vision.py`:
@@ -740,7 +748,13 @@ lượt 1 `OK` exit 0 (29,6s) · lượt 2 `OK` exit 0 (42,0s) · lượt 3 `OK`
 ---
 
 ## BUG-16 — `--cd` bị NUỐT IM LẶNG với vendor không có `workdir_flag` (agy, dsh, claude)
-📅 phát hiện 25/08/2026 · trạng thái: **ĐÃ GHI, CHƯA SỬA**
+📅 phát hiện 25/08/2026 · trạng thái: **✅ ĐÃ SỬA 02/11/2026 — fixture-verified, chưa live**
+
+> **Sửa (02/11/2026)**: `bin/lib/dispatcher.py` bọc runner ép `cwd=workdir` cho MỌI vendor spawn CLI
+> (agy/dsh/gemini/generic/Go; codex/grok giữ thêm cờ riêng). `--cd` không phải thư mục ⇒ `blocked`
+> trước probe/spawn. claude (bounded, `--tools ""` + plan-mode, P3) và openrouter (HTTP) bỏ qua `--cd`
+> **có warning**. Test: `tests/test_bug16_cd_nhat_quan.py` — agy GIẢ đọc file mốc trong cwd (subprocess).
+> **Chưa chạy với agy thật.**
 
 **Đau thật**: dispatch agy kèm `--cd <thư mục>` + prompt bảo "đọc `CONTEXT.md` trong thư mục làm việc".
 agy chạy ở cwd của tiến trình cha, báo *"Không tìm thấy CONTEXT.md ở đâu cả — mình tạm bỏ qua và tiếp tục"*,
@@ -920,3 +934,25 @@ Live test 19/09 23:02: gọi grok **không** truyền `--timeout` → `ok`, 1391
   2. `bin/lib/model_policy.py` & `bin/lib/vendor_config.py`: Cơ chế kiểm tra model catalog chuyển thành **khuyến cáo (advisory)** thay vì whitelist cứng. Model chưa có trong catalog chỉ phát cảnh báo `warning: model '...' not found in known catalog for vendor '...'`, không chặn thực thi (trừ model vi phạm chính sách cấm như `*-contributor`).
   3. Bằng chứng code/test: Kiểm chứng qua test suite (504 test trong `tests/test_vendor_resolver.py` và 816 test trong `tests/test_model_policy.py` xác minh phân giải selector, default `gpt-6.1-sol` low, và catalog advisory).
 - **Trạng thái**: **CHƯA LIVE TEST** — không bịa bằng chứng live test; điều phối sẽ chạy nghiệm thu live và ghi báo cáo riêng.
+
+---
+
+## Lô 02/11/2026 — 5 việc (fixture-verified, CHƯA LIVE)
+
+> Mọi bằng chứng dưới đây là **test với vendor giả/fixture** (`tests/fake_cli.py`), **không gọi vendor thật**.
+> Trạng thái chung: **fixture-verified, chưa live** — cần điều phối nghiệm thu live riêng.
+
+| # | Việc | Trạng thái | Test |
+|---|---|---|---|
+| 1 | Giao việc ghi file: `--sandbox workspace-write` opt-in + `--expect-artifact` (thiếu/cũ ⇒ `artifact_missing`) | fixture-verified, chưa live | `tests/test_expect_artifact.py` |
+| 2 | BUG-16 `--cd` nhất quán (cwd cho mọi vendor CLI; claude bounded bỏ qua có warning) | fixture-verified, chưa live | `tests/test_bug16_cd_nhat_quan.py` |
+| 3 | BUG-19 `--result-json` đúng một JSON, log → stderr | fixture-verified, chưa live | `tests/test_bug19_result_json_mot_json.py` |
+| 4 | `--require-clean` opt-in, checker inject được, chặn trước probe/spawn | fixture-verified, chưa live | `tests/test_require_clean.py` |
+| 5 | Python tối thiểu 3.11+ (README/requirements/entrypoint guard) + smoke máy sạch | fixture-verified, chưa live | `tests/test_smoke_may_sach.py` |
+
+**Phát hiện thêm khi smoke máy sạch**: `gemini` không có agy/gemini-cli/API key trả `status=error` (vi phạm P1).
+Đã sửa: mọi lane đều vắng mặt ⇒ `skipped`, `reason=not_installed`. Lane có chạy mà lỗi thì vẫn `error`.
+
+**Ghi chú môi trường**: 8 test sẵn đỏ trước lô này trên container Linux không có `gemini`/`agy` thật
+(`test_agy_vendor`, `test_openrouter`, `test_policy_entrypoints`, `test_served_model`, `test_stream_diagnose`
+— nhánh gemini lane) — phụ thuộc máy, không do lô này; chưa xử lý.

@@ -432,6 +432,7 @@ def run_vendor(
     is_failover: bool = False,
     allow_unknown: bool = False,
     data_class: str | None = None,
+    require_clean: bool = False,
 ) -> DispatchResult:
     """Cổng dispatch công khai. `stream=True` = --stream-diagnose: chạy vendor ở
     chế độ stream để khi timeout còn đọc được vendor đã đi tới đâu (BUG-6).
@@ -481,6 +482,7 @@ def run_vendor(
         is_failover=is_failover,
         allow_unknown=allow_unknown,
         data_class=data_class,
+        require_clean=require_clean,
     )
     extra = [w for w in (policy_warnings + probe_warnings) if w]
     if extra:
@@ -513,6 +515,7 @@ def _run_vendor(
     is_failover: bool = False,
     allow_unknown: bool = False,
     data_class: str | None = None,
+    require_clean: bool = False,
 ) -> DispatchResult:
     if probe_warnings is None:
         probe_warnings = []
@@ -541,6 +544,14 @@ def _run_vendor(
         if depth >= 3:
             raise DispatchError(f"depth {depth} >= 3, possible loop")
 
+        # BUG-16: --cd trỏ vào thư mục không tồn tại ⇒ chặn trước probe/spawn,
+        # không để vendor chạy ở chỗ khác rồi báo thành công.
+        if workdir:
+            wd = Path(workdir).expanduser()
+            if not wd.is_dir():
+                raise DispatchError(f"--cd không phải thư mục tồn tại: {workdir}")
+            workdir = str(wd.resolve())
+
         # Prompt empty guard
         if not prompt or not prompt.strip():
             raise DispatchError("Empty prompt. Pipe content via stdin.")
@@ -554,6 +565,19 @@ def _run_vendor(
             warnings=[],
             reason="guard_violation",
         )
+
+    # 1b. --require-clean (opt-in): checker PII TRƯỚC policy/probe/detector/spawn.
+    if require_clean:
+        from lib.clean_gate import CleanGateBlocked, require_clean as _require_clean
+        try:
+            policy_warnings.extend(_require_clean(prompt))
+        except CleanGateBlocked as e:
+            return DispatchResult(
+                status="blocked", vendor=vendor, model=model,
+                summary=f"dispatch blocked: {e}",
+                warnings=[str(e), f"[polykit] reason={e.reason}; chưa probe/spawn."],
+                reason=e.reason, exit_code=1, served_model=None,
+            )
 
     # 2. MODEL POLICY + RESOLVER — TRƯỚC probe/detector/spawn/network.
     #    Dùng CHUNG resolver với CLI (resolve_dispatch_target) nên hai entrypoint
@@ -782,6 +806,28 @@ def _run_vendor(
             res.data_class = DATA_CLASS_CODE_NOPII
         return res
 
+    # BUG-16: `--cd` phải có hiệu lực NHẤT QUÁN. Trước đây chỉ codex (-C), grok
+    # (--cwd) và vendor có workdir_flag ăn cờ; agy/dsh/gemini... chạy ở cwd của
+    # tiến trình cha mà không một dòng cảnh báo (thành công giả). Giờ: mọi vendor
+    # spawn CLI đều chạy với cwd=workdir (cờ riêng của vendor vẫn giữ). Ngoại lệ
+    # có cảnh báo rõ: claude (lane bounded, no tools — P3, không đọc file nào nên
+    # không nhận thư mục làm việc) và openrouter (HTTP, không có tiến trình con).
+    if workdir:
+        if vendor in ("claude", "openrouter"):
+            ly_do = ("lane Claude bounded (plan-mode, no tools) không đọc file"
+                     if vendor == "claude" else "openrouter là HTTP API, không có tiến trình con")
+            policy_warnings.append(
+                f"[polykit] warning: --cd {workdir} KHÔNG áp dụng cho {vendor} ({ly_do}); "
+                f"đưa nội dung cần thiết vào prompt."
+            )
+            sys.stderr.write(policy_warnings[-1] + "\n")
+        else:
+            _runner_goc = runner
+
+            def runner(*args, **kwargs):  # noqa: F811 — bọc để ép cwd
+                kwargs.setdefault("cwd", workdir)
+                return _runner_goc(*args, **kwargs)
+
     def go_runner(*args, **kwargs):
         """Bọc runner để ghi bằng chứng spawn trước khi process có thể nổ."""
         go_spawned.append(True)
@@ -848,7 +894,8 @@ def _run_vendor(
                     f"khác từ catalog."
                 )
             cmd = build_agy_cmd(resolved, prompt, stream=stream,
-                                timeout=validated_timeout, source=resolved_source)
+                                timeout=validated_timeout, source=resolved_source,
+                                auto_approve=(validated_sandbox == "workspace-write"))
             res = runner([shutil.which("agy") or "agy"] + cmd[1:],
                          capture_output=True, text=True,
                          timeout=validated_timeout, env=env)
@@ -1082,8 +1129,18 @@ def _run_vendor(
             if workdir and v_cfg.get("workdir_flag"):
                 cmd += f" {v_cfg['workdir_flag']} {shlex.quote(workdir)}"
                 
-            if validated_sandbox == "workspace-write" and v_cfg.get("auto_approve"):
-                cmd += f" {v_cfg['auto_approve']}"
+            if validated_sandbox == "workspace-write":
+                auto = v_cfg.get("auto_approve")
+                # vendors.json có chỗ ghi MÔ TẢ thay cho cờ (dsh: "Không có cờ. Dùng
+                # biến môi trường ..."; gemini: "-y | --yolo | ..."). Chỉ nối khi là
+                # MỘT cờ thật, không thì shell nhận rác. Không nối được ⇒ nói rõ.
+                if auto and auto.startswith("-") and " " not in auto.strip():
+                    cmd += f" {auto.strip()}"
+                else:
+                    ww = (f"vendor '{vendor}' không có cờ auto-approve dùng được "
+                          f"(auto_approve={auto!r}); workspace-write có thể bị vendor từ chối ghi.")
+                    if ww not in policy_warnings:
+                        policy_warnings.append(ww)
 
             res = runner(
                 cmd,
@@ -1460,6 +1517,24 @@ def _dispatch_gemini(
             warnings.append(f"lane 3 failed: API call failed ({type(e).__name__}: {str(e)})")
     else:
         warnings.append("lane 3 failed: API key unavailable")
+
+    # P1 (smoke máy sạch 02/11): KHÔNG lane nào chạy được vì thiếu binary/key
+    # ⇒ vendor vắng mặt = skipped (degrade), không phải error.
+    _vang = ("lane 1 failed: model not supported by agy",
+             "lane 1 failed: agy.sh and agy unavailable",
+             "lane 2 failed: gemini-cli unavailable",
+             "lane 3 failed: API key unavailable")
+    lane_msgs = [w for w in warnings if w.startswith("lane ")]
+    if lane_msgs and all(w in _vang for w in lane_msgs):
+        return DispatchResult(
+            status="skipped",
+            vendor="gemini",
+            model=model,
+            summary="vendor gemini skipped: not_installed (không có agy/gemini-cli/API key)",
+            warnings=warnings,
+            stdout="",
+            reason="not_installed",
+        )
 
     # All failed
     return DispatchResult(

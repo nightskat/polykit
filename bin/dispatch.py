@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 import sys
+if sys.version_info < (3, 11):  # SPEC: Python 3.11+ cho mọi logic
+    sys.exit("PolyKit cần Python 3.11+ (đang chạy %d.%d)" % sys.version_info[:2])
 import time
 import argparse
 import json
@@ -26,6 +28,23 @@ from lib.vendor_config import (
     default_timeout,
 )
 from lib.model_policy import ModelPolicyViolation, SelectionSource
+
+# BUG-19: --result-json hứa stdout là ĐÚNG MỘT JSON. Mọi log/progress (doctor
+# in stdout của verify_cmd, trap, cảnh báo, print lạc của lib) phải sang stderr.
+# Giữ fd stdout THẬT ở đây; khi có --result-json, sys.stdout bị trỏ sang stderr
+# và chỉ _emit_json được ghi vào stdout thật — đúng một lần.
+_REAL_STDOUT = None
+_EMITTED = False
+
+
+def _emit_json(obj) -> None:
+    global _EMITTED
+    if _EMITTED:
+        return
+    _EMITTED = True
+    out = _REAL_STDOUT or sys.stdout
+    out.write(json.dumps(obj, indent=2) + "\n")
+    out.flush()
 
 
 def _run_doctor(vendor_name: str) -> int:
@@ -104,12 +123,12 @@ class _ParserRaJson(argparse.ArgumentParser):
 
     def error(self, message):
         if "--result-json" in sys.argv:
-            print(json.dumps(DispatchResult(
+            _emit_json(DispatchResult(
                 status="blocked", vendor="?", model="?",
                 summary=f"dispatch blocked: sai tham số dòng lệnh: {message}",
                 warnings=[f"[polykit] {message}", self.format_usage().strip()],
                 stdout="", exit_code=2, reason="guard_violation",
-            ).to_dict(), indent=2))
+            ).to_dict())
         sys.stderr.write(f"[polykit] error: {message}\n")
         sys.stderr.write(self.format_usage())
         sys.exit(2)
@@ -118,14 +137,14 @@ class _ParserRaJson(argparse.ArgumentParser):
 def _doctor_ra_json(vendor: str, ma: int) -> None:
     """--doctor cũng phải tôn trọng --result-json (Codex review): trước đây nhánh
     này thoát với stdout 0 byte, đúng cái mà BUG-8 đang sửa."""
-    print(json.dumps(DispatchResult(
+    _emit_json(DispatchResult(
         status="ok" if ma == 0 else "error",
         vendor=vendor, model="-",
         summary=f"doctor {vendor}: {'đạt' if ma == 0 else 'không đạt'}",
         warnings=["[polykit] chi tiết doctor đã in ra stderr."],
         stdout="", exit_code=ma,
         reason=None if ma == 0 else "doctor_failed",
-    ).to_dict(), indent=2))
+    ).to_dict())
 
 
 def _chan_som(args, resolved_model: str, summary: str, warning_lines: list[str], reason: str = "guard_violation") -> None:
@@ -151,11 +170,21 @@ def _chan_som(args, resolved_model: str, summary: str, warning_lines: list[str],
             reason=reason,
             served_model=None,
         )
-        print(json.dumps(result.to_dict(), indent=2))
+        _emit_json(result.to_dict())
     sys.exit(2)
 
 
 def main():
+    global _REAL_STDOUT, _EMITTED
+    _REAL_STDOUT, _EMITTED = sys.stdout, False
+    try:
+        _main()
+    finally:
+        # Trả sys.stdout về như cũ (quan trọng khi main() được gọi in-process).
+        sys.stdout = _REAL_STDOUT
+
+
+def _main():
     cfg = load_vendor_config()
     names = vendor_names(cfg)
 
@@ -186,8 +215,17 @@ def main():
     parser.add_argument("--prompt-file", dest="prompt_file", default=None,
                         help="Đọc prompt từ file thay vì stdin (dùng cho prompt dài / nhiều dòng / tiếng Việt)")
     parser.add_argument("--format", choices=["text", "json"], default="text", help="Output format (default: text)")
-    parser.add_argument("--cd", dest="workdir", default=None, help="Working directory (codex/grok)")
+    parser.add_argument("--cd", dest="workdir", default=None, help="Thư mục làm việc: mọi vendor CLI chạy với cwd này (codex/grok nhận thêm cờ riêng). "
+                             "claude (bounded, no tools) và openrouter (HTTP) bỏ qua kèm warning (BUG-16).")
     parser.add_argument("--sandbox", choices=["read-only", "workspace-write"], default="read-only", help="Sandbox mode (default: read-only)")
+    parser.add_argument("--expect-artifact", dest="expect_artifacts", action="append", default=[],
+                        metavar="PATH",
+                        help="Giao việc GHI FILE: file vendor phải tạo/ghi trong lượt này (lặp được). "
+                             "Bắt buộc kèm --sandbox workspace-write. Đường dẫn tương đối tính từ --cd "
+                             "(không có thì cwd). Thiếu/cũ ⇒ status=error, reason=artifact_missing.")
+    parser.add_argument("--require-clean", action="store_true",
+                        help="Opt-in: prompt phải qua checker PII (pg-redact check, hoặc $POLYKIT_CLEAN_CHECKER) "
+                             "exit 0 trước MỌI probe/spawn. Thiếu checker/lỗi/PII ⇒ blocked (fail-closed).")
     parser.add_argument("--result-json", action="store_true", help="Output the full DispatchResult as JSON instead of raw stdout")
     parser.add_argument("--doctor", action="store_true", help="Run verify_cmd for the vendor, print status")
     parser.add_argument("--no-traps", action="store_true", help="Suppress trap warnings on stderr")
@@ -207,6 +245,9 @@ def main():
             names.append(k)
 
     args = parser.parse_args()
+    if args.result_json:
+        # Từ đây mọi print()/sys.stdout.write lạc đều ra stderr (BUG-19).
+        sys.stdout = sys.stderr
 
     # Model positional (tương thích cũ) vs --model alias: xung đột thì CHẶN,
     # không im lặng chọn một bên.
@@ -254,6 +295,16 @@ def main():
                 ],
                 reason="vision_blocked",
             )
+
+    # Giao việc ghi file là OPT-IN: --expect-artifact chỉ có nghĩa khi vendor
+    # được phép ghi. Đòi kiểm artifact mà vẫn read-only = chắc chắn fail, chặn sớm.
+    if args.expect_artifacts and args.sandbox != "workspace-write":
+        _chan_som(
+            args, resolved_model=raw_model or "auto",
+            summary="dispatch blocked: --expect-artifact cần --sandbox workspace-write (opt-in ghi file)",
+            warning_lines=["[polykit] error: --expect-artifact chỉ dùng với --sandbox workspace-write; "
+                           "mặc định read-only không cho vendor ghi file."],
+        )
 
     # BUG-18: không truyền --timeout → dùng trần RIÊNG của vendor
     if args.timeout is None:
@@ -346,7 +397,10 @@ def main():
             info["profile"] = args.profile
         if res_warnings:
             info["warnings"] = list(res_warnings)
-        print(json.dumps(info, indent=2))
+        if args.result_json:
+            _emit_json(info)
+        else:
+            print(json.dumps(info, indent=2))
         sys.exit(0)
 
     # In traps ra stderr (trước khi dispatch)
@@ -412,6 +466,11 @@ def main():
 
     # Dispatch task
     _t0 = time.monotonic()
+    _t0_wall = time.time()
+    _artifact_before = None
+    if args.expect_artifacts:
+        from lib.artifacts import snapshot_artifacts
+        _artifact_before = snapshot_artifacts(args.expect_artifacts, args.workdir)
     try:
         result = run_vendor(
             vendor=args.vendor,
@@ -431,6 +490,7 @@ def main():
             allow_sensitive_vision=args.allow_sensitive_vision,
             allow_unknown=args.allow_unknown_model,
             data_class=args.data_class,
+            require_clean=args.require_clean,
         )
     except Exception as e:
         # BUG-18 (Codex review): lỗi bất ngờ vẫn phải để lại dấu vết + thời gian đã chạy.
@@ -440,6 +500,19 @@ def main():
     for w in reversed(res_warnings):
         if w not in result.warnings:
             result.warnings.insert(0, w)
+
+    if args.expect_artifacts and result.status == "ok":
+        from lib.artifacts import check_artifacts
+        ok_lines, bad_lines = check_artifacts(args.expect_artifacts, args.workdir, _t0_wall,
+                                              before=_artifact_before)
+        result.warnings.extend(ok_lines + bad_lines)
+        if bad_lines:
+            for line in bad_lines:
+                sys.stderr.write(line + "\n")
+            result.status = "error"
+            result.reason = "artifact_missing"
+            result.summary = (f"{result.vendor} báo xong nhưng thiếu artifact kỳ vọng "
+                              f"({len(bad_lines)}/{len(args.expect_artifacts)})")
 
     _ghi_evidence(result.vendor, result.model, result.status, result.reason, result.served_model, _t0)
 
@@ -454,7 +527,7 @@ def main():
         sys.stderr.write("[polykit] chế độ chẩn đoán stream đang bật — xem warnings qua --result-json để biết chi tiết.\n")
 
     if args.result_json:
-        print(json.dumps(result.to_dict(), indent=2))
+        _emit_json(result.to_dict())
     else:
         if result.status == "ok":
             sys.stdout.write(result.stdout)
@@ -474,4 +547,18 @@ def main():
     sys.exit(0 if result.status == "ok" else 1)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit:
+        raise
+    except BaseException as e:  # BUG-19: lỗi bất ngờ vẫn phải ra đúng một JSON
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        if "--result-json" in sys.argv:
+            _emit_json(DispatchResult(
+                status="error", vendor="?", model="?",
+                summary=f"dispatch crashed: {type(e).__name__}: {e}",
+                warnings=["[polykit] traceback đã in ra stderr."],
+                stdout="", exit_code=1, reason="exec_error",
+            ).to_dict())
+        sys.exit(1)

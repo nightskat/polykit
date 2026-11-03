@@ -86,6 +86,20 @@ Nguồn chính thức là `--result-json`: `status`, `served_model`, `exit_code`
   - **Chỉ có** trường `model` từ HTTP response của OpenRouter hoặc top-level `modelVersion` từ Gemini API response envelope mới được công nhận là bằng chứng xác thực (`evidence`).
 - Dòng `[polykit] served: <model>` chỉ in ra stderr khi có evidence xác nhận model thật **KHÁC** model đã yêu cầu (ví dụ router OpenRouter trả về model cụ thể khác slug yêu cầu). Khi trùng nhau hoặc khi không có trusted envelope (`served_model=None`), dòng này không in ra.
 
+## Giao việc GHI FILE (opt-in)
+Mặc định `--sandbox read-only`. Muốn vendor ghi file thì phải opt-in và khai file kỳ vọng:
+```
+python3 bin/dispatch.py agy --sandbox workspace-write --cd <thư mục> \
+  --expect-artifact out/report.md --prompt-file brief.md --result-json
+```
+- `--expect-artifact` lặp được; đường dẫn tương đối tính từ `--cd` (không có thì cwd).
+- File thiếu, hoặc có sẵn từ trước lượt (mtime cũ) ⇒ `status=error`, `reason=artifact_missing`, chi tiết trong `warnings`.
+- `--expect-artifact` mà không kèm `workspace-write` ⇒ chặn sớm (`blocked`, exit 2), chưa probe/spawn.
+
+## Cổng PII `--require-clean` (opt-in)
+`--require-clean` ⇒ prompt phải qua `pg-redact check` (hoặc `$POLYKIT_CLEAN_CHECKER`) exit 0 trước mọi probe/spawn.
+Thiếu checker / PII / lỗi ⇒ `blocked` (fail-closed), reason `clean_checker_missing|pii_detected|clean_check_failed`.
+
 ⚠️ Mã thoát của vendor CLI không đáng tin. Nghiệm thu bằng nội dung/kích thước kết quả,
 và bằng **dấu vết phụ** (file nó bảo đã ghi có thật không, chạy lại có ra đúng số không).
 
