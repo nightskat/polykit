@@ -1,5 +1,28 @@
 # PolyKit — Nhật ký kỹ thuật
 
+## 2026-11-03 (chiều) — Sửa bug còn mở trên nền PR #1 + #2
+
+**Đã làm**
+- Gộp `ci/three-os` (PR #2) + `claude/vigilant-johnson-wb7bbe` (PR #1) vào branch từ main; không xung đột; 1081 pass.
+- QUAN SÁT-4: exit 0 + stdout rỗng → `error`/`empty_output` (trước: `ok`). `--expect-artifact` gỡ về ok để artifact quyết định.
+- BUG-20: gate output_dir/symlink PDF chạy TRƯỚC kiểm `pdftoppm`.
+- BUG-14 (Agy/DSH): đóng theo test BUG-13/15 có sẵn; timestamp `ready` → BACKLOG.
+- `tests/fake_cli.install_python_shim`: vendor giả Python + `.cmd` trên Windows; bỏ skip win32 của `test_vong6`.
+
+**Bài học**
+- Banner `traps for agy` là của PolyKit, ghi ra STDERR (`bin/dispatch.py:410`) — "stdout chỉ có banner" 20/08 thực chất là stdout rỗng; check rỗng bắt đúng ca đó.
+- PR #1 merge sau PR #2 nên test subprocess của nó (agy giả shebang) chưa từng chạy trên Windows.
+
+**Phát hiện**
+- Nhánh adapter generic dựng lệnh shell bằng `shlex.quote` (`bin/lib/dispatcher.py` ~1120) — cú pháp POSIX, có thể sai với cmd.exe. CHƯA KIỂM bằng test Windows.
+- BUG-6 (grok) và QUAN SÁT-3 (text PII) vẫn MỞ: cần vendor/pg-redact thật, không sửa bằng fixture được.
+
+**Lệnh chạy lại**
+```
+python3.11 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+.venv/bin/python -m pytest tests -q -rs
+```
+
 ## 2026-11-03 — CI 3 OS (ubuntu / macos / windows)
 
 **Đã làm**
