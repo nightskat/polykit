@@ -341,6 +341,9 @@ def test_run_vendor_sensitive_confirmation_no_retry_failover_inheritance():
     assert valid_fo is False
 
 
+@pytest.mark.usefixtures("hermetic_vendors")
+
+
 def test_run_vendor_gemini_auto_preserved_no_invented_model():
     """Gemini auto must be preserved without inventing a default model slug.
     served_model is None if response provides no proof (Grok finding 3)."""
@@ -755,6 +758,9 @@ def test_resolve_dispatch_target_gemini_auto_is_not_invented():
     assert t.model == "auto"
     assert t.selector is None
     assert any("gemini auto" in w for w in t.warnings)
+
+
+@pytest.mark.usefixtures("hermetic_vendors")
 
 
 def test_run_vendor_policy_warning_reaches_result_json():

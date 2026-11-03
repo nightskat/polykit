@@ -48,6 +48,9 @@ def test_or_dispatch_response_thiếu_field_thì_none_chứ_không_vỡ():
     assert res.served_model is None and res.provider is None
 
 
+@pytest.mark.usefixtures("hermetic_vendors")
+
+
 def test_dispatch_openrouter_gắn_served_model_và_nêu_trong_summary():
     import lib.dispatcher as d
 

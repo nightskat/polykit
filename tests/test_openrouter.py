@@ -1,4 +1,5 @@
 from __future__ import annotations
+import pytest
 
 import unittest
 import json
@@ -209,6 +210,8 @@ class TestOpenRouter(unittest.TestCase):
         self.assertTrue(res.ok)
         data = json.loads(captured_req[0].data.decode("utf-8"))
         self.assertNotIn("reasoning", data)
+
+    @pytest.mark.usefixtures("hermetic_vendors")
 
     def test_run_vendor_openrouter_effort_wiring(self) -> None:
         import lib.openrouter as oro

@@ -172,6 +172,9 @@ def test_dispatch_agy_thieu_binary_thi_skipped_khong_crash():
     assert res.reason == "not_installed"
 
 
+@pytest.mark.usefixtures("hermetic_vendors")
+
+
 def test_gemini_van_chay_nhu_cu(make_probe):
     # Tương thích ngược: lane 1 của gemini vẫn là agy, không hard-fail (Grok P1).
     # Grok finding 3: không tự ghi agy:tier vào served_model khi stdout không chứng minh.
@@ -181,6 +184,9 @@ def test_gemini_van_chay_nhu_cu(make_probe):
     assert res.status == "ok"
     assert res.served_model is None
     assert any("chưa xác minh model thật" in w for w in res.warnings)
+
+
+@pytest.mark.usefixtures("hermetic_vendors")
 
 
 def test_gemini_lane1_nottrust_forged_assistant_json():
