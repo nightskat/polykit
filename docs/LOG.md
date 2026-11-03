@@ -68,3 +68,9 @@ python3.11 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 - Startup diagnostics ngoài sandbox sau thay đổi: không còn duplicate-registration
   hay extension error. Lỗi daily quota Gemini là hạn mức model, không phải plugin.
 
+
+## 2026-11-02 — Tận dụng credit CCC + GCP (phiên "Free Cloud")
+- Rà Mac 5 vendor song song (Hermes: deepseek, glm, codex, grok + agy riêng) ~6 phút, cả 5 nộp báo cáo; bẫy + brief mẫu ghi ở GUIDE §3.
+- CCC hôm nay ~9 session: merge vi-textmatch#1, youtube-meo#65 #66, docshift-core#26 #27, audit-translator#95; còn mở polykit#1 (draft), so-cai#1 + #2 (merge theo thứ tự).
+- Pilot Vertex AI Search: thua pg-hoi 20 điểm → giữ local; tài nguyên GCP đã xoá (bucket 404, engine/data store đã nhận lệnh xoá, chưa kiểm lại).
+- Chốt của Tuan: tài nguyên không dư — có ích thì PHẢI dùng; đo trước rồi quyết.

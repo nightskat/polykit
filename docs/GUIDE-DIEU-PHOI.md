@@ -81,6 +81,6 @@ Nguyên tắc: vendor nào Hermes cầm (openai-codex, xai-oauth, opencode-go, o
 ## Bắn việc code lên cloud từ phiên local (chốt 03/11/2026)
 - **Vòng:** việc thật → cần code → `start_session target:cloud repository:nightskat/<repo>` → session mở PR → CI xanh → Claude local nghiệm thu (CI + diff + chạy lại) → Tuan merge.
 - **Brief phải tự đủ:** cloud không đọc được scratchpad/file local → chép danh sách lỗi, tiêu chí "xong" đo được, "không merge", "ghi CHƯA CHẠY nếu chưa chạy".
-- **Trước khi bắn:** push branch nền (cloud chỉ thấy remote). Repo có PII (soan-ho-so, vat-excel, bao-cao-dinh-ky) → KHÔNG.
+- **Trước khi bắn:** push branch nền (cloud chỉ thấy remote). Rào PII đã bỏ 03/11 (Tuan quyết) — tiêu chí: bắn được + hiệu quả.
 - **Bẫy:** lần gọi đầu có thể báo "app không nhận được duyệt" → gọi lại khi Tuan đang mở app. Cloud không hiện trong `list_sessions`, không báo khi xong → Tuan ghé claude.ai/code.
 - **Đã chạy 03/11:** so-cai #1#2, docshift-core #26#27, vi-textmatch kind name, polykit CI 3-OS, vdub C3.
