@@ -22,6 +22,12 @@ def env_sach(tmp_path):
     for k in ("XDG_STATE_HOME", "XDG_CACHE_HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME"):
         env[k] = str(tmp_path / k.lower())
     (tmp_path / "home").mkdir()
+    if sys.platform == "win32":
+        # Windows: Path.home() đọc USERPROFILE (không phải HOME); thiếu SystemRoot
+        # thì chính python con không khởi động được. Vẫn "sạch": không vendor/key.
+        import os
+        env["USERPROFILE"] = env["HOME"]
+        env["SystemRoot"] = os.environ.get("SystemRoot", r"C:\Windows")
     return env
 
 
