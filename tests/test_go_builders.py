@@ -152,7 +152,7 @@ class TestOpenCodeBuilder:
         bin_path = get_opencode_bin()
         expected = str(Path.home() / ".opencode/bin/opencode")
         assert bin_path == expected
-        assert bin_path.startswith("/")
+        assert Path(bin_path).is_absolute()  # Windows: C:\\..., không bắt đầu bằng "/"
 
     def test_opencode_default_model_and_effort(self, confined_go):
         """Model auto resolve thành deepseek-v4.1-flash với variant high."""
@@ -270,7 +270,7 @@ class TestHermesBuilder:
         which_res = shutil.which("hermes")
         if which_res:
             assert bin_path == str(Path(which_res).resolve())
-            assert bin_path.startswith("/")
+            assert Path(bin_path).is_absolute()  # Windows: C:\\..., không bắt đầu bằng "/"
         else:
             assert bin_path == "hermes"
 

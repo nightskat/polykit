@@ -4,27 +4,24 @@ import subprocess
 import pytest
 import os
 
+# fake `claude` viết bằng Python + shim `.cmd` trên Windows (tests/fake_cli.py)
+# ⇒ nhánh ok/error/quota chạy được trên cả 3 OS (trước 03/11 skip trên win32).
+sys.path.insert(0, os.path.dirname(__file__))
+from fake_cli import install_python_shim  # noqa: E402
+
 @pytest.fixture
 def fake_claude(tmp_path, monkeypatch):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    fake_bin = bin_dir / "claude"
-    
-    fake_bin.write_text("""#!/bin/bash
-if [ -n "$FAKE_OC_FAIL" ]; then
-    echo "boom: fake fail" >&2
-    exit 1
-fi
-if [ -n "$FAKE_OC_QUOTA" ]; then
-    echo "insufficient credit" >&2
-    exit 146
-fi
-echo "fake ok output"
-exit 0
+    fake_bin = install_python_shim(bin_dir, "claude", f"""#!{sys.executable}
+import os, sys
+if os.environ.get("FAKE_OC_FAIL"):
+    sys.stderr.write("boom: fake fail\\n"); sys.exit(1)
+if os.environ.get("FAKE_OC_QUOTA"):
+    sys.stderr.write("insufficient credit\\n"); sys.exit(146)
+print("fake ok output")
 """)
-    fake_bin.chmod(0o755)
-    
-    monkeypatch.setenv("PATH", f"{bin_dir}:{os.environ.get('PATH', '')}")
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
     return fake_bin
 
 def run_cli(args, env=None):

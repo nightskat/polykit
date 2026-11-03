@@ -102,7 +102,7 @@ def test_installed_opencode_is_auth_unverified_not_not_authed_or_ready():
         which=lambda b: "/fake/home/.opencode/bin/opencode",
         runner=runner,
     )
-    assert p.path == "/fake/home/.opencode/bin/opencode"
+    assert p.path == str(Path("/fake/home/.opencode/bin/opencode").resolve())
     assert p.version == "opencode 1.0.0"
     # Không có verified auth cmd -> authed=None (auth_unverified), KHÔNG PHẢI False (not_authed) hay True (ready)
     assert p.authed is None
@@ -122,7 +122,7 @@ def test_installed_hermes_is_auth_unverified_not_not_authed_or_ready():
         which=lambda b: "/usr/local/bin/hermes",
         runner=runner,
     )
-    assert p.path == "/usr/local/bin/hermes"
+    assert p.path == str(Path("/usr/local/bin/hermes").resolve())
     assert p.version == "hermes 0.5.0"
     assert p.authed is None
     assert classify(p) == VendorState.AUTH_UNVERIFIED

@@ -86,3 +86,16 @@ def fake_vendors(monkeypatch):
     for mod in modules_to_patch:
         if hasattr(mod, "load_vendor_config") and hasattr(mod.load_vendor_config, "cache_clear"):
             mod.load_vendor_config.cache_clear()
+
+
+# CI 3-OS (2026-11-03): một số test mock `runner` nhưng nhánh code vẫn gọi
+# `shutil.which("agy"/"gemini"/...)` hoặc đọc OPENROUTER_API_KEY THẬT trước khi
+# tới runner → chỉ xanh trên máy dev có cài vendor. Fixture này làm chúng hermetic:
+# mọi binary "có mặt" ở path giả, key giả. Runner vẫn là mock → KHÔNG gọi vendor thật.
+@pytest.fixture
+def hermetic_vendors(monkeypatch):
+    import shutil as _shutil
+    monkeypatch.setattr(_shutil, "which",
+                        lambda b, *a, **k: str(Path(tempfile.gettempdir()) / "fake-bin" / b))
+    monkeypatch.setenv("OPENROUTER_API_KEY", "fake-ci-key")
+    yield

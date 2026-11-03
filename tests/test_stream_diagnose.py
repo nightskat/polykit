@@ -1,3 +1,4 @@
+import pytest
 """BUG-6: cờ --stream-diagnose cho dispatch — chạy vendor ở chế độ stream để khi
 timeout còn đọc được vendor đã đi tới đâu.
 
@@ -186,6 +187,9 @@ def test_codex_stream_thanh_cong_trich_chu_tro_ly():
     assert any("chẩn đoán" in w for w in r.warnings)
 
 
+@pytest.mark.usefixtures("hermetic_vendors")
+
+
 def test_gemini_stream_them_co_o_stream_json():
     calls = []
     r = run_vendor("gemini", "xin chao", model="gemini-2.5-pro", stream=True,
@@ -262,6 +266,9 @@ def test_format_json_thi_GIU_NGUYEN_jsonl_tho():
     out = _apply_stream_diagnose(r, "codex", stream=True, fmt="json")
     assert out.stdout == raw
     assert any("giữ nguyên JSONL thô" in w for w in out.warnings)
+
+
+@pytest.mark.usefixtures("hermetic_vendors")
 
 
 def test_lane1_agy_phai_noi_that_la_khong_stream():

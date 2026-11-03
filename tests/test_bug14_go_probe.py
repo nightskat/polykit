@@ -182,7 +182,7 @@ def test_opencode_recent_success_makes_doctor_ready_and_detect_ready(monkeypatch
         records=records,
         now=NOW,
     )
-    assert p.path == "/fake/home/.opencode/bin/opencode"
+    assert p.path == str(Path("/fake/home/.opencode/bin/opencode").resolve())  # detect lưu resolve() — trên Windows thành D:\...
     assert p.authed is True
     assert p.quota_capped is False
     assert classify(p) == VendorState.READY

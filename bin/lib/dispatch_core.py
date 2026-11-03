@@ -400,7 +400,8 @@ def build_grok_cmd(model: str, sandbox: str, workdir: str | None, fmt: str,
 
 
 def build_agy_cmd(model: str, prompt: str, stream: bool = False,
-                  timeout: int | None = None, source: str = "explicit") -> list[str]:
+                  timeout: int | None = None, source: str = "explicit",
+                  auto_approve: bool = False) -> list[str]:
     """Gọi THẲNG binary agy, không qua agy.sh — wrapper chỉ có 8 tier Gemini,
     trong khi agy còn phục vụ claude-*/gpt-oss-*.
 
@@ -420,6 +421,9 @@ def build_agy_cmd(model: str, prompt: str, stream: bool = False,
         cmd += ["--output-format", "stream-json"]
     if timeout:
         cmd += ["--print-timeout", f"{int(timeout)}s"]
+    if auto_approve:
+        # Chỉ khi caller opt-in --sandbox workspace-write (giao việc ghi file).
+        cmd += ["--dangerously-skip-permissions"]
     cmd += ["--model", selector.model, "-p", prompt]
     return cmd
 

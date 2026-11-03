@@ -1,0 +1,4 @@
+# Chỉ cho test/CI (runtime vẫn stdlib-only, xem requirements.txt)
+pytest>=8
+pillow    # bench/vision/generate.py (test_vision_bench_*)
+openpyxl  # validate.py (test_validate)

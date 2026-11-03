@@ -117,3 +117,5 @@ Nghi ở **tầng harness/dispatch**, không ở dsh:
 - Có thể prompt dài (~40 dòng) bị cắt hoặc bị coi là rỗng → dsh không có việc gì làm.
 - Đối chứng đã có: cùng lúc đó `dsh --profile headless "<task>"` gọi trực tiếp vẫn chạy.
 👉 Cách kiểm: log lệnh thật mà `dispatch.py` dựng ra cho `dsh` (in `cmd` ra stderr), so với lệnh gọi tay chạy được.
+
+- [ ] doctor: ghi timestamp/cơ sở cho `ready` của agy/dsh (tách từ BUG-14, 03/11/2026)
