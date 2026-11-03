@@ -8,6 +8,7 @@ Hành vi `agy -p|--print <prompt>` điều khiển bằng chỉ thị trong prom
   CLAIM_ONLY     in "đã ghi xong" nhưng KHÔNG ghi gì (thành công giả)
   READ:<name>    in nội dung <name> trong cwd, hoặc "MISSING:<cwd>"
   FAIL           in lỗi ra stderr, exit 1
+  SILENT         chỉ in banner ra stderr, stdout RỖNG, exit 0 (QUAN SÁT-4)
 Mỗi lần được gọi, ghi argv + cwd vào $FAKE_AGY_LOG (nếu có).
 """
 from __future__ import annotations
@@ -45,6 +46,8 @@ for tok in prompt.split():
         out.append(p.read_text(encoding="utf-8").strip() if p.exists() else "MISSING:" + os.getcwd())
 if "CLAIM_ONLY" in prompt:
     out.append("đã ghi xong file theo yêu cầu")
+if "SILENT" in prompt:
+    sys.stderr.write("fake agy: banner, không có kết quả\n"); sys.exit(0)
 print("\n".join(out) or "OK")
 '''
 

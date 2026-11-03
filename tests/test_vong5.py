@@ -25,7 +25,7 @@ def fake_vendors(monkeypatch):
             "vendors": {
                 "fakevendor_no_flag": {
                     "binary": "true",
-                    "headless": "true",
+                    "headless": "echo OK",  # in ra kết quả: exit 0 + stdout rỗng giờ là lỗi (QUAN SÁT-4)
                     "model_flag": None,
                     "default_model": "fake-model",
                     "models": ["fake-model"],

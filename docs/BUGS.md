@@ -23,7 +23,7 @@
 | BUG-10 | ✅ ĐÃ SỬA | `populate.py` báo cáo sai 2 vendor (grok, agy) |
 | BUG-11 | ✅ ĐÃ SỬA | `pytest` bơm bản ghi rác vào `dispatch-log.jsonl` thật |
 | BUG-1 | ⚪️ ĐÓNG | Dòng `[polykit] served:` chỉ in khi model thật KHÁC model yêu cầu — không phải bug |
-| QUAN SÁT-4 | 🔴 MỞ | `agy` nuốt prompt đầu sau khi nghỉ lâu: dispatch hoàn tất nhưng không in JSON/finding |
+| QUAN SÁT-4 | ✅ ĐÃ SỬA 03/11 (phần wrapper) — fixture-verified, chưa live | exit 0 + stdout rỗng từng báo `ok` → giờ `error`/`empty_output`, exit 1, giữ stderr. Nguyên nhân sâu phía agy (prompt dài qua đối số) CHƯA rõ |
 | BUG-14 | ✅ Go ĐÃ SỬA; lịch sử Agy/DSH giữ nguyên | doctor opencode/hermes dùng chung evidence probe với dispatch (vòng 3) |
 | BUG-17 | ✅ ĐÃ SỬA | `--timeout` KHÔNG xuống tới `--print-timeout` của `agy` → agy tự cắt ở mặc định 5m0s, mất trắng lượt |
 | BUG-18 | ✅ ĐÃ SỬA | `grok` bị trần chung `--timeout 120` giết oan (39% lượt timeout) + log không ghi `latency_ms` |
@@ -87,7 +87,14 @@ không phải bằng chứng quota hoặc đăng nhập hết hạn.
 **Cần sửa**: dispatch phải đính kèm lỗi probe auth thực tế và phân biệt cache stale/session hết hạn
 với lỗi transport; doctor nên ghi rõ timestamp/cơ sở cho `ready`.
 
-### 🔴 QUAN SÁT-4 — `agy` nuốt prompt đầu sau khi nghỉ lâu, kết quả không nghiệm thu được
+### ✅ QUAN SÁT-4 — `agy` nuốt prompt đầu sau khi nghỉ lâu, kết quả không nghiệm thu được
+
+> **03/11/2026 — sửa phần wrapper (fixture-verified, CHƯA LIVE)**: tái hiện bằng agy giả
+> `SILENT` (banner ra stderr, stdout rỗng, exit 0) → trước sửa dispatch trả `status=ok`.
+> `_classify_completed` giờ trả `status=error`, `reason=empty_output`, `exit_code=0`, warnings
+> kèm stderr; CLI exit 1. Prompt bị vendor echo lại (không có gì khác) cũng tính là rỗng.
+> `--expect-artifact`: stdout im là hợp lệ → gỡ về ok rồi để kiểm artifact quyết định.
+> Test `tests/test_qs4_exit0_stdout_rong.py` (3/6 đỏ trước sửa). Nguyên nhân phía agy chưa đo lại.
 
 Ngày 20/08/2026, dispatch đầu tiên sau lần `doctor` bị sandbox chặn, từ lane PGBank. Prompt đã
 được `pg-redact check` pass trước khi gọi; không ghi PII vào bug này.

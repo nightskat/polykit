@@ -372,6 +372,18 @@ def _classify_completed(vendor: str, model: str, res, served_model: str | None =
     # PolyKit đọc chính chữ của mình rồi tưởng là lỗi của vendor.
     stderr = strip_echoed_prompt(res.stderr or "", prompt)
 
+    if res.returncode == 0 and not strip_echoed_prompt(stdout, prompt).strip():
+        # QUAN SÁT-4: exit 0 mà stdout rỗng (agy 20/08 chỉ in banner trap rồi
+        # thoát) KHÔNG phải "xong" — không có kết quả để nghiệm thu. Báo lỗi
+        # tường minh, giữ stderr làm bằng chứng. Nhánh --expect-artifact được
+        # dispatch.py gỡ lại thành ok rồi kiểm file (việc ghi file có thể im).
+        warnings = tail_lines(stderr) if stderr.strip() else []
+        warnings = ["[polykit] vendor thoát 0 nhưng stdout rỗng — không có kết quả để nghiệm thu."] + warnings
+        return DispatchResult(status="error", vendor=vendor, model=model,
+                              summary=f"{vendor} exited 0 with empty stdout (no result)",
+                              warnings=warnings, stdout=stdout, exit_code=0,
+                              reason="empty_output", served_model=None)
+
     if res.returncode == 0:
         # BUG-9(2): exit 0 KHÔNG có nghĩa là không có gì để nói. Vendor vẫn in
         # cảnh báo degraded / sắp hết quota / model thay thế ra stderr rồi thoát

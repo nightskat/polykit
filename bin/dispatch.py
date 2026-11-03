@@ -501,6 +501,12 @@ def _main():
         if w not in result.warnings:
             result.warnings.insert(0, w)
 
+    if args.expect_artifacts and result.reason == "empty_output":
+        # QUAN SÁT-4: việc ghi file được phép im lặng ở stdout — bằng chứng là
+        # artifact, kiểm ngay dưới. Không có artifact ⇒ vẫn error.
+        result.status = "ok"
+        result.reason = None
+        result.summary = f"{result.vendor} completed (stdout rỗng, kiểm artifact)"
     if args.expect_artifacts and result.status == "ok":
         from lib.artifacts import check_artifacts
         ok_lines, bad_lines = check_artifacts(args.expect_artifacts, args.workdir, _t0_wall,
