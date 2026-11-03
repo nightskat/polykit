@@ -24,7 +24,7 @@
 | BUG-11 | ✅ ĐÃ SỬA | `pytest` bơm bản ghi rác vào `dispatch-log.jsonl` thật |
 | BUG-1 | ⚪️ ĐÓNG | Dòng `[polykit] served:` chỉ in khi model thật KHÁC model yêu cầu — không phải bug |
 | QUAN SÁT-4 | ✅ ĐÃ SỬA 03/11 (phần wrapper) — fixture-verified, chưa live | exit 0 + stdout rỗng từng báo `ok` → giờ `error`/`empty_output`, exit 1, giữ stderr. Nguyên nhân sâu phía agy (prompt dài qua đối số) CHƯA rõ |
-| BUG-14 | ✅ Go ĐÃ SỬA; lịch sử Agy/DSH giữ nguyên | doctor opencode/hermes dùng chung evidence probe với dispatch (vòng 3) |
+| BUG-14 | ✅ ĐÃ SỬA (Go vòng 3; Agy/DSH đóng 03/11 theo test BUG-13/15) | doctor/dispatch mâu thuẫn auth. Phần còn lại "doctor ghi timestamp cho `ready` agy/dsh" chuyển BACKLOG (tính năng, không phải bug) |
 | BUG-17 | ✅ ĐÃ SỬA | `--timeout` KHÔNG xuống tới `--print-timeout` của `agy` → agy tự cắt ở mặc định 5m0s, mất trắng lượt |
 | BUG-18 | ✅ ĐÃ SỬA | `grok` bị trần chung `--timeout 120` giết oan (39% lượt timeout) + log không ghi `latency_ms` |
 | BUG-19 | ✅ ĐÃ SỬA 02/11 — fixture-verified, chưa live | `--result-json`: stdout từng có log/progress trước JSON (hermes 22/10; `--doctor` in stdout của verify_cmd). Sửa: khi `--result-json`, `sys.stdout`→stderr, chỉ `_emit_json` ghi stdout thật đúng 1 lần, kể cả crash. Test `tests/test_bug19_result_json_mot_json.py` (ok/lỗi/doctor/chặn sớm, agy giả). Chưa chạy lại với hermes thật |
@@ -71,7 +71,13 @@ PR#2 (CI) thấy: `_convert_pdf_to_images` gọi `shutil.which("pdftoppm")` đ�
 Sửa: chuyển kiểm binary xuống sau gate. `test_vision.py::test_missing_binary_blocked` bỏ `output_dir`
 (giờ bị gate chặn trước — đúng ý sửa). Test mới `tests/test_vision_gate_truoc_pdftoppm.py`.
 
-### BUG-14 — `doctor` và `dispatch` mâu thuẫn trạng thái auth
+### ✅ BUG-14 — `doctor` và `dispatch` mâu thuẫn trạng thái auth
+
+> **Đóng 03/11/2026 (fixture-verified, CHƯA LIVE agy/dsh)**: hai yêu cầu "Cần sửa" bên dưới đã
+> được BUG-13 (`vendors.py` giữ stderr probe) và BUG-15 (`auth_unverified` không còn skip;
+> skip mang `probe.error`) phủ. Bằng chứng: `tests/test_bug13_*`,
+> `tests/test_bug15_auth_probe_timeout_khong_mat_luot.py::test_thong_diep_skip_mang_theo_bang_chung_probe`
+> (pass 03/11). Timestamp cho `ready` → BACKLOG.
 
 Cập nhật vòng 3 (22/10/2026), phạm vi opencode/hermes đã sửa: detect() và doctor dùng chung live dispatch evidence TTL 1 giờ, đúng vendor/lane/model; không suy auth từ catalog. Failure tường minh mới thắng success; future success không promote, failure lệch tối đa 5s fail-closed; metadata sai kiểu bị loại. Legacy thiếu provider chỉ nhận model Go đã biết. Không đọc/sửa credential. Test regression tests/test_bug14_go_probe.py; full acceptance xem docs/plans/tests-v3-acceptance.txt. Live doctor-v3-acceptance.txt có Go ready kèm timestamp bằng chứng. Không tuyên bố đã retest toàn bộ lịch sử Agy/DSH bên dưới.
 
