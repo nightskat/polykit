@@ -361,3 +361,27 @@ def test_build_agy_cmd_truyen_print_timeout():
 def test_build_agy_cmd_khong_timeout_thi_giu_nguyen():
     """Không truyền timeout → argv y như cũ, không đẻ cờ thừa."""
     assert "--print-timeout" not in build_agy_cmd("auto", "x")
+
+
+def test_gemini_lane3_voi_cd_co_canh_bao(monkeypatch, tmp_path):
+    """Codex review PR#1: rơi xuống lane 3 HTTP khi có --cd ⇒ phải cảnh báo --cd không áp dụng."""
+    import json
+    import urllib.request
+    from lib.dispatcher import _dispatch_gemini
+
+    monkeypatch.setenv("GEMINI_API_KEY", "fake-test-key")
+    body = json.dumps({"candidates": [{"content": {"parts": [{"text": "pong"}]}}]}).encode()
+
+    class FakeHTTPResponse:
+        def read(self):
+            return body
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda req, timeout=None: FakeHTTPResponse())
+    res = _dispatch_gemini("ping", "auto", 30, runner=lambda cmd, **kw: _Res(1, ""), env={},
+                           workdir=str(tmp_path))
+    assert res.status == "ok"
+    assert any("--cd" in w and "lane 3" in w for w in res.warnings)

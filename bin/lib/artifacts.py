@@ -7,6 +7,7 @@ lượt này (mtime >= lúc bắt đầu) — file cũ còn sót không được
 """
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 # Sai số mtime giữa các filesystem (FAT/SMB làm tròn 2s).
@@ -20,24 +21,33 @@ def resolve_artifact(path: str, base: str | None) -> Path:
     return p.resolve()
 
 
-def snapshot_artifacts(paths: list[str], base: str | None) -> dict[str, int | None]:
-    """Chụp mtime_ns TRƯỚC lượt chạy: file có sẵn mà mtime không đổi = cũ."""
-    snap: dict[str, int | None] = {}
+def _digest(p: Path) -> str:
+    h = hashlib.sha256()
+    with p.open("rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def snapshot_artifacts(paths: list[str], base: str | None) -> dict[str, str | None]:
+    """Chụp sha256 nội dung TRƯỚC lượt chạy: file có sẵn mà nội dung không đổi = cũ
+    (so mtime thôi thì file cũ bị `touch` vẫn lọt)."""
+    snap: dict[str, str | None] = {}
     for raw in paths:
         p = resolve_artifact(raw, base)
         try:
-            snap[str(p)] = p.stat().st_mtime_ns
+            snap[str(p)] = _digest(p) if p.is_file() else None
         except OSError:
             snap[str(p)] = None
     return snap
 
 
 def check_artifacts(paths: list[str], base: str | None, since: float,
-                    before: dict[str, int | None] | None = None) -> tuple[list[str], list[str]]:
+                    before: dict[str, str | None] | None = None) -> tuple[list[str], list[str]]:
     """Trả (ok_lines, problem_lines). problem rỗng ⇒ mọi artifact đạt.
 
-    Có `before` (snapshot trước lượt chạy) ⇒ so mtime_ns chính xác: file có sẵn
-    mà mtime không đổi = stale, bất kể slack filesystem. Không có ⇒ fallback
+    Có `before` (snapshot trước lượt chạy) ⇒ so sha256 nội dung: file có sẵn
+    mà nội dung không đổi (kể cả bị touch) = stale, bất kể slack filesystem. Không có ⇒ fallback
     so với `since` kèm slack."""
     ok: list[str] = []
     bad: list[str] = []
@@ -52,7 +62,7 @@ def check_artifacts(paths: list[str], base: str | None, since: float,
         st = p.stat()
         if before is not None and str(p) in before:
             prev = before[str(p)]
-            stale = prev is not None and st.st_mtime_ns == prev
+            stale = prev is not None and _digest(p) == prev
         else:
             stale = st.st_mtime + _MTIME_SLACK_S < since
         if stale:

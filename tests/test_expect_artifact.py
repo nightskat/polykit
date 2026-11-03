@@ -92,3 +92,17 @@ def test_file_co_san_mtime_khong_doi_la_stale_du_trong_slack(tmp_path):
     f.write_text("mới")
     ok, bad = check_artifacts(["out.txt"], str(tmp_path), since, before=before)
     assert bad == [] and "artifact ok" in ok[0]
+
+
+def test_file_cu_bi_touch_noi_dung_khong_doi_van_stale(tmp_path):
+    """Codex review PR#1: file cũ bị touch (mtime đổi) nhưng nội dung y nguyên ⇒ stale."""
+    import os
+    import time as _t
+    from lib.artifacts import check_artifacts, snapshot_artifacts
+    f = tmp_path / "out.txt"
+    f.write_text("cũ")
+    since = _t.time()
+    before = snapshot_artifacts(["out.txt"], str(tmp_path))
+    os.utime(f, ns=(f.stat().st_atime_ns, f.stat().st_mtime_ns + 5_000_000_000))
+    ok, bad = check_artifacts(["out.txt"], str(tmp_path), since, before=before)
+    assert ok == [] and "artifact_stale" in bad[0]
