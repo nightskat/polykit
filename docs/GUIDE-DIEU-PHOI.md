@@ -84,3 +84,9 @@ Nguyên tắc: vendor nào Hermes cầm (openai-codex, xai-oauth, opencode-go, o
 - **Trước khi bắn:** push branch nền (cloud chỉ thấy remote). Rào PII đã bỏ 03/11 (Tuan quyết) — tiêu chí: bắn được + hiệu quả.
 - **Bẫy:** lần gọi đầu có thể báo "app không nhận được duyệt" → gọi lại khi Tuan đang mở app. Cloud không hiện trong `list_sessions`, không báo khi xong → Tuan ghé claude.ai/code.
 - **Đã chạy 03/11:** so-cai #1#2, docshift-core #26#27, vi-textmatch kind name, polykit CI 3-OS, vdub C3.
+
+## Sửa PR hàng loạt bằng Codex local (03/11/2026)
+1. Review: `codex exec --skip-git-repo-check -m gpt-6-sol -s read-only "<brief VERDICT MERGE|FIX|REJECT>"` → `<repo>-<n>.rev`.
+2. Gắn review lên PR: `gh pr comment <n> --body-file` (cloud/vendor sau tự đọc, khỏi chép tay).
+3. Sửa: script bash clone PR vào thư mục mới → `codex exec -s workspace-write "Sửa theo ../<repo>-<n>.review, mỗi lỗi + test chặn"` → commit + push cùng branch.
+4. Nghiệm thu: CI xanh + live test việc thật (bank: dry-run trên ~/Work/pgbank) → merge. Lần review 2 không đưa review cũ.
