@@ -53,7 +53,8 @@ print("\n".join(out) or "OK")
 
 
 def install_python_shim(bindir: Path, name: str, source: str) -> Path:
-    """Cài vendor giả viết bằng Python, chạy được trên MỌI OS.
+    """Cài vendor giả viết bằng Python, chạy được trên MỌI OS. Trả đường dẫn
+    GỌI ĐƯỢC (Windows: file `.cmd`).
 
     POSIX: file `name` có shebang + bit thực thi. Windows: shebang vô nghĩa và
     shutil.which cần PATHEXT ⇒ thêm `name.cmd` gọi đúng `sys.executable`.
@@ -62,8 +63,9 @@ def install_python_shim(bindir: Path, name: str, source: str) -> Path:
     script.write_text(source, encoding="utf-8")
     script.chmod(script.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     if sys.platform == "win32":
-        (bindir / f"{name}.cmd").write_text(
-            f'@"{sys.executable}" "%~dp0{name}.py" %*\r\n', encoding="utf-8")
+        launcher = bindir / f"{name}.cmd"
+        launcher.write_text(f'@"{sys.executable}" "%~dp0{name}.py" %*\r\n', encoding="utf-8")
+        return launcher
     return script
 
 

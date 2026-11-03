@@ -99,10 +99,10 @@ def test_khong_opt_in_thi_khong_goi_checker(monkeypatch):
 
 
 def _fake_checker(tmp_path, rc):
-    p = tmp_path / f"checker{rc}"
-    p.write_text(f"#!{sys.executable}\nimport sys; sys.exit({rc})\n")
-    p.chmod(p.stat().st_mode | stat.S_IXUSR)
-    return str(p)
+    # Python + shim .cmd trên Windows (shebang không chạy được ở đó).
+    from fake_cli import install_python_shim
+    d = tmp_path / f"checkerbin{rc}"; d.mkdir()
+    return str(install_python_shim(d, "checker", f"#!{sys.executable}\nimport sys; sys.exit({rc})\n"))
 
 
 def test_cli_checker_gia_chan_agy_khong_bi_goi(tmp_path):
