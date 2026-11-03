@@ -3,18 +3,23 @@
 ## 2026-11-03 (chiều) — Sửa bug còn mở trên nền PR #1 + #2
 
 **Đã làm**
-- Gộp `ci/three-os` (PR #2) + `claude/vigilant-johnson-wb7bbe` (PR #1) vào branch từ main; không xung đột; 1081 pass.
+- Gộp `ci/three-os` (PR #2) + `claude/vigilant-johnson-wb7bbe` (PR #1) vào branch từ main; không xung đột; 1081 pass ngay sau merge (local Linux).
 - QUAN SÁT-4: exit 0 + stdout rỗng → `error`/`empty_output` (trước: `ok`). `--expect-artifact` gỡ về ok để artifact quyết định.
 - BUG-20: gate output_dir/symlink PDF chạy TRƯỚC kiểm `pdftoppm`.
 - BUG-14 (Agy/DSH): đóng theo test BUG-13/15 có sẵn; timestamp `ready` → BACKLOG.
 - `tests/fake_cli.install_python_shim`: vendor giả Python + `.cmd` trên Windows; bỏ skip win32 của `test_vong6`.
+- BUG-21 (lộ ra khi CI Windows chạy test PR #1): lane argv không tìm `.cmd` (PATHEXT) + `--doctor` chạy `shell=True` với nháy POSIX. Sửa `resolve_argv0` + `shlex.split`.
+- Smoke máy sạch: thêm `USERPROFILE`/`SystemRoot` trên Windows; CI in test đỏ (`-rfE`).
+- Review advisor: exit 0 + stdout rỗng + stderr quota → `quota_capped` (không phải `empty_output`).
+- CI Windows qua các vòng: 25 đỏ → 6 đỏ → xanh. Run #13 (`213aca9`): ubuntu/macos/windows đều success; windows 1094 pass/2 skip (đọc dòng tổng trong log). Local Linux HEAD: 1096 pass/1 skip.
 
 **Bài học**
 - Banner `traps for agy` là của PolyKit, ghi ra STDERR (`bin/dispatch.py:410`) — "stdout chỉ có banner" 20/08 thực chất là stdout rỗng; check rỗng bắt đúng ca đó.
 - PR #1 merge sau PR #2 nên test subprocess của nó (agy giả shebang) chưa từng chạy trên Windows.
 
 **Phát hiện**
-- Nhánh adapter generic dựng lệnh shell bằng `shlex.quote` (`bin/lib/dispatcher.py` ~1120) — cú pháp POSIX, có thể sai với cmd.exe. CHƯA KIỂM bằng test Windows.
+- Nhánh adapter generic (vendor tự khai trong vendors.json) vẫn dựng lệnh shell bằng `shlex.quote` (`bin/lib/dispatcher.py` ~1140) — nháy POSIX, có thể sai với cmd.exe. CHƯA KIỂM bằng test Windows.
+- Gọi `.cmd` qua argv vẫn đi qua cmd.exe ⇒ prompt có `&|%` có thể bị diễn giải. CHƯA KIỂM.
 - BUG-6 (grok) và QUAN SÁT-3 (text PII) vẫn MỞ: cần vendor/pg-redact thật, không sửa bằng fixture được.
 
 **Lệnh chạy lại**
