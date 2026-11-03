@@ -52,15 +52,32 @@ print("\n".join(out) or "OK")
 '''
 
 
+def install_python_shim(bindir: Path, name: str, source: str) -> Path:
+    """Cài vendor giả viết bằng Python, chạy được trên MỌI OS.
+
+    POSIX: file `name` có shebang + bit thực thi. Windows: shebang vô nghĩa và
+    shutil.which cần PATHEXT ⇒ thêm `name.cmd` gọi đúng `sys.executable`.
+    """
+    script = bindir / (name + ".py" if sys.platform == "win32" else name)
+    script.write_text(source, encoding="utf-8")
+    script.chmod(script.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    if sys.platform == "win32":
+        (bindir / f"{name}.cmd").write_text(
+            f'@"{sys.executable}" "%~dp0{name}.py" %*\r\n', encoding="utf-8")
+    return script
+
+
 def make_fake_agy(tmp_path: Path) -> dict:
     bindir = tmp_path / "fakebin"
     bindir.mkdir(exist_ok=True)
-    exe = bindir / "agy"
-    exe.write_text(_SCRIPT.format(py=sys.executable), encoding="utf-8")
-    exe.chmod(exe.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    install_python_shim(bindir, "agy", _SCRIPT.format(py=sys.executable))
     env = dict(os.environ)
     # Chỉ bin giả + coreutils cơ bản (sh cho shell=True) — không vendor thật nào.
-    env["PATH"] = os.pathsep.join([str(bindir), "/usr/bin", "/bin"])
+    if sys.platform == "win32":
+        sysroot = os.environ.get("SystemRoot", r"C:\\Windows")
+        env["PATH"] = os.pathsep.join([str(bindir), os.path.join(sysroot, "System32"), sysroot])
+    else:
+        env["PATH"] = os.pathsep.join([str(bindir), "/usr/bin", "/bin"])
     env["FAKE_AGY_LOG"] = str(tmp_path / "agy-calls.jsonl")
     env.pop("XCLI_DISPATCH_DEPTH", None)
     return env
