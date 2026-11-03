@@ -889,10 +889,7 @@ class TestDeepSeekPdfConversion:
         pdf = create_sample_pdf(workspace / "sample.pdf")
         with patch("shutil.which", return_value=None):
             with pytest.raises(VisionBlockedError, match="pdftoppm binary not found"):
-                _convert_pdf_to_images(
-                    pdf_path=pdf,
-                    output_dir=workspace / "pages",
-                )
+                _convert_pdf_to_images(pdf_path=pdf)
 
     def test_subprocess_argv_timeout_and_full_res_flags(self, workspace: Path):
         """Kiểm tra lệnh gọi subprocess argv list (không shell=True), timeout, full res.

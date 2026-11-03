@@ -890,12 +890,6 @@ def _convert_pdf_to_images(
     ngay; module KHÔNG tự xoá (dispatch cần path còn hiệu lực). Caller/hệ điều
     hành dọn TMPDIR sau khi gửi request xong.
     """
-    binary = pdftoppm_bin or shutil.which("pdftoppm")
-    if not binary:
-        raise VisionBlockedError(
-            "pdftoppm binary not found. PDF to image conversion blocked."
-        )
-
     if output_dir is not None:
         raise VisionBlockedError(
             "Caller-supplied output_dir is rejected fail-closed; PDF pages are written "
@@ -907,6 +901,14 @@ def _convert_pdf_to_images(
         raise VisionSecurityError("Symlinks are blocked for PDF conversion source")
     if not src_pdf.exists() or not src_pdf.is_file():
         raise VisionFormatError(f"Source PDF not found: {src_pdf.name}")
+
+    # Gate an ninh (output_dir, symlink) chạy TRƯỚC — máy thiếu pdftoppm không
+    # được che mất vi phạm thật (phát hiện CI 3 OS, sửa 03/11).
+    binary = pdftoppm_bin or shutil.which("pdftoppm")
+    if not binary:
+        raise VisionBlockedError(
+            "pdftoppm binary not found. PDF to image conversion blocked."
+        )
 
     out_dir = _new_private_conversion_dir()
     page_prefix = _sanitize_page_prefix(prefix)

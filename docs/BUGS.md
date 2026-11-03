@@ -28,6 +28,7 @@
 | BUG-17 | ✅ ĐÃ SỬA | `--timeout` KHÔNG xuống tới `--print-timeout` của `agy` → agy tự cắt ở mặc định 5m0s, mất trắng lượt |
 | BUG-18 | ✅ ĐÃ SỬA | `grok` bị trần chung `--timeout 120` giết oan (39% lượt timeout) + log không ghi `latency_ms` |
 | BUG-19 | ✅ ĐÃ SỬA 02/11 — fixture-verified, chưa live | `--result-json`: stdout từng có log/progress trước JSON (hermes 22/10; `--doctor` in stdout của verify_cmd). Sửa: khi `--result-json`, `sys.stdout`→stderr, chỉ `_emit_json` ghi stdout thật đúng 1 lần, kể cả crash. Test `tests/test_bug19_result_json_mot_json.py` (ok/lỗi/doctor/chặn sớm, agy giả). Chưa chạy lại với hermes thật |
+| BUG-20 | ✅ ĐÃ SỬA 03/11 — fixture-verified | `vision._convert_pdf_to_images` kiểm thiếu `pdftoppm` TRƯỚC gate output_dir/symlink → máy thiếu binary thì gate an ninh không chạy (vẫn fail-closed). Giờ gate trước. Test `tests/test_vision_gate_truoc_pdftoppm.py` (2/3 đỏ trước sửa) |
 
 ---
 
@@ -61,6 +62,14 @@
 - Prompt bench vòng đầu có nhãn hàng ở name của ô số, gián tiếp gợi đáp án ô text cùng hàng. Không phải baseline OCR thuần không gợi ý. Thêm prompt hygiene chỉ tọa độ row/column, chạy lại dữ liệu thật synthetic; giữ vòng cũ làm evidence, không đổi số hồi tố thành pure OCR.
 
 ## 🔴 CÒN MỞ
+
+### ✅ BUG-20 — gate an ninh PDF bị che bởi kiểm `pdftoppm` (phát hiện CI 3 OS, sửa 03/11/2026)
+
+PR#2 (CI) thấy: `_convert_pdf_to_images` gọi `shutil.which("pdftoppm")` đầu tiên; thiếu binary
+⇒ raise "pdftoppm binary not found" trước khi kiểm `output_dir` caller và symlink nguồn. Không rò
+(vẫn chặn) nhưng lỗi trả về sai, gate không được thi hành trên máy không có poppler (CI Windows/mac).
+Sửa: chuyển kiểm binary xuống sau gate. `test_vision.py::test_missing_binary_blocked` bỏ `output_dir`
+(giờ bị gate chặn trước — đúng ý sửa). Test mới `tests/test_vision_gate_truoc_pdftoppm.py`.
 
 ### BUG-14 — `doctor` và `dispatch` mâu thuẫn trạng thái auth
 
