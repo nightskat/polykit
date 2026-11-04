@@ -210,3 +210,7 @@ GLM-5.3-flash high qua Go 3/3 · DeepSeek v4.1 flash low qua Go 2/3 · Grok-4.7 
 
 ## Chính sách PII (chốt 04/11/2026)
 Chỉ lane **dùng dữ liệu để train** mới phải pg-redact và bị gate: `*-contributor`, `:free`/`-free`, Muse Spark contributor. Codex/Grok sub, DeepSeek API/Go, GLM Go, agy, Claude → mở, gửi thẳng. Code gate theo cờ train: PR #4.
+
+### Bench lane Hermes sau PR #4 (04/11, 1 lượt, 5/5 task, 0 err)
+Grok-4.7 low **5/5** (79s, chậm) · Codex sol medium qua Hermes 4/5 · GLM-5.3-flash high qua Go 3/5 (sai ngày đáo hạn như 30/10) · DeepSeek v4.1 flash low qua Go 3/5 (API trực tiếp 10/10 → 1 lượt, cần thêm lượt mới kết luận Go kém hơn).
+→ Giữ: GLM chỉ classify/tag, cấm ngày/tiền. Grok-4.7 = QA tốt nhưng chậm, đừng để trên đường găng.
