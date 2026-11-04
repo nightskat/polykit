@@ -143,7 +143,15 @@ Lệnh plugin `/polykit:bench` đăng ký như doctor/dispatch; chạy trực ti
 python3 bin/bench_main.py --runs 3 --output-dir ./bench-results or:vendor/model:free:na codex:gpt-6.1-sol:low
 # Trong Claude Code:
 # /polykit:bench --runs 3 hermes:glm-5.3-flash:low
+python3 bin/bench_main.py --runs 2 hermes:opencode-go/glm-5.3-flash:high hermes:xai-oauth/grok-4.7:low
 ```
+
+Hermes: `hermes:<provider>/<model>:<effort>` → `hermes -z "<prompt>" --provider <p>
+-m <model> --reasoning <effort> < /dev/null` (`na` bỏ `--reasoning`). Provider
+`opencode-go` (hoặc model không có `/`) đi qua adapter dispatch + policy Go.
+Provider khác (vd `xai-oauth` = Grok sub) ngoài allowlist adapter: bench tự dựng
+argv, chỉ cho 5 prompt fixture cố định, vẫn qua cổng data Go. Stdout/stderr có
+`Gateway connection failed` → `err=gateway` (kể cả exit 0), không tính sai.
 
 Config là `vendor:model:effort`: tách vendor ở dấu `:` đầu, effort ở dấu `:`
 cuối, nên model chứa `:free` vẫn giữ nguyên. Vendor: `codex`, `agy`, `deepseek`,

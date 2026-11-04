@@ -220,3 +220,47 @@ def test_deepseek_current_model_payload(monkeypatch, effort):
 
 def test_deepseek_omitted_model_uses_api_default():
     assert bench.parse_config('deepseek::high') == ('deepseek', 'deepseek-flash', 'high')
+
+
+def test_hermes_config_provider_form():
+    assert bench.parse_config('hermes:xai-oauth/grok-4.7:low') == ('hermes', 'xai-oauth/grok-4.7', 'low')
+    assert bench.parse_config('hermes:opencode-go/glm-5.3-flash:high')[1] == 'opencode-go/glm-5.3-flash'
+    for bad in ('hermes:/grok:low', 'hermes:xai-oauth/:low'):
+        with pytest.raises(ValueError):
+            bench.parse_config(bad)
+
+
+def test_hermes_go_provider_uses_adapter(monkeypatch):
+    builder = Mock(return_value=['hermes-adapter'])
+    monkeypatch.setattr(bench, 'build_hermes_cmd', builder)
+    assert bench._hermes_cmd('opencode-go/glm-5.3-flash', 'high', 'p') == ['hermes-adapter']
+    assert builder.call_args.kwargs['model'] == 'opencode-go/glm-5.3-flash'
+
+
+def test_hermes_other_provider_argv(monkeypatch):
+    monkeypatch.setattr(bench, 'get_hermes_bin', lambda: 'hermes')
+    builder = Mock(side_effect=AssertionError('adapter not for xai'))
+    monkeypatch.setattr(bench, 'build_hermes_cmd', builder)
+    runner = Mock(return_value=subprocess.CompletedProcess([], 0, '{"lines":[3,9]}', ''))
+    monkeypatch.setattr(bench.subprocess, 'run', runner)
+    row = bench.job(('hermes', 'xai-oauth/grok-4.7', 'low'), 'code', 0)
+    assert row['ok'] is True and row['err'] is None
+    assert runner.call_args.args[0] == ['hermes', '-z', bench.TASKS['code'], '--provider',
+                                        'xai-oauth', '-m', 'grok-4.7', '--reasoning', 'low']
+    assert runner.call_args.kwargs['stdin'] is subprocess.DEVNULL
+
+
+def test_hermes_other_provider_rejects_non_fixture_prompt(monkeypatch):
+    with pytest.raises(bench.CallError, match='non_fixture_prompt'):
+        bench._hermes_cmd('xai-oauth/grok-4.7', 'low', 'khach hang that')
+
+
+@pytest.mark.parametrize('code,out,err', [(0, '{"lines":[3,9]}', 'Gateway connection failed'),
+                                          (1, 'Error: Gateway connection failed: x', '')])
+def test_hermes_gateway_failure_is_err(monkeypatch, code, out, err):
+    monkeypatch.setattr(bench, 'get_hermes_bin', lambda: 'hermes')
+    monkeypatch.setattr(bench.subprocess, 'run', Mock(return_value=
+                        subprocess.CompletedProcess([], code, out, err)))
+    row = bench.job(('hermes', 'xai-oauth/grok-4.7', 'low'), 'code', 0)
+    assert row['ok'] is None and row['err'] == 'gateway'
+    assert bench.summarize([row])[0]['n'] == 0

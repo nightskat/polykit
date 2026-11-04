@@ -14,7 +14,9 @@ from concurrent.futures import ThreadPoolExecutor
 from urllib import request
 from urllib.error import HTTPError, URLError
 
-from lib.dispatch_core import build_hermes_cmd, DispatchError
+from lib.dispatch_core import (build_hermes_cmd, DispatchError, GO_PROVIDER,
+                               get_hermes_bin)
+from lib.go_data_gate import evaluate_go_data_gate, GoDataGateBlocked
 
 
 
@@ -51,6 +53,10 @@ def parse_config(value: str) -> tuple[str, str, str]:
         raise ValueError("config must be vendor:model:effort")
     if vendor not in VENDORS:
         raise ValueError(f"unsupported vendor: {vendor}")
+    if vendor == "hermes" and "/" in model:
+        provider, _, name = model.partition("/")
+        if not provider.strip() or not name.strip():
+            raise ValueError("hermes config must be hermes:provider/model:effort")
     return vendor, model, effort
 
 
@@ -119,6 +125,35 @@ class CallError(Exception):
     """Sanitized operational error safe to persist in benchmark output."""
 
 
+HERMES_GATEWAY_MARKER = 'gateway connection failed'
+
+
+def _hermes_cmd(model: str, effort: str, prompt: str) -> list[str]:
+    """argv: hermes -z <prompt> --provider <p> -m <model> --reasoning <effort>.
+
+    opencode-go (or bare model) goes through the dispatch adapter, keeping its
+    model policy. Other Hermes providers (e.g. xai-oauth) are outside that
+    adapter's Go allowlist; bench only builds them for its fixed synthetic
+    TASKS and still runs the Go data gate.
+    """
+    provider, slash, name = model.partition('/')
+    if not slash or provider == GO_PROVIDER:
+        return build_hermes_cmd(model=model, prompt=prompt, effort=effort,
+                                data_class='code-nopii')
+    if prompt not in TASKS.values():
+        raise CallError('adapter:non_fixture_prompt')
+    try:
+        evaluate_go_data_gate(data_class='code-nopii', prompt=prompt,
+                              attachments=None, synthetic_vision=False,
+                              vendor='hermes')
+    except GoDataGateBlocked as ex:
+        raise CallError(f'adapter:{ex.reason}') from None
+    cmd = [get_hermes_bin(), '-z', prompt, '--provider', provider, '-m', name]
+    if effort != 'na':
+        cmd += ['--reasoning', effort]
+    return cmd
+
+
 def call(vendor: str, model: str, effort: str, prompt: str) -> str:
     if vendor in {'deepseek', 'or'}:
         key_name, url = {
@@ -149,10 +184,7 @@ def call(vendor: str, model: str, effort: str, prompt: str) -> str:
         return text
 
     if vendor == 'hermes':
-        # Preserve the adapter's model policy and data gate. Bench prompts are
-        # fixed synthetic fixtures; a gate rejection remains an err.
-        cmd = build_hermes_cmd(model=model, prompt=prompt, effort=effort,
-                               data_class='code-nopii')
+        cmd = _hermes_cmd(model, effort, prompt)
         stdin = None
     elif vendor == 'codex':
         cmd = ['codex', 'exec', '-m', model, '-s', 'read-only',
@@ -180,6 +212,9 @@ def call(vendor: str, model: str, effort: str, prompt: str) -> str:
         if any(marker in diagnostic for marker in
                ('credits balance is too low', 'resource_exhausted')):
             raise CallError('quota')
+    if vendor == 'hermes' and HERMES_GATEWAY_MARKER in \
+            f'{result.stdout or ""}\n{result.stderr or ""}'.lower():
+        raise CallError('gateway')
     if result.returncode:
         raise CallError(f'exit:{result.returncode}')
     return result.stdout
