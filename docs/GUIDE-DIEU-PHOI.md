@@ -196,3 +196,6 @@ Bẫy đã vấp:
 
 ### Bench lane Hermes (04/11, 1 lượt, chỉ 3/5 task đo được)
 GLM-5.3-flash high qua Go 3/3 · DeepSeek v4.1 flash low qua Go 2/3 · Grok-4.7 low 2/2 (chậm 74s, 1 timeout) · Codex sol medium qua Hermes 2/3. Crosscheck + code bị PII gate chặn vì fixture có CCCD giả → PR #4 đang sửa (fixture `synthetic`). Chưa đủ để chốt GLM; giữ kết luận 30/10.
+
+## Chính sách PII (chốt 04/11/2026)
+Chỉ lane **dùng dữ liệu để train** mới phải pg-redact và bị gate: `*-contributor`, `:free`/`-free`, Muse Spark contributor. Codex/Grok sub, DeepSeek API/Go, GLM Go, agy, Claude → mở, gửi thẳng. Code gate theo cờ train: PR #4.
