@@ -59,7 +59,8 @@ Nguyên tắc: vendor nào Hermes cầm (openai-codex, xai-oauth, opencode-go, o
 
 - Default: codex `gpt-6.1-sol` low · agy `gemini-3.8-flash-high` (+hồ sơ `kho`=argon-high, `claude`=sonnet-5-5-medium) · opencode/hermes `deepseek-v4.1-flash` high (+`glm-5.3-flash` max chọn tay) · grok reviewer `grok-4.7`.
 - `*-contributor` (vendor train trên dữ liệu): **chặn cứng** mọi đường. `*-free`: chỉ chọn tường minh, không default/auto/failover.
-- opencode/hermes **không sandbox**: chỉ chạy khi `--data-class code-nopii`; đính kèm/vision thật/PII vẫn chặn. `data_class` là LỜI KHAI, không phải ranh giới bảo mật — agent vẫn đọc được file ngoài repo.
+- opencode/hermes **không sandbox**: chỉ chạy khi `--data-class code-nopii`; đính kèm/vision thật vẫn chặn.
+- **Rào PII (chính sách 04/11, Tuan quyết):** cổng PII/pg-redact (`pii_detected`) CHỈ chạy cho lane dùng dữ liệu để train — `TRAINS_ON_DATA` trong `bin/lib/model_policy.py`: slug khớp `*-contributor*`, `*:free`, `*-free`, `meta/muse-spark-*-contributor*`; thiếu model ⇒ coi là train (fail-closed). Lane khác (opencode-go glm/deepseek, openai-codex, xai-oauth, DeepSeek API, agy) bỏ gate. Cấm model `*-contributor` trên Go adapter vẫn giữ (chính sách tiền/train). `data_class` là LỜI KHAI, không phải ranh giới bảo mật — agent vẫn đọc được file ngoài repo.
 - Vision: tầng ĐỐI CHIẾU số cho trang vnocr hỏng, không thay vnocr, không nguồn quyết định. Mã kiểu `O0l1` vẫn đọc tay.
 - ZDR DeepSeek trên OpenCode Go gia hạn theo tháng, hết **31/10/2026** → kiểm lại trang `opencode.ai/go`.
 
@@ -147,11 +148,11 @@ python3 bin/bench_main.py --runs 2 hermes:opencode-go/glm-5.3-flash:high hermes:
 ```
 
 Hermes: `hermes:<provider>/<model>:<effort>` → `hermes -z "<prompt>" --provider <p>
--m <model> --reasoning <effort> < /dev/null` (`na` bỏ `--reasoning`). 5 prompt fixture
-của bench (sha256 ghim trong `FIXTURE_SHA256`) mang data-class `synthetic` → bỏ
-qua cổng PII (CCCD/biển số bịa); `opencode-go` vẫn qua model policy adapter.
-Prompt ngoài fixture: `opencode-go` qua adapter + cổng PII như dispatch thường,
-provider khác bị từ chối. Cổng PII và allowlist adapter KHÔNG đổi.
+-m <model> --reasoning <effort> < /dev/null` (`na` bỏ `--reasoning`). `opencode-go`
+(hoặc model không có `/`) đi qua adapter dispatch + model policy Go. Provider khác
+(`xai-oauth`, `openai-codex`, ...) bench dựng argv trực tiếp. Cổng PII chỉ chạy
+khi model thuộc `TRAINS_ON_DATA` (xem rào PII ở trên); fixture bench chạy trên
+mọi lane hermes không train.
 Timeout: `--timeout <giây>`; mặc định 300, hermes 600. Stdout/stderr có
 `Gateway connection failed` → `err=gateway` (kể cả exit 0), không tính sai.
 
@@ -176,7 +177,7 @@ Giây TB tính mọi lượt, kể cả lỗi; không có câu chấm được t
 Trả lời sai schema hoặc không có JSON là sai. Năm task cố định là thước đo nhỏ,
 không phải bảo chứng năng lực làm việc thật.
 
-**Bẫy:** data bench là bịa (tổng hợp); việc thật phải **pg-redact trước** khi
+**Bẫy:** data bench là bịa (tổng hợp); việc thật trên lane train phải **pg-redact trước** khi
 đưa ra vendor. Hermes tái dùng adapter và cổng policy/data hiện có, không bỏ
 qua cổng vì nhãn synthetic; config không được policy duyệt hoặc fixture bị
 checker chặn sẽ ghi `err`. Hermes vẫn là lane unsandboxed theo adapter.

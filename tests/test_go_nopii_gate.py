@@ -40,6 +40,14 @@ from lib.go_data_gate import (
 )
 from lib.states import VendorProbe
 
+@pytest.fixture(autouse=True)
+def _train_lane(monkeypatch):
+    """Cơ chế PII gate giờ chỉ chạy cho lane train (TRAINS_ON_DATA); Go adapter
+    chỉ duyệt profile paid nên ép lane train để giữ kiểm cơ chế checker."""
+    import lib.go_data_gate as gdg
+    monkeypatch.setattr(gdg, "_trains_on_data", lambda model: True)
+
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GO_VENDORS = ("opencode", "hermes")
 

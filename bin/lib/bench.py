@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import datetime as dt
-import hashlib
 import json
 # Credentials are read only from the process environment. Do not load dotenv,
 # vendor profiles, key files or the user's home directory here.
@@ -16,7 +15,8 @@ from urllib import request
 from urllib.error import HTTPError, URLError
 
 from lib.dispatch_core import (build_hermes_cmd, DispatchError, GO_PROVIDER,
-                               get_hermes_bin, _enforce_builder_policy)
+                               get_hermes_bin)
+from lib.go_data_gate import evaluate_go_data_gate, GoDataGateBlocked
 
 
 
@@ -133,43 +133,22 @@ class CallError(Exception):
 HERMES_GATEWAY_MARKER = 'gateway connection failed'
 
 
-# Pinned sha256 of the fixed synthetic TASKS. Editing a fixture without
-# updating its hash drops it back to the normal PII gate (fail-closed).
-FIXTURE_SHA256 = frozenset({
-    '1d9ea2f3d3d07aee400d41069d217c701514d4856b99ebbef9cc043dca62a2e8',
-    '92e3701e5575f15a78864c7ff5d616e7385184ad67c5dd976a08af407b7b55b0',
-    '158c01e99aa1de659a40ffea643a1e2847791743cd10a4d99d2aa78d98616281',
-    '7f3ff3a4d92d63b353dc1ae6a1ede65a907f0b12c8252a38f47cb8ca1d8edb91',
-    'e9820d8d8721743e47732e8f0d7ef9d8783dca320127def09e8fbdc7236abd95',
-})
-
-
-def data_class_for(prompt: str) -> str:
-    """'synthetic' only for a bench fixture whose hash is pinned."""
-    digest = hashlib.sha256(prompt.encode('utf-8')).hexdigest()
-    return 'synthetic' if digest in FIXTURE_SHA256 else 'code-nopii'
-
-
 def _hermes_cmd(model: str, effort: str, prompt: str) -> list[str]:
     """argv: hermes -z <prompt> --provider <p> -m <model> --reasoning <effort>.
 
-    Non-fixture prompts: opencode-go goes through the dispatch adapter (policy
-    + PII gate); other providers are refused. Pinned synthetic fixtures skip
-    the PII gate only here (their fake CCCD/plates trip it); opencode-go
-    still goes through the adapter's model policy. The gate itself and the
-    adapter allowlist are unchanged for normal dispatch.
+    opencode-go (or bare model) goes through the dispatch adapter and its
+    model policy. Other providers (xai-oauth, openai-codex, ...) build argv
+    directly; the PII gate runs only for lanes in TRAINS_ON_DATA.
     """
     provider, slash, name = model.partition('/')
-    is_go = not slash or provider == GO_PROVIDER
-    if data_class_for(prompt) != 'synthetic':
-        if not is_go:
-            raise CallError('adapter:non_fixture_prompt')
+    if not slash or provider == GO_PROVIDER:
         return build_hermes_cmd(model=model, prompt=prompt, effort=effort,
                                 data_class='code-nopii')
-    if is_go:
-        sel = _enforce_builder_policy(vendor='hermes', model=model,
-                                      effort=None if effort == 'na' else effort)
-        provider, name = sel.provider or GO_PROVIDER, sel.model
+    try:
+        evaluate_go_data_gate(data_class='code-nopii', prompt=prompt,
+                              vendor='hermes', model=model)
+    except GoDataGateBlocked as ex:
+        raise CallError(f'adapter:{ex.reason}') from None
     cmd = [get_hermes_bin(), '-z', prompt, '--provider', provider, '-m', name]
     if effort != 'na':
         cmd += ['--reasoning', effort]

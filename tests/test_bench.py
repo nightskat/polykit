@@ -251,34 +251,55 @@ def test_hermes_other_provider_argv(monkeypatch):
     assert runner.call_args.kwargs['stdin'] is subprocess.DEVNULL
 
 
-def test_fixture_hashes_pinned():
-    assert all(bench.data_class_for(t) == 'synthetic' for t in bench.TASKS.values())
-    assert bench.data_class_for(bench.TASKS['code'] + ' ') == 'code-nopii'
-
-
 @pytest.mark.parametrize('model', ['opencode-go/glm-5.3-flash', 'xai-oauth/grok-4.7',
                                    'openai-codex/gpt-6.1-sol'])
 @pytest.mark.parametrize('task', ['crosscheck', 'code'])
-def test_synthetic_fixture_not_pii_blocked(monkeypatch, model, task):
+def test_fixture_runs_on_non_train_hermes_lane(monkeypatch, model, task):
+    from lib import go_data_gate
+    monkeypatch.setattr(go_data_gate, '_which', lambda name: '/fake/pg-redact')
+    monkeypatch.setattr(go_data_gate, '_checker_runner', Mock(side_effect=AssertionError('no gate')))
     monkeypatch.setattr(bench, 'get_hermes_bin', lambda: 'hermes')
     cmd = bench._hermes_cmd(model, 'high', bench.TASKS[task])
     provider, _, name = model.partition('/')
-    assert cmd[:2] == ['hermes', '-z'] and cmd[3:7] == ['--provider', provider, '-m', name]
+    assert cmd[0].endswith('hermes') and cmd[1] == '-z'
+    assert cmd[3:7] == ['--provider', provider, '-m', name]
 
 
-def test_unknown_prompt_with_cccd_still_blocked(monkeypatch):
+def _fake_pii_checker(monkeypatch):
     from lib import go_data_gate
-    from lib.dispatch_core import DispatchError
-    # Fake pg-redact: flags the CCCD (exit 1); never reached for fixtures.
     monkeypatch.setattr(go_data_gate, '_which', lambda name: '/fake/pg-redact')
     monkeypatch.setattr(go_data_gate, '_checker_runner', lambda *a, **k:
                         subprocess.CompletedProcess([], 1, '', ''))
-    prompt = 'Kiem tra ho so khach Nguyen Van A, CCCD 031089004512, SDT 0912345678'
-    with pytest.raises(DispatchError) as ex:
-        bench._hermes_cmd('opencode-go/glm-5.3-flash', 'high', prompt)
-    assert ex.value.reason == 'pii_detected'
-    with pytest.raises(bench.CallError):
-        bench._hermes_cmd('xai-oauth/grok-4.7', 'high', prompt)
+
+
+CCCD_PROMPT = 'Kiem tra ho so khach Nguyen Van A, CCCD 031089004512, SDT 0912345678'
+
+
+def test_train_lane_with_cccd_blocked(monkeypatch):
+    _fake_pii_checker(monkeypatch)
+    with pytest.raises(bench.CallError) as ex:
+        bench._hermes_cmd('openrouter/meta/muse-spark-2-contributor', 'low', CCCD_PROMPT)
+    assert str(ex.value) == 'adapter:pii_detected'
+    from lib.go_data_gate import evaluate_go_data_gate, GoDataGateBlocked
+    for model in ('vendor/x:free', 'vendor/x-free', 'x-contributor'):
+        with pytest.raises(GoDataGateBlocked):
+            evaluate_go_data_gate(data_class='code-nopii', prompt=CCCD_PROMPT,
+                                  vendor='hermes', model=model)
+
+
+def test_non_train_lane_with_cccd_passes(monkeypatch):
+    _fake_pii_checker(monkeypatch)
+    monkeypatch.setattr(bench, 'get_hermes_bin', lambda: 'hermes')
+    for model in ('opencode-go/glm-5.3-flash', 'xai-oauth/grok-4.7', 'openai-codex/gpt-6.1-sol'):
+        assert bench._hermes_cmd(model, 'low', CCCD_PROMPT)[2] == CCCD_PROMPT
+
+
+def test_trains_on_data_patterns():
+    from lib.model_policy import trains_on_data
+    for m in ('a-contributor', 'vendor/x:free', 'x-free', 'meta/muse-spark-2-contributor', None, ''):
+        assert trains_on_data(m)
+    for m in ('glm-5.3-flash', 'deepseek-v4.1-flash', 'grok-4.7', 'gpt-6.1-sol', 'deepseek-flash'):
+        assert not trains_on_data(m)
 
 
 def test_hermes_default_timeout_600(monkeypatch):
@@ -291,11 +312,6 @@ def test_hermes_default_timeout_600(monkeypatch):
     assert runner.call_args.kwargs['timeout'] == 42
     bench.call('codex', 'x', 'low', 'p')
     assert runner.call_args.kwargs['timeout'] == 300
-
-
-def test_hermes_other_provider_rejects_non_fixture_prompt(monkeypatch):
-    with pytest.raises(bench.CallError, match='non_fixture_prompt'):
-        bench._hermes_cmd('xai-oauth/grok-4.7', 'low', 'khach hang that')
 
 
 @pytest.mark.parametrize('code,out,err', [(0, '{"lines":[3,9]}', 'Gateway connection failed'),

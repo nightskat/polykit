@@ -282,6 +282,21 @@ def validate_token(token: str, field_name: str = "Token") -> None:
         )
 
 
+# Lane dùng dữ liệu để train (chính sách 04/11): CHỈ các lane này chạy cổng
+# PII/redact. Khớp trên slug (không phân biệt hoa thường).
+TRAINS_ON_DATA: tuple[str, ...] = ("*-contributor*", "*:free", "*-free",
+                                   "meta/muse-spark-*-contributor*")
+
+
+def trains_on_data(name: str | None) -> bool:
+    """True nếu model khớp TRAINS_ON_DATA. Thiếu model ⇒ True (fail-closed)."""
+    if not name or not name.strip():
+        return True
+    from fnmatch import fnmatchcase
+    lower = name.strip().lower()
+    return any(fnmatchcase(lower, pat) for pat in TRAINS_ON_DATA)
+
+
 def is_contributor_model(name: str) -> bool:
     """Kiểm tra tên model/selector có chứa pattern contributor không."""
     if not name:
