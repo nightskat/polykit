@@ -106,3 +106,6 @@ bằng chứng thật (router chọn gì thì response nói đúng cái đó). a
 
 ## PII
 ❌ KHÔNG gửi PII thật. Khử định danh trước hoặc chuyển về Claude host. Xem `../CHIA-VIEC.md` §PII.
+
+## 04/11/2026
+- `gemini-3.8-flash-high` bench 15/15 (5 task bank × 3), ~54s, output JSON sạch. Argon hết credit (empty = 429). Quota nhiều nhất → ưu tiên giao trước, nghiệm thu bằng chạy lại.

@@ -53,3 +53,6 @@ hoặc chuyển việc về Claude host. Xem `../CHIA-VIEC.md` §PII.
 - 429/quota → failover sang Gemini lane review (xem `/polykit:failover`).
 - Model list đổi thường xuyên (0.14x đổi default liên tục) — đừng hardcode model trong script,
   để `auto` trừ khi có lý do ghim.
+
+## 04/11/2026
+- `gpt-6.1-sol` medium 10/10 = main khi Claude outage (low 9/10). luna 2/10 → cấm tính toán.

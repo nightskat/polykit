@@ -40,3 +40,6 @@ qua dispatch; cần Grok code thì chia task ≤50 dòng hoặc đổi lane.
 ## Sự cố thường gặp
 - 402 (hết credit) → doctor chuyển state `quota_capped`, dispatch degrade — không crash.
   Đó là hành vi thiết kế (milestone M2).
+
+## 04/11/2026
+- 4.6 low 10/10 qua OR; 4.7 low qua Hermes 5/5 nhưng 79s/call → QA, không worker bulk.

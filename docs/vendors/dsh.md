@@ -108,3 +108,6 @@ Dispatch thật qua `bin/dispatch.py dsh --timeout 300 --result-json`, việc c�
 - **Dấu vết phụ**: `solve.py` và `ketqua.txt` có thật trong thư mục gọi lệnh — chạy lại `solve.py`
   độc lập vẫn ra `76127`. Nghĩa là nó thật sự ghi file và chạy, không phải nhẩm ra con số.
 - Số dư trước/sau đều `$11.14` → chi phí dưới ngưỡng hiển thị 2 chữ số thập phân (< $0,01).
+
+## 04/11/2026
+- API slug mới `deepseek-flash` (effort low|high|max); low 10/10 4,8s = worker mặc định. Qua Hermes→Go `deepseek-v4.1-flash` low chỉ 10/15 → việc chính xác gọi API trực tiếp.

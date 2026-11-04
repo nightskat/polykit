@@ -74,3 +74,10 @@ python3.11 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 - CCC hôm nay ~9 session: merge vi-textmatch#1, youtube-meo#65 #66, docshift-core#26 #27, audit-translator#95; còn mở polykit#1 (draft), so-cai#1 + #2 (merge theo thứ tự).
 - Pilot Vertex AI Search: thua pg-hoi 20 điểm → giữ local; tài nguyên GCP đã xoá (bucket 404, engine/data store đã nhận lệnh xoá, chưa kiểm lại).
 - Chốt của Tuan: tài nguyên không dư — có ích thì PHẢI dùng; đo trước rồi quyết.
+
+## 2026-11-04 — Bench main×worker + PII chỉ lane train
+- Bench `bin/bench_main.py` (5 task bank chấm bằng code, raw `~/Claude/Build/tools/bench/`): Codex sol medium 10/10 = main khi Claude sập; DeepSeek API `deepseek-flash` low 10/10 = worker; Muse Spark contributor 10/10 (free, PHẢI redact); agy `gemini-3.8-flash-high` 15/15 (3 lượt, không bịa); Grok-4.7 qua Hermes 5/5 nhưng 79s; Hermes→Go DeepSeek low 10/15; GLM high 3/5 (1 lượt).
+- PR #4: PII gate + pg-redact CHỈ cho lane train (`*-contributor`, `:free`); test local-only (cần pg-redact, CI skip) phải chạy trên Mac — 1221 pass.
+- Lesson: Hermes gateway chết → `hermes gateway restart`, đừng bypass; cloud session fail → thêm `repository` rồi retry; CI xanh ≠ nghiệm thu khi test skip.
+- Finding: cùng model, qua lớp trung gian (Go) kém API trực tiếp → việc chính xác gọi API.
+- Quy trình: agy quota nhiều nhất → giao trước, nghiệm thu bằng chạy lại; nghi bịa agentic chỉ là nghi ngờ.
