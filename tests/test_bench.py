@@ -109,7 +109,8 @@ def test_cli_nonzero_is_error_even_with_answer(monkeypatch, vendor):
     monkeypatch.setattr(bench, 'build_hermes_cmd', lambda **kwargs: ['hermes', '-z', kwargs['prompt']])
     monkeypatch.setattr(bench.subprocess, 'run', Mock(return_value=
                         subprocess.CompletedProcess([], 2, '{"lines":[3,9]}', 'secret')))
-    row = bench.job((vendor, 'x', 'low'), 'code', 0)
+    model = 'glm-5.3-flash' if vendor == 'hermes' else 'x'
+    row = bench.job((vendor, model, 'low'), 'code', 0)
     assert row['ok'] is None and row['err'] == 'exit:2'
     assert 'secret' not in json.dumps(row)
 
@@ -248,6 +249,48 @@ def test_hermes_other_provider_argv(monkeypatch):
     assert runner.call_args.args[0] == ['hermes', '-z', bench.TASKS['code'], '--provider',
                                         'xai-oauth', '-m', 'grok-4.7', '--reasoning', 'low']
     assert runner.call_args.kwargs['stdin'] is subprocess.DEVNULL
+
+
+def test_fixture_hashes_pinned():
+    assert all(bench.data_class_for(t) == 'synthetic' for t in bench.TASKS.values())
+    assert bench.data_class_for(bench.TASKS['code'] + ' ') == 'code-nopii'
+
+
+@pytest.mark.parametrize('model', ['opencode-go/glm-5.3-flash', 'xai-oauth/grok-4.7',
+                                   'openai-codex/gpt-6.1-sol'])
+@pytest.mark.parametrize('task', ['crosscheck', 'code'])
+def test_synthetic_fixture_not_pii_blocked(monkeypatch, model, task):
+    monkeypatch.setattr(bench, 'get_hermes_bin', lambda: 'hermes')
+    cmd = bench._hermes_cmd(model, 'high', bench.TASKS[task])
+    provider, _, name = model.partition('/')
+    assert cmd[:2] == ['hermes', '-z'] and cmd[3:7] == ['--provider', provider, '-m', name]
+
+
+def test_unknown_prompt_with_cccd_still_blocked(monkeypatch):
+    from lib import go_data_gate
+    from lib.dispatch_core import DispatchError
+    # Fake pg-redact: flags the CCCD (exit 1); never reached for fixtures.
+    monkeypatch.setattr(go_data_gate, '_which', lambda name: '/fake/pg-redact')
+    monkeypatch.setattr(go_data_gate, '_checker_runner', lambda *a, **k:
+                        subprocess.CompletedProcess([], 1, '', ''))
+    prompt = 'Kiem tra ho so khach Nguyen Van A, CCCD 031089004512, SDT 0912345678'
+    with pytest.raises(DispatchError) as ex:
+        bench._hermes_cmd('opencode-go/glm-5.3-flash', 'high', prompt)
+    assert ex.value.reason == 'pii_detected'
+    with pytest.raises(bench.CallError):
+        bench._hermes_cmd('xai-oauth/grok-4.7', 'high', prompt)
+
+
+def test_hermes_default_timeout_600(monkeypatch):
+    monkeypatch.setattr(bench, 'get_hermes_bin', lambda: 'hermes')
+    runner = Mock(return_value=subprocess.CompletedProcess([], 0, 'a', ''))
+    monkeypatch.setattr(bench.subprocess, 'run', runner)
+    bench.call('hermes', 'xai-oauth/grok-4.7', 'low', bench.TASKS['code'])
+    assert runner.call_args.kwargs['timeout'] == 600
+    bench.call('hermes', 'xai-oauth/grok-4.7', 'low', bench.TASKS['code'], 42)
+    assert runner.call_args.kwargs['timeout'] == 42
+    bench.call('codex', 'x', 'low', 'p')
+    assert runner.call_args.kwargs['timeout'] == 300
 
 
 def test_hermes_other_provider_rejects_non_fixture_prompt(monkeypatch):

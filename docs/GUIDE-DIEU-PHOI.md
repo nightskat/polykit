@@ -147,10 +147,12 @@ python3 bin/bench_main.py --runs 2 hermes:opencode-go/glm-5.3-flash:high hermes:
 ```
 
 Hermes: `hermes:<provider>/<model>:<effort>` → `hermes -z "<prompt>" --provider <p>
--m <model> --reasoning <effort> < /dev/null` (`na` bỏ `--reasoning`). Provider
-`opencode-go` (hoặc model không có `/`) đi qua adapter dispatch + policy Go.
-Provider khác (vd `xai-oauth` = Grok sub) ngoài allowlist adapter: bench tự dựng
-argv, chỉ cho 5 prompt fixture cố định, vẫn qua cổng data Go. Stdout/stderr có
+-m <model> --reasoning <effort> < /dev/null` (`na` bỏ `--reasoning`). 5 prompt fixture
+của bench (sha256 ghim trong `FIXTURE_SHA256`) mang data-class `synthetic` → bỏ
+qua cổng PII (CCCD/biển số bịa); `opencode-go` vẫn qua model policy adapter.
+Prompt ngoài fixture: `opencode-go` qua adapter + cổng PII như dispatch thường,
+provider khác bị từ chối. Cổng PII và allowlist adapter KHÔNG đổi.
+Timeout: `--timeout <giây>`; mặc định 300, hermes 600. Stdout/stderr có
 `Gateway connection failed` → `err=gateway` (kể cả exit 0), không tính sai.
 
 Config là `vendor:model:effort`: tách vendor ở dấu `:` đầu, effort ở dấu `:`

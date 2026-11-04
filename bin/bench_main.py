@@ -23,6 +23,8 @@ def positive_int(value: str) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--runs', type=positive_int, default=1)
+    parser.add_argument('--timeout', type=positive_int, default=None,
+                        help='giay moi call (mac dinh 300, hermes 600)')
     parser.add_argument('--output-dir', type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument('configs', nargs='+', type=parse_config,
                         metavar='vendor:model:effort')
@@ -36,7 +38,7 @@ def main(argv: list[str] | None = None) -> int:
         with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8',
                                          prefix='bench-', suffix='.json',
                                          dir=output_dir, delete=False) as out:
-            results = run_bench(configs, args.runs)
+            results = run_bench(configs, args.runs, args.timeout)
             summary = summarize(results)
             json.dump(dict(schema_version=1,
                            created_at=datetime.now(timezone.utc).isoformat(),

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import json
 # Credentials are read only from the process environment. Do not load dotenv,
 # vendor profiles, key files or the user's home directory here.
@@ -15,8 +16,7 @@ from urllib import request
 from urllib.error import HTTPError, URLError
 
 from lib.dispatch_core import (build_hermes_cmd, DispatchError, GO_PROVIDER,
-                               get_hermes_bin)
-from lib.go_data_gate import evaluate_go_data_gate, GoDataGateBlocked
+                               get_hermes_bin, _enforce_builder_policy)
 
 
 
@@ -119,6 +119,11 @@ def check(task: str, answer: object) -> bool:
     raise ValueError(f"unknown task: {task}")
 
 TIMEOUT = 300
+HERMES_TIMEOUT = 600
+
+
+def timeout_for(vendor: str, timeout: int | None = None) -> int:
+    return timeout or (HERMES_TIMEOUT if vendor == 'hermes' else TIMEOUT)
 
 
 class CallError(Exception):
@@ -128,33 +133,52 @@ class CallError(Exception):
 HERMES_GATEWAY_MARKER = 'gateway connection failed'
 
 
+# Pinned sha256 of the fixed synthetic TASKS. Editing a fixture without
+# updating its hash drops it back to the normal PII gate (fail-closed).
+FIXTURE_SHA256 = frozenset({
+    '1d9ea2f3d3d07aee400d41069d217c701514d4856b99ebbef9cc043dca62a2e8',
+    '92e3701e5575f15a78864c7ff5d616e7385184ad67c5dd976a08af407b7b55b0',
+    '158c01e99aa1de659a40ffea643a1e2847791743cd10a4d99d2aa78d98616281',
+    '7f3ff3a4d92d63b353dc1ae6a1ede65a907f0b12c8252a38f47cb8ca1d8edb91',
+    'e9820d8d8721743e47732e8f0d7ef9d8783dca320127def09e8fbdc7236abd95',
+})
+
+
+def data_class_for(prompt: str) -> str:
+    """'synthetic' only for a bench fixture whose hash is pinned."""
+    digest = hashlib.sha256(prompt.encode('utf-8')).hexdigest()
+    return 'synthetic' if digest in FIXTURE_SHA256 else 'code-nopii'
+
+
 def _hermes_cmd(model: str, effort: str, prompt: str) -> list[str]:
     """argv: hermes -z <prompt> --provider <p> -m <model> --reasoning <effort>.
 
-    opencode-go (or bare model) goes through the dispatch adapter, keeping its
-    model policy. Other Hermes providers (e.g. xai-oauth) are outside that
-    adapter's Go allowlist; bench only builds them for its fixed synthetic
-    TASKS and still runs the Go data gate.
+    Non-fixture prompts: opencode-go goes through the dispatch adapter (policy
+    + PII gate); other providers are refused. Pinned synthetic fixtures skip
+    the PII gate only here (their fake CCCD/plates trip it); opencode-go
+    still goes through the adapter's model policy. The gate itself and the
+    adapter allowlist are unchanged for normal dispatch.
     """
     provider, slash, name = model.partition('/')
-    if not slash or provider == GO_PROVIDER:
+    is_go = not slash or provider == GO_PROVIDER
+    if data_class_for(prompt) != 'synthetic':
+        if not is_go:
+            raise CallError('adapter:non_fixture_prompt')
         return build_hermes_cmd(model=model, prompt=prompt, effort=effort,
                                 data_class='code-nopii')
-    if prompt not in TASKS.values():
-        raise CallError('adapter:non_fixture_prompt')
-    try:
-        evaluate_go_data_gate(data_class='code-nopii', prompt=prompt,
-                              attachments=None, synthetic_vision=False,
-                              vendor='hermes')
-    except GoDataGateBlocked as ex:
-        raise CallError(f'adapter:{ex.reason}') from None
+    if is_go:
+        sel = _enforce_builder_policy(vendor='hermes', model=model,
+                                      effort=None if effort == 'na' else effort)
+        provider, name = sel.provider or GO_PROVIDER, sel.model
     cmd = [get_hermes_bin(), '-z', prompt, '--provider', provider, '-m', name]
     if effort != 'na':
         cmd += ['--reasoning', effort]
     return cmd
 
 
-def call(vendor: str, model: str, effort: str, prompt: str) -> str:
+def call(vendor: str, model: str, effort: str, prompt: str,
+         timeout: int | None = None) -> str:
+    timeout = timeout_for(vendor, timeout)
     if vendor in {'deepseek', 'or'}:
         key_name, url = {
             'deepseek': ('DEEPSEEK_API_KEY', 'https://api.deepseek.com/chat/completions'),
@@ -173,7 +197,7 @@ def call(vendor: str, model: str, effort: str, prompt: str) -> str:
         req = request.Request(url, json.dumps(body).encode(), {
             'Content-Type': 'application/json', 'Authorization': f'Bearer {key}',
         })
-        with request.urlopen(req, timeout=TIMEOUT) as response:
+        with request.urlopen(req, timeout=timeout) as response:
             payload = json.load(response)
         try:
             text = payload['choices'][0]['message']['content']
@@ -201,7 +225,7 @@ def call(vendor: str, model: str, effort: str, prompt: str) -> str:
     # Disposable cwd prevents accidental project context from the benchmark
     # worktree. Hermes itself is unsandboxed, as documented by its adapter.
     with tempfile.TemporaryDirectory(prefix='polykit-bench-') as cwd:
-        kwargs = dict(capture_output=True, text=True, timeout=TIMEOUT, cwd=cwd)
+        kwargs = dict(capture_output=True, text=True, timeout=timeout, cwd=cwd)
         if stdin is None:
             kwargs['stdin'] = subprocess.DEVNULL
         else:
@@ -220,12 +244,14 @@ def call(vendor: str, model: str, effort: str, prompt: str) -> str:
     return result.stdout
 
 
-def job(config: tuple[str, str, str], task: str, run: int) -> dict:
+def job(config: tuple[str, str, str], task: str, run: int,
+        timeout: int | None = None) -> dict:
     vendor, model, effort = config
     started = time.perf_counter()
     text, ok, err = '', None, None
     try:
-        text = call(vendor, model, effort, TASKS[task])
+        text = (call(vendor, model, effort, TASKS[task], timeout) if timeout
+                else call(vendor, model, effort, TASKS[task]))
         ok = check(task, parse(text))
     except CallError as ex:
         err = str(ex)
@@ -245,10 +271,11 @@ def job(config: tuple[str, str, str], task: str, run: int) -> dict:
                 err=err, s=round(time.perf_counter() - started, 4), text=text[-4000:])
 
 
-def run_bench(configs: list[tuple[str, str, str]], runs: int) -> list[dict]:
+def run_bench(configs: list[tuple[str, str, str]], runs: int,
+              timeout: int | None = None) -> list[dict]:
     if runs < 1:
         raise ValueError('runs must be positive')
-    jobs = [(config, task, run) for config in configs for task in TASKS
+    jobs = [(config, task, run, timeout) for config in configs for task in TASKS
             for run in range(runs)]
     with ThreadPoolExecutor(max_workers=4) as pool:
         return list(pool.map(lambda args: job(*args), jobs))
