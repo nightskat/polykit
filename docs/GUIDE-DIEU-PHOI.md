@@ -116,3 +116,21 @@ Luật: lane trả theo token → low là điểm ngọt; lane gói cố định
 - Claude Code cloud credit: $56/$250, **hết 14:59 05/11** → dùng nốt cho repo có CI.
 - GCP: Developer Program ≈1,66tr VND (toàn GCP, Vertex `global`) + trial 26,1tr (chỉ Vertex AI Search).
 - Thứ tự rót việc đến 08/11: **agy → Codex → DeepSeek API → Grok → Vertex**; Go để dành việc gấp.
+
+## Khi Claude outage (chốt 04/11/2026)
+
+| Vai | Bình thường | Claude sập → |
+|---|---|---|
+| Main/orchestrator | Opus low | **Codex `gpt-6.1-sol`** (sub) |
+| Maker cơ khí | Sonnet/DeepSeek | Hermes → `deepseek-v4.1-flash` **low** |
+| QA red-team | Grok | Grok 4.6 **low** qua Hermes |
+| Prose VN / doc dài | Sonnet | agy `--model gemini-3.1-pro-preview` |
+| Tính tiền/ngày | Opus | DeepSeek low **+ tính lại bằng code**; cấm GLM, cấm effort none |
+| Hồ sơ KH | Claude host | Local (vnocr, pg-hoi) |
+
+App thay Claude desktop: Codex CLI/app → agy IDE → Hermes chat (⛔ không nhét `sk-ant-`) → Gemini app/NotebookLM cho hỏi nhẹ.
+
+Bẫy:
+- agy lane Claude (Opus/Sonnet) vẫn do Anthropic phục vụ model → outage cấp model thì chết theo; dùng lane Gemini.
+- Trước khi trông vào agy: `agy models < /dev/null` (state 03/11 báo `stale`).
+- pg-hoi chạy local, không phụ thuộc Claude.
