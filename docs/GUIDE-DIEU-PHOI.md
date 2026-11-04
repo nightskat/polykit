@@ -189,6 +189,7 @@ Lệnh: `python3 bin/bench_main.py --runs 2 vendor:model:effort ...`. Raw: `~/Cl
 Bẫy đã vấp:
 - DeepSeek API đổi slug → `deepseek-flash`; `deepseek-v4.1-flash` trả 400.
 - agy hết credit → output rỗng/429 → harness ghi `err`, đừng đọc là "model kém" (argon chưa đo được).
-- Hermes gateway có lúc chết ("no local fallback") → gọi thẳng `codex exec ... < /dev/null`.
+- Hermes gateway có lúc chết ("Gateway connection failed; no local fallback") → `hermes gateway status`; nếu stopped thì `hermes gateway restart`, rồi thử `hermes -z "OK"` trước khi giao việc. 04/11 launchd tự dựng lại sau ~10 phút. Chỉ gọi thẳng `codex exec` khi restart không cứu.
+- Cloud session: lần 1 báo "can't clone" vì phiên đứng ở `~` (không phải git) → gọi lại với `repository: nightskat/polykit` là bắn được.
 - Câu nghiệm thu mơ hồ làm cả bảng trượt → đáp án phải chấp nhận tập hợp hợp lệ, không ép 1 đáp án.
 - GLM (OpenCode Go) chưa đo lại vòng này; giữ kết luận 30/10: chỉ high, cấm tính ngày/tiền.
