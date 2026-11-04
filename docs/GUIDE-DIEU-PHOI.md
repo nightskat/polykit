@@ -193,3 +193,6 @@ Bẫy đã vấp:
 - Cloud session: lần 1 báo "can't clone" vì phiên đứng ở `~` (không phải git) → gọi lại với `repository: nightskat/polykit` là bắn được.
 - Câu nghiệm thu mơ hồ làm cả bảng trượt → đáp án phải chấp nhận tập hợp hợp lệ, không ép 1 đáp án.
 - GLM (OpenCode Go) chưa đo lại vòng này; giữ kết luận 30/10: chỉ high, cấm tính ngày/tiền.
+
+### Bench lane Hermes (04/11, 1 lượt, chỉ 3/5 task đo được)
+GLM-5.3-flash high qua Go 3/3 · DeepSeek v4.1 flash low qua Go 2/3 · Grok-4.7 low 2/2 (chậm 74s, 1 timeout) · Codex sol medium qua Hermes 2/3. Crosscheck + code bị PII gate chặn vì fixture có CCCD giả → PR #4 đang sửa (fixture `synthetic`). Chưa đủ để chốt GLM; giữ kết luận 30/10.
