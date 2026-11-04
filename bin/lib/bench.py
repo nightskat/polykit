@@ -14,7 +14,9 @@ from concurrent.futures import ThreadPoolExecutor
 from urllib import request
 from urllib.error import HTTPError, URLError
 
-from lib.dispatch_core import build_hermes_cmd, DispatchError
+from lib.dispatch_core import (build_hermes_cmd, DispatchError, GO_PROVIDER,
+                               get_hermes_bin)
+from lib.go_data_gate import evaluate_go_data_gate, GoDataGateBlocked
 
 
 
@@ -51,6 +53,10 @@ def parse_config(value: str) -> tuple[str, str, str]:
         raise ValueError("config must be vendor:model:effort")
     if vendor not in VENDORS:
         raise ValueError(f"unsupported vendor: {vendor}")
+    if vendor == "hermes" and "/" in model:
+        provider, _, name = model.partition("/")
+        if not provider.strip() or not name.strip():
+            raise ValueError("hermes config must be hermes:provider/model:effort")
     return vendor, model, effort
 
 
@@ -113,13 +119,45 @@ def check(task: str, answer: object) -> bool:
     raise ValueError(f"unknown task: {task}")
 
 TIMEOUT = 300
+HERMES_TIMEOUT = 600
+
+
+def timeout_for(vendor: str, timeout: int | None = None) -> int:
+    return timeout or (HERMES_TIMEOUT if vendor == 'hermes' else TIMEOUT)
 
 
 class CallError(Exception):
     """Sanitized operational error safe to persist in benchmark output."""
 
 
-def call(vendor: str, model: str, effort: str, prompt: str) -> str:
+HERMES_GATEWAY_MARKER = 'gateway connection failed'
+
+
+def _hermes_cmd(model: str, effort: str, prompt: str) -> list[str]:
+    """argv: hermes -z <prompt> --provider <p> -m <model> --reasoning <effort>.
+
+    opencode-go (or bare model) goes through the dispatch adapter and its
+    model policy. Other providers (xai-oauth, openai-codex, ...) build argv
+    directly; the PII gate runs only for lanes in TRAINS_ON_DATA.
+    """
+    provider, slash, name = model.partition('/')
+    if not slash or provider == GO_PROVIDER:
+        return build_hermes_cmd(model=model, prompt=prompt, effort=effort,
+                                data_class='code-nopii')
+    try:
+        evaluate_go_data_gate(data_class='code-nopii', prompt=prompt,
+                              vendor='hermes', model=model)
+    except GoDataGateBlocked as ex:
+        raise CallError(f'adapter:{ex.reason}') from None
+    cmd = [get_hermes_bin(), '-z', prompt, '--provider', provider, '-m', name]
+    if effort != 'na':
+        cmd += ['--reasoning', effort]
+    return cmd
+
+
+def call(vendor: str, model: str, effort: str, prompt: str,
+         timeout: int | None = None) -> str:
+    timeout = timeout_for(vendor, timeout)
     if vendor in {'deepseek', 'or'}:
         key_name, url = {
             'deepseek': ('DEEPSEEK_API_KEY', 'https://api.deepseek.com/chat/completions'),
@@ -138,7 +176,7 @@ def call(vendor: str, model: str, effort: str, prompt: str) -> str:
         req = request.Request(url, json.dumps(body).encode(), {
             'Content-Type': 'application/json', 'Authorization': f'Bearer {key}',
         })
-        with request.urlopen(req, timeout=TIMEOUT) as response:
+        with request.urlopen(req, timeout=timeout) as response:
             payload = json.load(response)
         try:
             text = payload['choices'][0]['message']['content']
@@ -149,10 +187,7 @@ def call(vendor: str, model: str, effort: str, prompt: str) -> str:
         return text
 
     if vendor == 'hermes':
-        # Preserve the adapter's model policy and data gate. Bench prompts are
-        # fixed synthetic fixtures; a gate rejection remains an err.
-        cmd = build_hermes_cmd(model=model, prompt=prompt, effort=effort,
-                               data_class='code-nopii')
+        cmd = _hermes_cmd(model, effort, prompt)
         stdin = None
     elif vendor == 'codex':
         cmd = ['codex', 'exec', '-m', model, '-s', 'read-only',
@@ -169,7 +204,7 @@ def call(vendor: str, model: str, effort: str, prompt: str) -> str:
     # Disposable cwd prevents accidental project context from the benchmark
     # worktree. Hermes itself is unsandboxed, as documented by its adapter.
     with tempfile.TemporaryDirectory(prefix='polykit-bench-') as cwd:
-        kwargs = dict(capture_output=True, text=True, timeout=TIMEOUT, cwd=cwd)
+        kwargs = dict(capture_output=True, text=True, timeout=timeout, cwd=cwd)
         if stdin is None:
             kwargs['stdin'] = subprocess.DEVNULL
         else:
@@ -180,17 +215,22 @@ def call(vendor: str, model: str, effort: str, prompt: str) -> str:
         if any(marker in diagnostic for marker in
                ('credits balance is too low', 'resource_exhausted')):
             raise CallError('quota')
+    if vendor == 'hermes' and HERMES_GATEWAY_MARKER in \
+            f'{result.stdout or ""}\n{result.stderr or ""}'.lower():
+        raise CallError('gateway')
     if result.returncode:
         raise CallError(f'exit:{result.returncode}')
     return result.stdout
 
 
-def job(config: tuple[str, str, str], task: str, run: int) -> dict:
+def job(config: tuple[str, str, str], task: str, run: int,
+        timeout: int | None = None) -> dict:
     vendor, model, effort = config
     started = time.perf_counter()
     text, ok, err = '', None, None
     try:
-        text = call(vendor, model, effort, TASKS[task])
+        text = (call(vendor, model, effort, TASKS[task], timeout) if timeout
+                else call(vendor, model, effort, TASKS[task]))
         ok = check(task, parse(text))
     except CallError as ex:
         err = str(ex)
@@ -210,10 +250,11 @@ def job(config: tuple[str, str, str], task: str, run: int) -> dict:
                 err=err, s=round(time.perf_counter() - started, 4), text=text[-4000:])
 
 
-def run_bench(configs: list[tuple[str, str, str]], runs: int) -> list[dict]:
+def run_bench(configs: list[tuple[str, str, str]], runs: int,
+              timeout: int | None = None) -> list[dict]:
     if runs < 1:
         raise ValueError('runs must be positive')
-    jobs = [(config, task, run) for config in configs for task in TASKS
+    jobs = [(config, task, run, timeout) for config in configs for task in TASKS
             for run in range(runs)]
     with ThreadPoolExecutor(max_workers=4) as pool:
         return list(pool.map(lambda args: job(*args), jobs))

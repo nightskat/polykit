@@ -1,3 +1,4 @@
+import pytest
 """Việc 4 — `--require-clean` (opt-in): checker PII inject được, chặn TRƯỚC mọi probe/spawn."""
 import json
 import stat
@@ -9,6 +10,14 @@ from unittest.mock import MagicMock
 import lib.clean_gate as cg
 from fake_cli import make_fake_agy, read_calls
 from lib.dispatcher import run_vendor
+
+@pytest.fixture(autouse=True)
+def _train_lane(monkeypatch):
+    """Cơ chế PII gate giờ chỉ chạy cho lane train (TRAINS_ON_DATA); Go adapter
+    chỉ duyệt profile paid nên ép lane train để giữ kiểm cơ chế checker."""
+    import lib.go_data_gate as gdg
+    monkeypatch.setattr(gdg, "_trains_on_data", lambda model: True)
+
 
 DISPATCH = Path(__file__).resolve().parents[1] / "bin" / "dispatch.py"
 

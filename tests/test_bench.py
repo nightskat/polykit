@@ -109,7 +109,8 @@ def test_cli_nonzero_is_error_even_with_answer(monkeypatch, vendor):
     monkeypatch.setattr(bench, 'build_hermes_cmd', lambda **kwargs: ['hermes', '-z', kwargs['prompt']])
     monkeypatch.setattr(bench.subprocess, 'run', Mock(return_value=
                         subprocess.CompletedProcess([], 2, '{"lines":[3,9]}', 'secret')))
-    row = bench.job((vendor, 'x', 'low'), 'code', 0)
+    model = 'glm-5.3-flash' if vendor == 'hermes' else 'x'
+    row = bench.job((vendor, model, 'low'), 'code', 0)
     assert row['ok'] is None and row['err'] == 'exit:2'
     assert 'secret' not in json.dumps(row)
 
@@ -220,3 +221,105 @@ def test_deepseek_current_model_payload(monkeypatch, effort):
 
 def test_deepseek_omitted_model_uses_api_default():
     assert bench.parse_config('deepseek::high') == ('deepseek', 'deepseek-flash', 'high')
+
+
+def test_hermes_config_provider_form():
+    assert bench.parse_config('hermes:xai-oauth/grok-4.7:low') == ('hermes', 'xai-oauth/grok-4.7', 'low')
+    assert bench.parse_config('hermes:opencode-go/glm-5.3-flash:high')[1] == 'opencode-go/glm-5.3-flash'
+    for bad in ('hermes:/grok:low', 'hermes:xai-oauth/:low'):
+        with pytest.raises(ValueError):
+            bench.parse_config(bad)
+
+
+def test_hermes_go_provider_uses_adapter(monkeypatch):
+    builder = Mock(return_value=['hermes-adapter'])
+    monkeypatch.setattr(bench, 'build_hermes_cmd', builder)
+    assert bench._hermes_cmd('opencode-go/glm-5.3-flash', 'high', 'p') == ['hermes-adapter']
+    assert builder.call_args.kwargs['model'] == 'opencode-go/glm-5.3-flash'
+
+
+def test_hermes_other_provider_argv(monkeypatch):
+    monkeypatch.setattr(bench, 'get_hermes_bin', lambda: 'hermes')
+    builder = Mock(side_effect=AssertionError('adapter not for xai'))
+    monkeypatch.setattr(bench, 'build_hermes_cmd', builder)
+    runner = Mock(return_value=subprocess.CompletedProcess([], 0, '{"lines":[3,9]}', ''))
+    monkeypatch.setattr(bench.subprocess, 'run', runner)
+    row = bench.job(('hermes', 'xai-oauth/grok-4.7', 'low'), 'code', 0)
+    assert row['ok'] is True and row['err'] is None
+    assert runner.call_args.args[0] == ['hermes', '-z', bench.TASKS['code'], '--provider',
+                                        'xai-oauth', '-m', 'grok-4.7', '--reasoning', 'low']
+    assert runner.call_args.kwargs['stdin'] is subprocess.DEVNULL
+
+
+@pytest.mark.parametrize('model', ['opencode-go/glm-5.3-flash', 'xai-oauth/grok-4.7',
+                                   'openai-codex/gpt-6.1-sol'])
+@pytest.mark.parametrize('task', ['crosscheck', 'code'])
+def test_fixture_runs_on_non_train_hermes_lane(monkeypatch, model, task):
+    from lib import go_data_gate
+    monkeypatch.setattr(go_data_gate, '_which', lambda name: '/fake/pg-redact')
+    monkeypatch.setattr(go_data_gate, '_checker_runner', Mock(side_effect=AssertionError('no gate')))
+    monkeypatch.setattr(bench, 'get_hermes_bin', lambda: 'hermes')
+    cmd = bench._hermes_cmd(model, 'high', bench.TASKS[task])
+    provider, _, name = model.partition('/')
+    assert cmd[0].endswith('hermes') and cmd[1] == '-z'
+    assert cmd[3:7] == ['--provider', provider, '-m', name]
+
+
+def _fake_pii_checker(monkeypatch):
+    from lib import go_data_gate
+    monkeypatch.setattr(go_data_gate, '_which', lambda name: '/fake/pg-redact')
+    monkeypatch.setattr(go_data_gate, '_checker_runner', lambda *a, **k:
+                        subprocess.CompletedProcess([], 1, '', ''))
+
+
+CCCD_PROMPT = 'Kiem tra ho so khach Nguyen Van A, CCCD 031089004512, SDT 0912345678'
+
+
+def test_train_lane_with_cccd_blocked(monkeypatch):
+    _fake_pii_checker(monkeypatch)
+    with pytest.raises(bench.CallError) as ex:
+        bench._hermes_cmd('openrouter/meta/muse-spark-2-contributor', 'low', CCCD_PROMPT)
+    assert str(ex.value) == 'adapter:pii_detected'
+    from lib.go_data_gate import evaluate_go_data_gate, GoDataGateBlocked
+    for model in ('vendor/x:free', 'vendor/x-free', 'x-contributor'):
+        with pytest.raises(GoDataGateBlocked):
+            evaluate_go_data_gate(data_class='code-nopii', prompt=CCCD_PROMPT,
+                                  vendor='hermes', model=model)
+
+
+def test_non_train_lane_with_cccd_passes(monkeypatch):
+    _fake_pii_checker(monkeypatch)
+    monkeypatch.setattr(bench, 'get_hermes_bin', lambda: 'hermes')
+    for model in ('opencode-go/glm-5.3-flash', 'xai-oauth/grok-4.7', 'openai-codex/gpt-6.1-sol'):
+        assert bench._hermes_cmd(model, 'low', CCCD_PROMPT)[2] == CCCD_PROMPT
+
+
+def test_trains_on_data_patterns():
+    from lib.model_policy import trains_on_data
+    for m in ('a-contributor', 'vendor/x:free', 'x-free', 'meta/muse-spark-2-contributor', None, ''):
+        assert trains_on_data(m)
+    for m in ('glm-5.3-flash', 'deepseek-v4.1-flash', 'grok-4.7', 'gpt-6.1-sol', 'deepseek-flash'):
+        assert not trains_on_data(m)
+
+
+def test_hermes_default_timeout_600(monkeypatch):
+    monkeypatch.setattr(bench, 'get_hermes_bin', lambda: 'hermes')
+    runner = Mock(return_value=subprocess.CompletedProcess([], 0, 'a', ''))
+    monkeypatch.setattr(bench.subprocess, 'run', runner)
+    bench.call('hermes', 'xai-oauth/grok-4.7', 'low', bench.TASKS['code'])
+    assert runner.call_args.kwargs['timeout'] == 600
+    bench.call('hermes', 'xai-oauth/grok-4.7', 'low', bench.TASKS['code'], 42)
+    assert runner.call_args.kwargs['timeout'] == 42
+    bench.call('codex', 'x', 'low', 'p')
+    assert runner.call_args.kwargs['timeout'] == 300
+
+
+@pytest.mark.parametrize('code,out,err', [(0, '{"lines":[3,9]}', 'Gateway connection failed'),
+                                          (1, 'Error: Gateway connection failed: x', '')])
+def test_hermes_gateway_failure_is_err(monkeypatch, code, out, err):
+    monkeypatch.setattr(bench, 'get_hermes_bin', lambda: 'hermes')
+    monkeypatch.setattr(bench.subprocess, 'run', Mock(return_value=
+                        subprocess.CompletedProcess([], code, out, err)))
+    row = bench.job(('hermes', 'xai-oauth/grok-4.7', 'low'), 'code', 0)
+    assert row['ok'] is None and row['err'] == 'gateway'
+    assert bench.summarize([row])[0]['n'] == 0

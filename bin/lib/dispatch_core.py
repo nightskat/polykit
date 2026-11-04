@@ -652,6 +652,7 @@ def _build_hermes_argv(
             attachments=attachments,
             synthetic_vision=synthetic_vision,
             vendor="hermes",
+            model=selector.model,
         )
     except GoDataGateBlocked as e:
         raise DispatchError(

@@ -32,6 +32,10 @@ CHECKER_TIMEOUT_S = 20
 
 # Điểm tiêm cho test: patch ``lib.go_data_gate._which`` / ``_checker_runner``.
 _which = shutil.which
+try:
+    from lib.model_policy import trains_on_data as _trains_on_data
+except ImportError:  # pragma: no cover
+    from bin.lib.model_policy import trains_on_data as _trains_on_data
 _checker_runner = subprocess.run
 
 
@@ -228,4 +232,7 @@ def evaluate_go_data_gate(
         if attachments or synthetic_vision:
             raise _blocked_vision(vendor, f"{vendor or 'Go adapter'} does not support vision attachments")
 
+    # Chính sách 04/11: PII/redact chỉ áp cho lane train (TRAINS_ON_DATA).
+    if not _trains_on_data(model):
+        return []
     return _check_prompt_pii(prompt)

@@ -40,6 +40,14 @@ from lib.go_data_gate import (
 )
 from lib.states import VendorProbe
 
+@pytest.fixture(autouse=True)
+def _train_lane(monkeypatch):
+    """Cơ chế PII gate giờ chỉ chạy cho lane train (TRAINS_ON_DATA); Go adapter
+    chỉ duyệt profile paid nên ép lane train để giữ kiểm cơ chế checker."""
+    import lib.go_data_gate as gdg
+    monkeypatch.setattr(gdg, "_trains_on_data", lambda model: True)
+
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GO_VENDORS = ("opencode", "hermes")
 
@@ -498,21 +506,68 @@ def test_cli_wrong_data_class_blocked_json(vendor):
     assert data["data_class"] == "pii"
 
 
+def _cli_pii_lane(monkeypatch, capsys, model):
+    """CLI thật, policy thật; chỉ detector và vendor runner được thay bằng spy."""
+    import dispatch
+    import lib.go_data_gate as gate_mod
+    from lib.model_policy import trains_on_data
+
+    # Gỡ override autouse: hai test này kiểm chính sách TRAINS_ON_DATA thật.
+    monkeypatch.setattr(gate_mod, "_trains_on_data", trains_on_data)
+    det, run = SpyDetector(), SpyRunner(stdout="done")
+
+    def dispatch_with_spies(**kwargs):
+        return run_vendor(**kwargs, detector=det, runner=run)
+
+    monkeypatch.setattr(dispatch, "run_vendor", dispatch_with_spies)
+    monkeypatch.setattr(sys, "argv", [
+        "dispatch.py", "opencode", model, "--data-class", "code-nopii",
+        "--prompt", "Nguyen Van A CCCD 012345678901", "--result-json",
+    ])
+    with pytest.raises(SystemExit) as exc:
+        dispatch.main()
+    captured = capsys.readouterr()
+    assert "012345678901" not in captured.out
+    assert "012345678901" not in captured.err
+    return exc.value.code, json.loads(captured.out), det, run
+
+
 @pytest.mark.skipif(
     __import__("shutil").which("pg-redact") is None,
     reason="pg-redact không có trên máy — nhánh checker thật không chạy được",
 )
-def test_cli_optin_real_checker_blocks_pii_before_spawn():
-    proc = _cli("opencode", "auto", "--data-class", "code-nopii",
-                prompt="Nguyen Van A CCCD 012345678901")
-    assert proc.returncode == 1
-    data = json.loads(proc.stdout)
+def test_cli_optin_real_checker_train_lane_blocks_pii_before_spawn(monkeypatch, capsys):
+    from lib.model_policy import trains_on_data
+
+    model = "deepseek-v4.1-flash-free"  # explicit -free được Go adapter duyệt
+    assert trains_on_data(model)
+    code, data, det, run = _cli_pii_lane(monkeypatch, capsys, model)
+    assert code == 1
     assert data["status"] == "blocked"
     assert data["reason"] == "pii_detected"
     assert data["unsandboxed"] is False
     assert data["data_class"] == DATA_CLASS_CODE_NOPII
-    assert "012345678901" not in proc.stdout
-    assert "012345678901" not in proc.stderr
+    assert det.called is False and run.called is False
+
+
+def test_cli_optin_non_train_lane_allows_pii_with_mock_spawn(monkeypatch, capsys):
+    import lib.go_data_gate as gate_mod
+    from lib.model_policy import trains_on_data
+
+    model = "deepseek-v4.1-flash"
+    assert not trains_on_data(model)
+
+    def unexpected_checker(prompt):
+        pytest.fail("lane không train không được gọi PII checker")
+
+    monkeypatch.setattr(gate_mod, "_check_prompt_pii", unexpected_checker)
+    code, data, det, run = _cli_pii_lane(monkeypatch, capsys, model)
+    assert code == 0
+    assert data["status"] == "ok"
+    assert data["reason"] != "pii_detected"
+    assert data["unsandboxed"] is True
+    assert data["data_class"] == DATA_CLASS_CODE_NOPII
+    assert det.called is True and run.called is True
 
 
 @pytest.mark.parametrize("vendor", GO_VENDORS)
