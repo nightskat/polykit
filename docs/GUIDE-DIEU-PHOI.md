@@ -121,10 +121,10 @@ Luật: lane trả theo token → low là điểm ngọt; lane gói cố định
 
 | Vai | Bình thường | Claude sập → |
 |---|---|---|
-| Main/orchestrator | Opus low | **Codex `gpt-6.1-sol`** (sub) |
+| Main/orchestrator | Opus low | **Codex `gpt-6.1-sol` medium** (sub; low trượt nghiệm thu 1/2) |
 | Maker cơ khí | Sonnet/DeepSeek | Hermes → `deepseek-v4.1-flash` **low** |
 | QA red-team | Grok | Grok 4.6 **low** qua Hermes |
-| Prose VN / doc dài | Sonnet | agy `--model gemini-3.1-pro-preview` |
+| Prose VN / doc dài | Sonnet | agy `--model gemini-3.8-flash-high` (slug 3.1-pro đã chết) |
 | Tính tiền/ngày | Opus | DeepSeek low **+ tính lại bằng code**; cấm GLM, cấm effort none |
 | Hồ sơ KH | Claude host | Local (vnocr, pg-hoi) |
 
@@ -134,3 +134,61 @@ Bẫy:
 - agy lane Claude (Opus/Sonnet) vẫn do Anthropic phục vụ model → outage cấp model thì chết theo; dùng lane Gemini.
 - Trước khi trông vào agy: `agy models < /dev/null` (state 03/11 báo `stale`).
 - pg-hoi chạy local, không phụ thuộc Claude.
+
+## Bench
+
+Lệnh plugin `/polykit:bench` đăng ký như doctor/dispatch; chạy trực tiếp:
+
+```bash
+python3 bin/bench_main.py --runs 3 --output-dir ./bench-results or:vendor/model:free:na codex:gpt-6.1-sol:low
+# Trong Claude Code:
+# /polykit:bench --runs 3 hermes:glm-5.3-flash:low
+```
+
+Config là `vendor:model:effort`: tách vendor ở dấu `:` đầu, effort ở dấu `:`
+cuối, nên model chứa `:free` vẫn giữ nguyên. Vendor: `codex`, `agy`, `deepseek`,
+`or`, `hermes`; effort `na` bỏ tham số reasoning với API/codex/agy.
+DeepSeek API dùng `deepseek:deepseek-flash:low`, effort `low|high|max`;
+`deepseek::high` dùng model mặc định `deepseek-flash`. Theo lần chạy 04/11,
+`deepseek-v4.1-flash` trả HTTP 400 trên API trực tiếp; profile Go/Hermes
+có namespace riêng.
+API chỉ đọc `DEEPSEEK_API_KEY` / `OPENROUTER_API_KEY` từ env, không đọc file key.
+JSON mặc định ở `~/Claude/Build/tools/bench/`; đổi bằng `--output-dir`.
+
+Bảng in `ok/n`, `err`, giây TB và task sai. `n` chỉ gồm câu đã nhận để chấm;
+HTTP/timeout/CLI exit khác 0/thiếu key/adapter bị chặn là `err`, `ok=null`,
+không tính sai. JSON lỗi có mã gọn, không lưu exception message hay stderr.
+agy báo `credits balance is too low` hoặc `RESOURCE_EXHAUSTED` trên stdout/stderr
+được ghi `err=quota`, kể cả CLI exit 0. Câu trả lời lưu tối đa 4000 ký tự cuối.
+Acceptance chấp nhận tập ID `{1,5}` hoặc `{1,4,5}`; mỗi mục có thể là số nguyên
+hoặc dict dùng khóa `id`, `index`, `claim`, `nhan_dinh`.
+Giây TB tính mọi lượt, kể cả lỗi; không có câu chấm được thì `0/0` và số err.
+Trả lời sai schema hoặc không có JSON là sai. Năm task cố định là thước đo nhỏ,
+không phải bảo chứng năng lực làm việc thật.
+
+**Bẫy:** data bench là bịa (tổng hợp); việc thật phải **pg-redact trước** khi
+đưa ra vendor. Hermes tái dùng adapter và cổng policy/data hiện có, không bỏ
+qua cổng vì nhãn synthetic; config không được policy duyệt hoặc fixture bị
+checker chặn sẽ ghi `err`. Hermes vẫn là lane unsandboxed theo adapter.
+
+## Bench main × worker (04/11/2026, 5 task × 2 lượt, chấm bằng code)
+
+Lệnh: `python3 bin/bench_main.py --runs 2 vendor:model:effort ...`. Raw: `~/Claude/Build/tools/bench/2026-11-04-main-worker-*.json`.
+
+| Vai | Chọn | Effort | Điểm | Ghi chú |
+|---|---|---|---|---|
+| 🎩 Main | Claude Opus 5.5 | low | 12/12 (30/10) | mặc định |
+| 🎩 Main khi Claude sập | Codex `gpt-6.1-sol` | **medium** | 10/10 | low 9/10 (trượt nghiệm thu) · high không hơn |
+| 🎩 Main dự phòng 2 | Muse Wonder (OR) | low | 10/10 | đắt $4/$20 · **redact** |
+| 🛠️ Worker tính/logic | DeepSeek `deepseek-flash` (API/Go) | **low** | 10/10, 4,8s | high 9/10 → đừng bump |
+| 🛠️ Worker free | Muse Spark 1.3 contributor (OR) | low | 10/10 | Meta train cả prompt+completion → **pg-redact bắt buộc** |
+| 🔨 QA red-team | Grok 4.6 | low | 10/10 | |
+| ✍️ Draft/prose | agy `gemini-3.8-flash` | high | 7/10 | trượt code/ngày → không giao tính |
+| ⛔ Không giao tính | Codex luna (2/10) · minimax m3.1 (4/10) · nemotron free (3/10) · gpt-oss (6/10) · agy sonnet (8/10, sai lãi) · qwen3.7 (7/10) · kimi-k3 (8/10) | | | |
+
+Bẫy đã vấp:
+- DeepSeek API đổi slug → `deepseek-flash`; `deepseek-v4.1-flash` trả 400.
+- agy hết credit → output rỗng/429 → harness ghi `err`, đừng đọc là "model kém" (argon chưa đo được).
+- Hermes gateway có lúc chết ("no local fallback") → gọi thẳng `codex exec ... < /dev/null`.
+- Câu nghiệm thu mơ hồ làm cả bảng trượt → đáp án phải chấp nhận tập hợp hợp lệ, không ép 1 đáp án.
+- GLM (OpenCode Go) chưa đo lại vòng này; giữ kết luận 30/10: chỉ high, cấm tính ngày/tiền.
