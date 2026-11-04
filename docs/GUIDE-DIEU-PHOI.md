@@ -214,3 +214,7 @@ Chỉ lane **dùng dữ liệu để train** mới phải pg-redact và bị gat
 ### Bench lane Hermes sau PR #4 (04/11, 1 lượt, 5/5 task, 0 err)
 Grok-4.7 low **5/5** (79s, chậm) · Codex sol medium qua Hermes 4/5 · GLM-5.3-flash high qua Go 3/5 (sai ngày đáo hạn như 30/10) · DeepSeek v4.1 flash low qua Go 3/5 (API trực tiếp 10/10 → 1 lượt, cần thêm lượt mới kết luận Go kém hơn).
 → Giữ: GLM chỉ classify/tag, cấm ngày/tiền. Grok-4.7 = QA tốt nhưng chậm, đừng để trên đường găng.
+
+### Bench bổ sung 04/11 chiều (3 lượt × 5 task, `bench-swnsf3qv.json`)
+- **agy `gemini-3.8-flash-high` 15/15**, 0 err, ~54s/call. Soi 15 output: chỉ JSON, không câu tự xưng/bịa "đã chạy". → dùng được cho tính ngày/lãi khi output khuôn JSON + verify code. Rủi ro bịa vẫn còn ở việc agentic (pytest), không ở việc trả lời khuôn.
+- **Hermes → Go DeepSeek low 10/15** (sai acceptance, code), 19s. Kém API trực tiếp (10/10) → việc chính xác gọi DeepSeek API, Go chỉ cho maker/draft.
