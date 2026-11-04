@@ -90,3 +90,29 @@ Nguyên tắc: vendor nào Hermes cầm (openai-codex, xai-oauth, opencode-go, o
 2. Gắn review lên PR: `gh pr comment <n> --body-file` (cloud/vendor sau tự đọc, khỏi chép tay).
 3. Sửa: script bash clone PR vào thư mục mới → `codex exec -s workspace-write "Sửa theo ../<repo>-<n>.review, mỗi lỗi + test chặn"` → commit + push cùng branch.
 4. Nghiệm thu: CI xanh + live test việc thật (bank: dry-run trên ~/Work/pgbank) → merge. Lần review 2 không đưa review cũ.
+
+## Ma trận ai × effort × việc (chốt 04/11/2026)
+
+| Việc | Ai | Effort |
+|---|---|---|
+| Điều phối, nghiệm thu, soát số bank | Claude Opus 5.5 | low |
+| Việc cơ khí, draft, prose VN, đọc dài | agy `gemini-3.8-flash-high` (luôn ghim `--model`) | high — gói cố định, effort cao không tốn tiền |
+| Việc khó qua agy | agy `claude-opus-5-5-high` · `gemini-4-argon` (quota ít, chỉ review) | high |
+| Code + adversarial review | Codex `gpt-6-sol` | high |
+| Review nhanh | Codex `gpt-6-luna` | medium |
+| Maker rẻ, tính toán/logic | DeepSeek V4.1 Flash | low (⛔ none 3/12; ⛔ V4-Pro kém Flash) |
+| Bulk classify/tag | GLM-5.3-Flash | high (⛔ tính ngày/tiền) |
+| Red-team, bắt số ảo | Grok 4.6 | low |
+| VN polish ngắn | Sonnet 5.5 | medium (⛔ tự tính tiền) |
+| OCR / PII | vnocr local | — |
+
+Luật: lane trả theo token → low là điểm ngọt; lane gói cố định đang dư quota → effort cao được. Model sai thì đổi model / giao code tính, đừng bump effort.
+
+### Quota snapshot 04/11/2026 (đo lại trước khi tin)
+- Claude Max: tuần 68% → dự hết sáng thứ Sáu; chỉ plan + nghiệm thu.
+- OpenCode Go: **tháng 90%**, dự chạm trần 07/11, gia hạn 08/11, Extra Usage TẮT → dừng hẳn (im lặng retry). Xem: opencode.ai/workspace → tab Go.
+- DeepSeek API: $3,69 — `curl https://api.deepseek.com/user/balance -H "Authorization: Bearer $KEY"` (usage thật bằng code).
+- Codex: vừa reset. agy: dư nhất.
+- Claude Code cloud credit: $56/$250, **hết 14:59 05/11** → dùng nốt cho repo có CI.
+- GCP: Developer Program ≈1,66tr VND (toàn GCP, Vertex `global`) + trial 26,1tr (chỉ Vertex AI Search).
+- Thứ tự rót việc đến 08/11: **agy → Codex → DeepSeek API → Grok → Vertex**; Go để dành việc gấp.
